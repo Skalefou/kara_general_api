@@ -31,6 +31,7 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("com.google.firebase:firebase-admin:9.4.1")
     implementation("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     runtimeOnly("org.glassfish.jaxb:jaxb-runtime:4.0.5")
@@ -45,6 +46,8 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("com.ninja-squad:springmockk:4.0.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
