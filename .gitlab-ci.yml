@@ -23,6 +23,8 @@ build_and_test:
   services:
     - docker:24-dind
   script:
+    - echo "FIREBASE_CREDENTIALS_BASE64 défini ? ${FIREBASE_CREDENTIALS_BASE64:+oui}"
+    - echo "POSTGRES_HOST défini ? ${POSTGRES_HOST:+oui}"
     - ./gradlew build --console=plain
   artifacts:
     when: always
