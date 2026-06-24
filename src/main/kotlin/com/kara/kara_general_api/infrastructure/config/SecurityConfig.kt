@@ -20,6 +20,9 @@ class SecurityConfig {
             authorizeHttpRequests {
                 authorize("/api/v1/auth/**", permitAll)
                 authorize("/error", permitAll)
+                authorize("/swagger-ui/**", permitAll)
+                authorize("/swagger-ui.html", permitAll)
+                authorize("/v3/api-docs/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
         }

@@ -7,12 +7,9 @@ import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
-import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -20,10 +17,9 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val registerUseCase: RegisterUseCase,
-) {
+) : AuthApi {
 
-    @PostMapping("/register")
-    fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<Any> {
+    override fun register(request: RegisterRequest): ResponseEntity<Any> {
         val command =
             RegisterCommand(
                 email = Email(request.email),
