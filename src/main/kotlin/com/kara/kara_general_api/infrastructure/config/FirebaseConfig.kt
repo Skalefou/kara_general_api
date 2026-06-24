@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.config
 
+import com.google.api.client.http.apache.v2.ApacheHttpTransport
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
@@ -23,6 +24,7 @@ class FirebaseConfig(
         val credentials = GoogleCredentials.fromStream(ByteArrayInputStream(credentialsJson))
         val options = FirebaseOptions.builder()
             .setCredentials(credentials)
+            .setHttpTransport(ApacheHttpTransport())
             .build()
 
         return FirebaseApp.initializeApp(options)

@@ -6,6 +6,7 @@ import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
+import com.kara.kara_general_api.domain.port.output.EmailAlreadyUsedException
 import com.kara.kara_general_api.domain.port.output.FirebaseAuthGateway
 import com.kara.kara_general_api.domain.port.output.FirebaseUserId
 import com.kara.kara_general_api.domain.port.output.PasswordHasher
@@ -58,6 +59,19 @@ class RegisterServiceTest {
 
         assertEquals(RegisterResult.EmailAlreadyUsed, result)
         verify(exactly = 0) { firebaseAuthGateway.createUser(command.email, command.plainPassword) }
+    }
+
+    @Test
+    fun `should return EmailAlreadyUsed when firebase reports email already exists`() {
+        every { userRepository.existsByEmail(command.email) } returns false
+        every {
+            firebaseAuthGateway.createUser(command.email, command.plainPassword)
+        } throws EmailAlreadyUsedException(command.email)
+
+        val result = sut.register(command)
+
+        assertEquals(RegisterResult.EmailAlreadyUsed, result)
+        verify(exactly = 0) { userRepository.save(any()) }
     }
 
     @Test

@@ -1,0 +1,69 @@
+### Variables
+@host = http://localhost:8080
+
+### Inscription réussie
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "jane.doe@example.com",
+  "password": "S3cur3P@ssw0rd",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "phoneNumber": "+33612345678",
+  "birthDate": "1990-01-15"
+}
+
+> {%
+client.test("Status is 201 CREATED", function() {
+  client.assert(response.status === 201, "Expected 201, got " + response.status);
+});
+client.test("Body contains registered email", function() {
+  client.assert(response.body.email === "jane.doe@example.com", "Unexpected email in response body");
+});
+%}
+
+### Mot de passe invalide (trop court, pas de chiffre) -> 400 INVALID_PASSWORD
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "invalid-password@example.com",
+  "password": "short",
+  "firstName": "John",
+  "lastName": "Smith",
+  "phoneNumber": "+33612345679",
+  "birthDate": "1985-06-20"
+}
+
+> {%
+client.test("Status is 400 BAD_REQUEST", function() {
+  client.assert(response.status === 400, "Expected 400, got " + response.status);
+});
+client.test("Body contains INVALID_PASSWORD code", function() {
+  client.assert(response.body.code === "INVALID_PASSWORD", "Unexpected error code: " + response.body.code);
+});
+%}
+
+### Email déjà utilisé -> 409 EMAIL_ALREADY_USED
+### (exécuter la requête "Inscription réussie" une première fois avant celle-ci)
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "jane.doe@example.com",
+  "password": "An0therP@ssw0rd",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "phoneNumber": "+33612345678",
+  "birthDate": "1990-01-15"
+}
+
+> {%
+client.test("Status is 409 CONFLICT", function() {
+  client.assert(response.status === 409, "Expected 409, got " + response.status);
+});
+client.test("Body contains EMAIL_ALREADY_USED code", function() {
+  client.assert(response.body.code === "EMAIL_ALREADY_USED", "Unexpected error code: " + response.body.code);
+});
+%}

@@ -13,23 +13,23 @@ import java.util.UUID
 class UserEntity(
     @Id
     @Column(columnDefinition = "uuid")
-    val id: UUID = UUID.randomUUID(),
+    var id: UUID = UUID.randomUUID(),
     @Column(nullable = false, unique = true)
-    val email: String,
+    var email: String,
     @Column(name = "password_hash", nullable = false)
-    val passwordHash: String,
+    var passwordHash: String,
     @Column(name = "first_name", nullable = false)
-    val firstName: String,
+    var firstName: String,
     @Column(name = "last_name", nullable = false)
-    val lastName: String,
+    var lastName: String,
     @Column(name = "phone_number", nullable = false)
-    val phoneNumber: String,
+    var phoneNumber: String,
     @Column(name = "birth_date", nullable = false)
-    val birthDate: LocalDate,
+    var birthDate: LocalDate,
     @Column(nullable = false)
-    val role: String,
+    var role: String,
     @Column(name = "firebase_uid", nullable = false, unique = true)
-    val firebaseUid: String,
+    var firebaseUid: String,
     @Column(name = "created_at", nullable = false, updatable = false)
-    val createdAt: Instant = Instant.now(),
+    var createdAt: Instant = Instant.now(),
 )

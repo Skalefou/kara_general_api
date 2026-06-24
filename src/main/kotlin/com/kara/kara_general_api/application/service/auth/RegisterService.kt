@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
+import com.kara.kara_general_api.domain.port.output.EmailAlreadyUsedException
 import com.kara.kara_general_api.domain.port.output.FirebaseAuthGateway
 import com.kara.kara_general_api.domain.port.output.PasswordHasher
 import com.kara.kara_general_api.domain.port.output.UserRepository
@@ -26,7 +27,12 @@ class RegisterService(
             return RegisterResult.InvalidPassword(passwordIssues)
         }
 
-        val firebaseUserId = firebaseAuthGateway.createUser(command.email, command.plainPassword)
+        val firebaseUserId =
+            try {
+                firebaseAuthGateway.createUser(command.email, command.plainPassword)
+            } catch (_: EmailAlreadyUsedException) {
+                return RegisterResult.EmailAlreadyUsed
+            }
 
         val user =
             try {
