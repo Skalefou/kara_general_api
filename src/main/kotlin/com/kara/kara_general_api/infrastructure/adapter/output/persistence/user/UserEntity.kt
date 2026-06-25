@@ -32,4 +32,6 @@ class UserEntity(
     var firebaseUid: String,
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),
+    @Column(name = "email_verified", nullable = false)
+    var emailVerified: Boolean = false,
 )

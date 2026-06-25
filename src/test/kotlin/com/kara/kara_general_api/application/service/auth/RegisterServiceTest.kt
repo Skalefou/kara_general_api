@@ -7,6 +7,8 @@ import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.output.EmailAlreadyUsedException
+import com.kara.kara_general_api.domain.port.output.EmailService
+import com.kara.kara_general_api.domain.port.output.EmailVerificationCodeRepository
 import com.kara.kara_general_api.domain.port.output.FirebaseAuthGateway
 import com.kara.kara_general_api.domain.port.output.FirebaseUserId
 import com.kara.kara_general_api.domain.port.output.PasswordHasher
@@ -25,7 +27,16 @@ class RegisterServiceTest {
     private val userRepository = mockk<UserRepository>()
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>()
     private val passwordHasher = mockk<PasswordHasher>()
-    private val sut = RegisterService(userRepository, firebaseAuthGateway, passwordHasher)
+    private val emailVerificationCodeRepository = mockk<EmailVerificationCodeRepository>(relaxed = true)
+    private val emailService = mockk<EmailService>(relaxed = true)
+    private val sut =
+        RegisterService(
+            userRepository,
+            firebaseAuthGateway,
+            passwordHasher,
+            emailVerificationCodeRepository,
+            emailService,
+        )
 
     private val command =
         RegisterCommand(
@@ -49,6 +60,8 @@ class RegisterServiceTest {
         assertIs<RegisterResult.Success>(result)
         assertEquals("firebase-uid", result.user.firebaseUid)
         verify { userRepository.save(any()) }
+        verify { emailVerificationCodeRepository.save(command.email, any(), any()) }
+        verify { emailService.sendVerificationCode(command.email, any()) }
     }
 
     @Test

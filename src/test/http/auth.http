@@ -51,7 +51,7 @@ POST {{host}}/api/v1/auth/register
 Content-Type: application/json
 
 {
-  "email": "jane.doe@example.com",
+  "email": "thomas.poupard@protonmail.com",
   "password": "An0therP@ssw0rd",
   "firstName": "Jane",
   "lastName": "Doe",
@@ -65,5 +65,84 @@ client.test("Status is 409 CONFLICT", function() {
 });
 client.test("Body contains EMAIL_ALREADY_USED code", function() {
   client.assert(response.body.code === "EMAIL_ALREADY_USED", "Unexpected error code: " + response.body.code);
+});
+%}
+
+### Vérification email avec un mauvais code -> 400 INVALID_VERIFICATION_CODE
+### (exécuter "Inscription réussie" avant celle-ci pour avoir un compte non vérifié)
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "jane.doe@example.com",
+  "code": "000000"
+}
+
+> {%
+client.test("Status is 400 BAD_REQUEST", function() {
+  client.assert(response.status === 400, "Expected 400, got " + response.status);
+});
+client.test("Body contains INVALID_VERIFICATION_CODE or VERIFICATION_CODE_EXPIRED code", function() {
+  client.assert(
+    response.body.code === "INVALID_VERIFICATION_CODE" || response.body.code === "VERIFICATION_CODE_EXPIRED",
+    "Unexpected error code: " + response.body.code
+  );
+});
+%}
+
+### Vérification email pour un compte inexistant -> 404 USER_NOT_FOUND
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "never-registered@example.com",
+  "code": "123456"
+}
+
+> {%
+client.test("Status is 404 NOT_FOUND", function() {
+  client.assert(response.status === 404, "Expected 404, got " + response.status);
+});
+client.test("Body contains USER_NOT_FOUND code", function() {
+  client.assert(response.body.code === "USER_NOT_FOUND", "Unexpected error code: " + response.body.code);
+});
+%}
+
+### Vérification email réussie -> 200 + accessToken
+### Remplacer "code" par celui réellement reçu par email après l'inscription de "jane.doe@example.com"
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "thomas.poupard@protonmail.com",
+  "code": "123456"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("Body contains an accessToken and expiresIn", function() {
+  client.assert(!!response.body.accessToken, "Missing accessToken in response body");
+  client.assert(response.body.expiresIn === 900, "Unexpected expiresIn: " + response.body.expiresIn);
+});
+%}
+
+### Vérification email déjà vérifié -> 409 EMAIL_ALREADY_VERIFIED
+### (exécuter la requête de vérification réussie ci-dessus une première fois avant celle-ci)
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "jane.doe@example.com",
+  "code": "123456"
+}
+
+> {%
+client.test("Status is 409 CONFLICT", function() {
+  client.assert(response.status === 409, "Expected 409, got " + response.status);
+});
+client.test("Body contains EMAIL_ALREADY_VERIFIED code", function() {
+  client.assert(response.body.code === "EMAIL_ALREADY_VERIFIED", "Unexpected error code: " + response.body.code);
 });
 %}

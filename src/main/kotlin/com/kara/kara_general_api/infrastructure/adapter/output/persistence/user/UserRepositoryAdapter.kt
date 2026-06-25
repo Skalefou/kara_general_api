@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.user
 
 import com.kara.kara_general_api.domain.model.user.User
+import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
@@ -25,9 +26,9 @@ class UserRepositoryAdapter(
         val sql =
             """
             INSERT INTO users (id, email, password_hash, first_name, last_name,
-                                phone_number, birth_date, role, firebase_uid, created_at)
+                                phone_number, birth_date, role, firebase_uid, created_at, email_verified)
             VALUES (:id, :email, :passwordHash, :firstName, :lastName,
-                    :phoneNumber, :birthDate, :role, :firebaseUid, :createdAt)
+                    :phoneNumber, :birthDate, :role, :firebaseUid, :createdAt, :emailVerified)
             """.trimIndent()
         jdbc.update(
             sql,
@@ -41,8 +42,25 @@ class UserRepositoryAdapter(
                 .addValue("birthDate", Date.valueOf(user.birthDate))
                 .addValue("role", user.role.name)
                 .addValue("firebaseUid", user.firebaseUid)
-                .addValue("createdAt", Timestamp.from(user.createdAt)),
+                .addValue("createdAt", Timestamp.from(user.createdAt))
+                .addValue("emailVerified", user.emailVerified),
         )
         return user
+    }
+
+    override fun findByEmail(email: Email): User? {
+        val sql =
+            """
+            SELECT id, email, password_hash, first_name, last_name, phone_number,
+                   birth_date, role, firebase_uid, created_at, email_verified
+            FROM users
+            WHERE email = :email
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("email" to email.value), rowMapper).firstOrNull()
+    }
+
+    override fun markEmailVerified(id: UserId) {
+        val sql = "UPDATE users SET email_verified = true WHERE id = :id"
+        jdbc.update(sql, mapOf("id" to id.value))
     }
 }

@@ -17,7 +17,10 @@ data class User(
     val role: UserRole,
     val firebaseUid: String,
     val createdAt: Instant,
+    val emailVerified: Boolean = false,
 ) {
+    fun verifyEmail(): User = copy(emailVerified = true)
+
     companion object {
         fun register(
             email: Email,
@@ -39,6 +42,7 @@ data class User(
                 role = UserRole.CLIENT,
                 firebaseUid = firebaseUid,
                 createdAt = Instant.now(),
+                emailVerified = false,
             )
     }
 }

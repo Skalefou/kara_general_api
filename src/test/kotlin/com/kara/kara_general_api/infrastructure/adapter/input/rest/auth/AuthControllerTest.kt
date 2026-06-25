@@ -8,6 +8,9 @@ import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
+import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
+import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
+import com.kara.kara_general_api.domain.port.output.AccessToken
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
@@ -35,6 +38,9 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var registerUseCase: RegisterUseCase
+
+    @MockkBean
+    private lateinit var verifyEmailUseCase: VerifyEmailUseCase
 
     private val requestBody =
         """
@@ -85,5 +91,67 @@ class AuthControllerTest {
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"))
+    }
+
+    private val verifyEmailRequestBody =
+        """
+        {
+          "email": "client@kara.app",
+          "code": "123456"
+        }
+        """.trimIndent()
+
+    @Test
+    fun `should return 200 with access token when verification code is valid`() {
+        every { verifyEmailUseCase.verify(any()) } returns
+            VerifyEmailResult.Success(AccessToken(value = "jwt-token", expiresInSeconds = 900))
+
+        mockMvc.perform(
+            post("/api/v1/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(verifyEmailRequestBody),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").value("jwt-token"))
+            .andExpect(jsonPath("$.expiresIn").value(900))
+    }
+
+    @Test
+    fun `should return 400 when verification code is invalid`() {
+        every { verifyEmailUseCase.verify(any()) } returns VerifyEmailResult.InvalidCode
+
+        mockMvc.perform(
+            post("/api/v1/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(verifyEmailRequestBody),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("INVALID_VERIFICATION_CODE"))
+    }
+
+    @Test
+    fun `should return 404 when no account matches the email`() {
+        every { verifyEmailUseCase.verify(any()) } returns VerifyEmailResult.UserNotFound
+
+        mockMvc.perform(
+            post("/api/v1/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(verifyEmailRequestBody),
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+    }
+
+    @Test
+    fun `should return 409 when email is already verified`() {
+        every { verifyEmailUseCase.verify(any()) } returns VerifyEmailResult.AlreadyVerified
+
+        mockMvc.perform(
+            post("/api/v1/auth/verify-email")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(verifyEmailRequestBody),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_VERIFIED"))
     }
 }
