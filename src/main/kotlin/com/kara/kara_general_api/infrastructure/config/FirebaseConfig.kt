@@ -8,10 +8,12 @@ import com.google.firebase.auth.FirebaseAuth
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import java.io.ByteArrayInputStream
 import java.util.Base64
 
 @Configuration
+@Profile("!test")
 class FirebaseConfig(
     @Value("\${FIREBASE_CREDENTIALS_BASE64}") private val credentialsBase64: String,
 ) {
