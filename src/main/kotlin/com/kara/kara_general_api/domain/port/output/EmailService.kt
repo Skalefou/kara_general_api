@@ -6,4 +6,6 @@ interface EmailService {
     fun sendVerificationCode(email: Email, code: String)
 
     fun sendAccountDeletionConfirmation(email: Email)
+
+    fun sendPasswordResetCode(email: Email, code: String)
 }

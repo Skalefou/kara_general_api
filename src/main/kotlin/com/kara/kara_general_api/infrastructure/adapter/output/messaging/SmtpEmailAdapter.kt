@@ -35,4 +35,18 @@ class SmtpEmailAdapter(
         )
         mailSender.send(message)
     }
+
+    override fun sendPasswordResetCode(email: Email, code: String) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Réinitialisation de votre mot de passe Kara")
+        helper.setText(
+            "<p>Votre code de réinitialisation est : <strong>$code</strong></p>" +
+                "<p>Ce code est valable 15 minutes.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
 }

@@ -6,8 +6,12 @@ import com.kara.kara_general_api.domain.model.user.UserRole
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordResult
+import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
+import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordResult
+import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
 import com.kara.kara_general_api.domain.port.output.AccessToken
@@ -41,6 +45,12 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var verifyEmailUseCase: VerifyEmailUseCase
+
+    @MockkBean
+    private lateinit var forgotPasswordUseCase: ForgotPasswordUseCase
+
+    @MockkBean
+    private lateinit var resetPasswordUseCase: ResetPasswordUseCase
 
     private val requestBody =
         """
@@ -153,5 +163,66 @@ class AuthControllerTest {
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_VERIFIED"))
+    }
+
+    @Test
+    fun `should return 204 when forgot password request is sent`() {
+        every { forgotPasswordUseCase.requestReset(any()) } returns ForgotPasswordResult.Success
+
+        mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "client@kara.app"}"""),
+        ).andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `should return 204 when password is reset successfully`() {
+        every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.Success
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "client@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
+        ).andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `should return 400 when reset code is expired`() {
+        every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.CodeExpiredOrMissing
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "client@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("RESET_CODE_EXPIRED"))
+    }
+
+    @Test
+    fun `should return 400 when reset code is invalid`() {
+        every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.InvalidCode
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "client@kara.app", "code": "000000", "newPassword": "Azerty123"}"""),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("INVALID_RESET_CODE"))
+    }
+
+    @Test
+    fun `should return 404 when user is not found during reset`() {
+        every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.UserNotFound
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "unknown@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
     }
 }

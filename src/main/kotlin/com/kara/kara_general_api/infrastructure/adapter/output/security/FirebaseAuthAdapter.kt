@@ -37,6 +37,12 @@ class FirebaseAuthAdapter(
         firebaseAuth.deleteUser(firebaseUserId.value)
     }
 
+    override fun updatePassword(firebaseUserId: FirebaseUserId, plainPassword: String) {
+        firebaseAuth.updateUser(
+            UserRecord.UpdateRequest(firebaseUserId.value).setPassword(plainPassword),
+        )
+    }
+
     private fun recoverFromAmbiguousFailure(email: Email): UserRecord? =
         try {
             firebaseAuth.getUserByEmail(email.value)

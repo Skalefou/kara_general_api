@@ -1,6 +1,7 @@
 ### Variables
 @host = http://localhost:8080
 
+
 ### ÉTAPE 1 — Inscrire un compte dédié aux tests de suppression
 ### Inscription du compte test
 POST {{host}}/api/v1/auth/register
@@ -120,5 +121,180 @@ client.test("Status is 404 NOT_FOUND", function() {
 });
 client.test("Body contains USER_NOT_FOUND code", function() {
   client.assert(response.body.code === "USER_NOT_FOUND", "Unexpected code: " + response.body.code);
+});
+%}
+
+### ÉTAPE 2 — Inscrire un compte dédié aux tests de réinitialisation
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com",
+  "password": "R3s3tM3!",
+  "firstName": "Test",
+  "lastName": "Reset",
+  "phoneNumber": "+33600000002",
+  "birthDate": "2000-01-01"
+}
+
+> {%
+client.test("Status is 201 CREATED", function() {
+  client.assert(response.status === 201, "Expected 201, got " + response.status);
+});
+%}
+
+### Lecture du code de vérification depuis Redis -> stocke dans {{resetVerifCode}}
+GET {{host}}/api/v1/test/auth/verification-code?email=reset-me@example.com
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.global.set("resetVerifCode", response.body.code);
+%}
+
+### Vérification email -> stocke le token dans {{resetToken}}
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com",
+  "code": "{{resetVerifCode}}"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.global.set("resetToken", response.body.accessToken);
+%}
+
+### Demande de réinitialisation pour un email inconnu -> 204 (silencieux, anti-énumération)
+POST {{host}}/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "inconnu@example.com"
+}
+
+> {%
+client.test("Status is 204 NO_CONTENT", function() {
+  client.assert(response.status === 204, "Expected 204, got " + response.status);
+});
+%}
+
+### Demande de réinitialisation pour un email connu -> 204 + code envoyé par mail
+POST {{host}}/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com"
+}
+
+> {%
+client.test("Status is 204 NO_CONTENT", function() {
+  client.assert(response.status === 204, "Expected 204, got " + response.status);
+});
+%}
+
+### Lecture du code de réinitialisation depuis Redis -> stocke dans {{resetCode}}
+GET {{host}}/api/v1/test/auth/reset-code?email=reset-me@example.com
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("Reset code is present in Redis", function() {
+  client.assert(!!response.body.code, "Code absent — la demande de reset a-t-elle bien été faite ?");
+});
+client.global.set("resetCode", response.body.code);
+%}
+
+### Réinitialisation avec un mauvais code -> 400 INVALID_RESET_CODE
+POST {{host}}/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com",
+  "code": "000000",
+  "newPassword": "N3wP@ssw0rd"
+}
+
+> {%
+client.test("Status is 400 BAD_REQUEST", function() {
+  client.assert(response.status === 400, "Expected 400, got " + response.status);
+});
+client.test("Body contains INVALID_RESET_CODE code", function() {
+  client.assert(response.body.code === "INVALID_RESET_CODE", "Unexpected code: " + response.body.code);
+});
+%}
+
+### Réinitialisation avec un mot de passe trop faible -> 400 INVALID_PASSWORD
+POST {{host}}/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com",
+  "code": "{{resetCode}}",
+  "newPassword": "abc"
+}
+
+> {%
+client.test("Status is 400 BAD_REQUEST", function() {
+  client.assert(response.status === 400, "Expected 400, got " + response.status);
+});
+client.test("Body contains INVALID_PASSWORD code", function() {
+  client.assert(response.body.code === "INVALID_PASSWORD", "Unexpected code: " + response.body.code);
+});
+%}
+
+### Réinitialisation réussie -> 204 NO_CONTENT
+POST {{host}}/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com",
+  "code": "{{resetCode}}",
+  "newPassword": "N3wP@ssw0rd"
+}
+
+> {%
+client.test("Status is 204 NO_CONTENT", function() {
+  client.assert(response.status === 204, "Expected 204, got " + response.status);
+});
+%}
+
+### Réutilisation du même code après succès -> 400 RESET_CODE_EXPIRED
+POST {{host}}/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "reset-me@example.com",
+  "code": "{{resetCode}}",
+  "newPassword": "AuTr3P@ssw0rd"
+}
+
+> {%
+client.test("Status is 400 BAD_REQUEST", function() {
+  client.assert(response.status === 400, "Expected 400, got " + response.status);
+});
+client.test("Body contains RESET_CODE_EXPIRED code", function() {
+  client.assert(response.body.code === "RESET_CODE_EXPIRED", "Unexpected code: " + response.body.code);
+});
+%}
+
+### Suppression du compte reset-me avec le nouveau mot de passe -> 204 NO_CONTENT
+### Le JWT issu du verify-email reste valide ; le mot de passe à fournir est le nouveau
+DELETE {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{resetToken}}
+
+{
+  "password": "N3wP@ssw0rd"
+}
+
+> {%
+client.test("Status is 204 NO_CONTENT", function() {
+  client.assert(response.status === 204, "Expected 204, got " + response.status);
 });
 %}

@@ -1,6 +1,8 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -68,5 +70,43 @@ interface AuthApi {
     @PostMapping("/verify-email")
     fun verifyEmail(
         @Valid @RequestBody request: VerifyEmailRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Demander un code de réinitialisation de mot de passe",
+        description = "Envoie un code OTP par email. Retourne toujours 204 même si l'email est inconnu (anti-énumération).",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Code envoyé (ou email silencieusement ignoré)"),
+        ],
+    )
+    @PostMapping("/forgot-password")
+    fun forgotPassword(
+        @Valid @RequestBody request: ForgotPasswordRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Réinitialiser le mot de passe",
+        description = "Valide le code OTP et remplace le mot de passe en base et dans Firebase.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Mot de passe réinitialisé avec succès"),
+            ApiResponse(
+                responseCode = "400",
+                description = "Code invalide, expiré ou mot de passe trop faible",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/reset-password")
+    fun resetPassword(
+        @Valid @RequestBody request: ResetPasswordRequest,
     ): ResponseEntity<Any>
 }

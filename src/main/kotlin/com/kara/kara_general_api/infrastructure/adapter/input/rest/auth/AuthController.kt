@@ -2,14 +2,21 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordCommand
+import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
+import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordCommand
+import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordResult
+import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
 import org.springframework.http.HttpStatus
@@ -23,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
     private val registerUseCase: RegisterUseCase,
     private val verifyEmailUseCase: VerifyEmailUseCase,
+    private val forgotPasswordUseCase: ForgotPasswordUseCase,
+    private val resetPasswordUseCase: ResetPasswordUseCase,
 ) : AuthApi {
 
     override fun register(request: RegisterRequest): ResponseEntity<Any> {
@@ -124,6 +133,69 @@ class AuthController(
                     ).apply {
                         title = "Code invalide"
                         setProperty("code", "INVALID_VERIFICATION_CODE")
+                    },
+                )
+        }
+    }
+
+    override fun forgotPassword(request: ForgotPasswordRequest): ResponseEntity<Any> {
+        forgotPasswordUseCase.requestReset(ForgotPasswordCommand(email = Email(request.email)))
+        return ResponseEntity.noContent().build()
+    }
+
+    override fun resetPassword(request: ResetPasswordRequest): ResponseEntity<Any> {
+        val command =
+            ResetPasswordCommand(
+                email = Email(request.email),
+                code = request.code,
+                newPassword = request.newPassword,
+            )
+
+        return when (val result = resetPasswordUseCase.resetPassword(command)) {
+            ResetPasswordResult.Success ->
+                ResponseEntity.noContent().build()
+
+            ResetPasswordResult.UserNotFound ->
+                ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND,
+                        "Aucun compte ne correspond à cet email.",
+                    ).apply {
+                        title = "Compte introuvable"
+                        setProperty("code", "USER_NOT_FOUND")
+                    },
+                )
+
+            ResetPasswordResult.CodeExpiredOrMissing ->
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST,
+                        "Le code de réinitialisation a expiré. Merci de faire une nouvelle demande.",
+                    ).apply {
+                        title = "Code expiré"
+                        setProperty("code", "RESET_CODE_EXPIRED")
+                    },
+                )
+
+            ResetPasswordResult.InvalidCode ->
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST,
+                        "Le code de réinitialisation est incorrect.",
+                    ).apply {
+                        title = "Code invalide"
+                        setProperty("code", "INVALID_RESET_CODE")
+                    },
+                )
+
+            is ResetPasswordResult.InvalidPassword ->
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST,
+                        result.reasons.joinToString(" "),
+                    ).apply {
+                        title = "Mot de passe invalide"
+                        setProperty("code", "INVALID_PASSWORD")
                     },
                 )
         }

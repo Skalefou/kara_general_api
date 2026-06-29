@@ -14,4 +14,6 @@ interface FirebaseAuthGateway {
     fun createUser(email: Email, plainPassword: String): FirebaseUserId
 
     fun deleteUser(firebaseUserId: FirebaseUserId)
+
+    fun updatePassword(firebaseUserId: FirebaseUserId, plainPassword: String)
 }

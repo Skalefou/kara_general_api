@@ -21,6 +21,8 @@ data class User(
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
 
+    fun changePassword(hashedPassword: HashedPassword): User = copy(hashedPassword = hashedPassword)
+
     companion object {
         fun register(
             email: Email,

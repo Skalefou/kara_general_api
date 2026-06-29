@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.user
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
+import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -74,6 +75,11 @@ class UserRepositoryAdapter(
     override fun markEmailVerified(id: UserId) {
         val sql = "UPDATE users SET email_verified = true WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value))
+    }
+
+    override fun updatePassword(id: UserId, hashedPassword: HashedPassword) {
+        val sql = "UPDATE users SET password_hash = :passwordHash WHERE id = :id"
+        jdbc.update(sql, mapOf("id" to id.value, "passwordHash" to hashedPassword.value))
     }
 
     override fun anonymize(id: UserId) {
