@@ -11,5 +11,9 @@ interface UserRepository {
 
     fun findByEmail(email: Email): User?
 
+    fun findById(id: UserId): User?
+
     fun markEmailVerified(id: UserId)
+
+    fun anonymize(id: UserId)
 }

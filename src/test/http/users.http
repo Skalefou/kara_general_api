@@ -1,0 +1,124 @@
+### Variables
+@host = http://localhost:8080
+
+### ÉTAPE 1 — Inscrire un compte dédié aux tests de suppression
+### Inscription du compte test
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "delete-me@example.com",
+  "password": "D3l3t3M3!",
+  "firstName": "Test",
+  "lastName": "Suppression",
+  "phoneNumber": "+33600000001",
+  "birthDate": "2000-01-01"
+}
+
+> {%
+client.test("Status is 201 CREATED", function() {
+  client.assert(response.status === 201, "Expected 201, got " + response.status);
+});
+%}
+
+### Lecture du code de vérification depuis Redis -> stocke dans {{verificationCode}}
+GET {{host}}/api/v1/test/auth/verification-code?email=delete-me@example.com
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("Code is present in Redis", function() {
+  client.assert(!!response.body.code, "Code absent de Redis — l'inscription a-t-elle bien été faite ?");
+});
+client.global.set("verificationCode", response.body.code);
+%}
+
+
+### Vérification email avec le code récupéré -> stocke le token dans {{token}}
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "delete-me@example.com",
+  "code": "{{verificationCode}}"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("Body contains accessToken", function() {
+  client.assert(!!response.body.accessToken, "Missing accessToken");
+});
+client.global.set("token", response.body.accessToken);
+%}m
+
+### Sans authentification -> 401
+DELETE {{host}}/api/v1/users/me
+Content-Type: application/json
+
+{
+  "password": "D3l3t3M3!"
+}
+
+> {%
+client.test("Status is 401 UNAUTHORIZED", function() {
+  client.assert(response.status === 401, "Expected 401, got " + response.status);
+});
+%}
+
+### Mot de passe incorrect -> 401 INVALID_PASSWORD
+DELETE {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "password": "MauvaisMotDePasse1!"
+}
+
+> {%
+client.test("Status is 401 UNAUTHORIZED", function() {
+  client.assert(response.status === 401, "Expected 401, got " + response.status);
+});
+client.test("Body contains INVALID_PASSWORD code", function() {
+  client.assert(response.body.code === "INVALID_PASSWORD", "Unexpected code: " + response.body.code);
+});
+%}
+
+### Suppression réussie -> 204 NO_CONTENT
+DELETE {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "password": "D3l3t3M3!"
+}
+
+> {%
+client.test("Status is 204 NO_CONTENT", function() {
+  client.assert(response.status === 204, "Expected 204, got " + response.status);
+});
+client.test("Body is empty", function() {
+  client.assert(!response.body || response.body === "", "Expected empty body");
+});
+%}
+
+### Deuxième tentative après suppression (compte anonymisé) -> 404
+### Le JWT est encore valide mais le compte n'existe plus dans findById (deleted_at IS NOT NULL)
+DELETE {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "password": "D3l3t3M3!"
+}
+
+> {%
+client.test("Status is 404 NOT_FOUND", function() {
+  client.assert(response.status === 404, "Expected 404, got " + response.status);
+});
+client.test("Body contains USER_NOT_FOUND code", function() {
+  client.assert(response.body.code === "USER_NOT_FOUND", "Unexpected code: " + response.body.code);
+});
+%}

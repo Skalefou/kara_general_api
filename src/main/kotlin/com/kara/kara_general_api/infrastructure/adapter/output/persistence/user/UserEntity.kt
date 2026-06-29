@@ -14,24 +14,26 @@ class UserEntity(
     @Id
     @Column(columnDefinition = "uuid")
     var id: UUID = UUID.randomUUID(),
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, columnDefinition = "varchar(255)")
     var email: String,
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash", nullable = false, columnDefinition = "varchar(255)")
     var passwordHash: String,
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "first_name", nullable = false, columnDefinition = "varchar(100)")
     var firstName: String,
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "last_name", nullable = false, columnDefinition = "varchar(100)")
     var lastName: String,
-    @Column(name = "phone_number", nullable = false)
+    @Column(name = "phone_number", nullable = false, columnDefinition = "varchar(20)")
     var phoneNumber: String,
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date", nullable = false, columnDefinition = "date")
     var birthDate: LocalDate,
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(50)")
     var role: String,
-    @Column(name = "firebase_uid", nullable = false, unique = true)
+    @Column(name = "firebase_uid", nullable = false, unique = true, columnDefinition = "varchar(128)")
     var firebaseUid: String,
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
     var createdAt: Instant = Instant.now(),
-    @Column(name = "email_verified", nullable = false)
+    @Column(name = "email_verified", nullable = false, columnDefinition = "boolean")
     var emailVerified: Boolean = false,
+    @Column(name = "deleted_at", columnDefinition = "timestamptz")
+    var deletedAt: Instant? = null,
 )

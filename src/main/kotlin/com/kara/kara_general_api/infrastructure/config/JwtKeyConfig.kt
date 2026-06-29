@@ -28,4 +28,8 @@ class JwtKeyConfig {
         val keySpec = X509EncodedKeySpec(Base64.getDecoder().decode(base64PublicKey))
         return KeyFactory.getInstance("RSA").generatePublic(keySpec) as RSAPublicKey
     }
+
+    @Bean
+    fun jwtAuthenticationFilter(jwtPublicKey: RSAPublicKey): JwtAuthenticationFilter =
+        JwtAuthenticationFilter(jwtPublicKey)
 }

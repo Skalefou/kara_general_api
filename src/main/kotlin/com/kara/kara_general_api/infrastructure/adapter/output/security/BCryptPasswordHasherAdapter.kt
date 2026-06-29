@@ -11,4 +11,7 @@ class BCryptPasswordHasherAdapter(
 ) : PasswordHasher {
     override fun hash(plainPassword: String): HashedPassword =
         HashedPassword(requireNotNull(passwordEncoder.encode(plainPassword)))
+
+    override fun matches(plainPassword: String, hashedPassword: HashedPassword): Boolean =
+        passwordEncoder.matches(plainPassword, hashedPassword.value)
 }

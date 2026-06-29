@@ -22,4 +22,17 @@ class SmtpEmailAdapter(
         helper.setText("<p>Votre code de vérification est : <strong>$code</strong></p>", true)
         mailSender.send(message)
     }
+
+    override fun sendAccountDeletionConfirmation(email: Email) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Votre compte Kara a été supprimé")
+        helper.setText(
+            "<p>Votre compte a bien été supprimé. Toutes vos données personnelles ont été effacées.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
 }

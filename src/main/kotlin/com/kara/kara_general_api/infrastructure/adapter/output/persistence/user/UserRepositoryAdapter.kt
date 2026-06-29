@@ -59,8 +59,44 @@ class UserRepositoryAdapter(
         return jdbc.query(sql, mapOf("email" to email.value), rowMapper).firstOrNull()
     }
 
+    override fun findById(id: UserId): User? {
+        val sql =
+            """
+            SELECT id, email, password_hash, first_name, last_name, phone_number,
+                   birth_date, role, firebase_uid, created_at, email_verified
+            FROM users
+            WHERE id = :id
+              AND deleted_at IS NULL
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
+    }
+
     override fun markEmailVerified(id: UserId) {
         val sql = "UPDATE users SET email_verified = true WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value))
+    }
+
+    override fun anonymize(id: UserId) {
+        val sql =
+            """
+            UPDATE users SET
+                email          = :anonymizedEmail,
+                password_hash  = 'DELETED',
+                first_name     = 'Compte',
+                last_name      = 'Supprimé',
+                phone_number   = '0000000000',
+                birth_date     = '1970-01-01',
+                firebase_uid   = :anonymizedFirebaseUid,
+                deleted_at     = NOW(),
+                email_verified = false
+            WHERE id = :id
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("anonymizedEmail", "deleted_${id.value}@kara.deleted")
+                .addValue("anonymizedFirebaseUid", "DELETED_${id.value}"),
+        )
     }
 }
