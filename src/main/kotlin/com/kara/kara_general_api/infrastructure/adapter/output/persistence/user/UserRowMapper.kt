@@ -26,5 +26,6 @@ class UserRowMapper : RowMapper<User> {
             firebaseUid = rs.getString("firebase_uid"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             emailVerified = rs.getBoolean("email_verified"),
+            deletedAt = rs.getTimestamp("deleted_at")?.toInstant(),
         )
 }

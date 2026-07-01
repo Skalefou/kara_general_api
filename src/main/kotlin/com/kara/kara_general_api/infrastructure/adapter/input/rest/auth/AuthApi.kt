@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
@@ -41,6 +42,35 @@ interface AuthApi {
     @PostMapping("/register")
     fun register(
         @Valid @RequestBody request: RegisterRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Se connecter",
+        description = "Authentifie un utilisateur via email ou téléphone (`isEmail`) et mot de passe, et délivre un access token JWT.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Authentification réussie, access token délivré"),
+            ApiResponse(
+                responseCode = "401",
+                description = "Identifiant ou mot de passe incorrect",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Aucun compte ne correspond à cet identifiant",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "410",
+                description = "Le compte a été supprimé",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/login")
+    fun login(
+        @Valid @RequestBody request: LoginRequest,
     ): ResponseEntity<Any>
 
     @Operation(

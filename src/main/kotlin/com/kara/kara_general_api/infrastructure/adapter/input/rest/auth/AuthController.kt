@@ -4,6 +4,10 @@ import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordCommand
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
+import com.kara.kara_general_api.domain.port.input.auth.LoginCommand
+import com.kara.kara_general_api.domain.port.input.auth.LoginIdentifier
+import com.kara.kara_general_api.domain.port.input.auth.LoginResult
+import com.kara.kara_general_api.domain.port.input.auth.LoginUseCase
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
@@ -14,11 +18,14 @@ import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -29,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val registerUseCase: RegisterUseCase,
+    private val loginUseCase: LoginUseCase,
     private val verifyEmailUseCase: VerifyEmailUseCase,
     private val forgotPasswordUseCase: ForgotPasswordUseCase,
     private val resetPasswordUseCase: ResetPasswordUseCase,
@@ -75,6 +83,60 @@ class AuthController(
                     ).apply {
                         title = "Mot de passe invalide"
                         setProperty("code", "INVALID_PASSWORD")
+                    },
+                )
+        }
+    }
+
+    override fun login(request: LoginRequest): ResponseEntity<Any> {
+        val identifier =
+            if (request.isEmail) {
+                LoginIdentifier.ByEmail(Email(request.identifiant))
+            } else {
+                LoginIdentifier.ByPhoneNumber(PhoneNumber(request.identifiant))
+            }
+        val command = LoginCommand(identifier = identifier, password = request.password)
+
+        return when (val result = loginUseCase.login(command)) {
+            is LoginResult.Success ->
+                ResponseEntity.ok(
+                    LoginResponse(
+                        accessToken = result.accessToken.value,
+                        expiresIn = result.accessToken.expiresInSeconds,
+                        user = UserResponse.from(result.user),
+                    ),
+                )
+
+            LoginResult.UserNotFound ->
+                ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND,
+                        "Aucun compte ne correspond à cet identifiant.",
+                    ).apply {
+                        title = "Compte introuvable"
+                        setProperty("code", "USER_NOT_FOUND")
+                    },
+                )
+
+            LoginResult.InvalidCredentials ->
+                ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.UNAUTHORIZED,
+                        "Identifiant ou mot de passe incorrect.",
+                    ).apply {
+                        title = "Identifiants invalides"
+                        setProperty("code", "INVALID_CREDENTIALS")
+                    },
+                )
+
+            LoginResult.AccountDeleted ->
+                ResponseEntity.status(HttpStatus.GONE).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.GONE,
+                        "Ce compte a été supprimé.",
+                    ).apply {
+                        title = "Compte supprimé"
+                        setProperty("code", "ACCOUNT_DELETED")
                     },
                 )
         }

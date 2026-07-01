@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
+import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 
 interface UserRepository {
     fun existsByEmail(email: Email): Boolean
@@ -11,6 +12,8 @@ interface UserRepository {
     fun save(user: User): User
 
     fun findByEmail(email: Email): User?
+
+    fun findByPhoneNumber(phoneNumber: PhoneNumber): User?
 
     fun findById(id: UserId): User?
 

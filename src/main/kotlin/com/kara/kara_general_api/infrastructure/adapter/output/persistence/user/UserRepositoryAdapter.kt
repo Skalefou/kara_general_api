@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
+import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -53,18 +54,29 @@ class UserRepositoryAdapter(
         val sql =
             """
             SELECT id, email, password_hash, first_name, last_name, phone_number,
-                   birth_date, role, firebase_uid, created_at, email_verified
+                   birth_date, role, firebase_uid, created_at, email_verified, deleted_at
             FROM users
             WHERE email = :email
             """.trimIndent()
         return jdbc.query(sql, mapOf("email" to email.value), rowMapper).firstOrNull()
     }
 
+    override fun findByPhoneNumber(phoneNumber: PhoneNumber): User? {
+        val sql =
+            """
+            SELECT id, email, password_hash, first_name, last_name, phone_number,
+                   birth_date, role, firebase_uid, created_at, email_verified, deleted_at
+            FROM users
+            WHERE phone_number = :phoneNumber
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("phoneNumber" to phoneNumber.value), rowMapper).firstOrNull()
+    }
+
     override fun findById(id: UserId): User? {
         val sql =
             """
             SELECT id, email, password_hash, first_name, last_name, phone_number,
-                   birth_date, role, firebase_uid, created_at, email_verified
+                   birth_date, role, firebase_uid, created_at, email_verified, deleted_at
             FROM users
             WHERE id = :id
               AND deleted_at IS NULL

@@ -1,0 +1,13 @@
+package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto
+
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
+import io.swagger.v3.oas.annotations.media.Schema
+
+data class LoginResponse(
+    @field:Schema(description = "Access token JWT (RS256)")
+    val accessToken: String,
+    @field:Schema(description = "Durée de validité du token, en secondes", example = "900")
+    val expiresIn: Long,
+    @field:Schema(description = "Profil de l'utilisateur connecté")
+    val user: UserResponse,
+)

@@ -8,6 +8,8 @@ import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordResult
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
+import com.kara.kara_general_api.domain.port.input.auth.LoginResult
+import com.kara.kara_general_api.domain.port.input.auth.LoginUseCase
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
 import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordResult
@@ -42,6 +44,9 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var registerUseCase: RegisterUseCase
+
+    @MockkBean
+    private lateinit var loginUseCase: LoginUseCase
 
     @MockkBean
     private lateinit var verifyEmailUseCase: VerifyEmailUseCase
@@ -101,6 +106,86 @@ class AuthControllerTest {
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"))
+    }
+
+    private val user =
+        User(
+            id = UserId(UUID.randomUUID()),
+            email = Email("client@kara.app"),
+            hashedPassword = HashedPassword("hashed"),
+            firstName = "Marie",
+            lastName = "Dupont",
+            phoneNumber = PhoneNumber("0612345678"),
+            birthDate = LocalDate.of(1995, 5, 20),
+            role = UserRole.CLIENT,
+            firebaseUid = "firebase-uid",
+            createdAt = Instant.now(),
+            emailVerified = true,
+        )
+
+    private val loginRequestBody =
+        """
+        {
+          "identifiant": "client@kara.app",
+          "password": "Azerty123",
+          "isEmail": true
+        }
+        """.trimIndent()
+
+    @Test
+    fun `should return 200 with access token and user when login succeeds`() {
+        every { loginUseCase.login(any()) } returns
+            LoginResult.Success(user, AccessToken(value = "jwt-token", expiresInSeconds = 900))
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").value("jwt-token"))
+            .andExpect(jsonPath("$.expiresIn").value(900))
+            .andExpect(jsonPath("$.user.email").value("client@kara.app"))
+            .andExpect(jsonPath("$.user.password_hash").doesNotExist())
+    }
+
+    @Test
+    fun `should return 404 when no account matches the login identifier`() {
+        every { loginUseCase.login(any()) } returns LoginResult.UserNotFound
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+    }
+
+    @Test
+    fun `should return 401 when login credentials are invalid`() {
+        every { loginUseCase.login(any()) } returns LoginResult.InvalidCredentials
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+    }
+
+    @Test
+    fun `should return 410 when the account has been deleted`() {
+        every { loginUseCase.login(any()) } returns LoginResult.AccountDeleted
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isGone)
+            .andExpect(jsonPath("$.code").value("ACCOUNT_DELETED"))
     }
 
     private val verifyEmailRequestBody =

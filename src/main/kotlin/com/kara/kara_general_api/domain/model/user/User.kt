@@ -18,6 +18,7 @@ data class User(
     val firebaseUid: String,
     val createdAt: Instant,
     val emailVerified: Boolean = false,
+    val deletedAt: Instant? = null,
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
 
