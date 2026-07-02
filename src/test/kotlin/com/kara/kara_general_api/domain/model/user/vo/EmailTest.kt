@@ -17,4 +17,11 @@ class EmailTest {
     fun `should throw when format is invalid`() {
         assertFailsWith<IllegalArgumentException> { Email("not-an-email") }
     }
+
+    @Test
+    fun `should normalize email to lowercase and trimmed`() {
+        val email = Email("  Client@Kara.App  ")
+
+        assertEquals("client@kara.app", email.value)
+    }
 }

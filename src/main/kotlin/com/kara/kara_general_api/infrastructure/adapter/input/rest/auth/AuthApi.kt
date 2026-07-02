@@ -2,11 +2,16 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.common.dto.ApiErrorResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -26,7 +31,11 @@ interface AuthApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "201", description = "Compte créé avec succès"),
+            ApiResponse(
+                responseCode = "201",
+                description = "Compte créé avec succès",
+                content = [Content(schema = Schema(implementation = RegisterResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "400",
                 description = "Mot de passe invalide",
@@ -50,21 +59,79 @@ interface AuthApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Authentification réussie, access token délivré"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Authentification réussie, access token délivré",
+                content = [Content(schema = Schema(implementation = LoginResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "401",
                 description = "Identifiant ou mot de passe incorrect",
-                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "INVALID_CREDENTIALS",
+                                value = """
+                                    {
+                                      "title": "Identifiants invalides",
+                                      "status": 401,
+                                      "detail": "Identifiant ou mot de passe incorrect.",
+                                      "instance": "/api/v1/auth/login",
+                                      "code": "INVALID_CREDENTIALS"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
             ),
             ApiResponse(
                 responseCode = "404",
                 description = "Aucun compte ne correspond à cet identifiant",
-                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "USER_NOT_FOUND",
+                                value = """
+                                    {
+                                      "title": "Compte introuvable",
+                                      "status": 404,
+                                      "detail": "Aucun compte ne correspond à cet identifiant.",
+                                      "instance": "/api/v1/auth/login",
+                                      "code": "USER_NOT_FOUND"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
             ),
             ApiResponse(
                 responseCode = "410",
                 description = "Le compte a été supprimé",
-                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "ACCOUNT_DELETED",
+                                value = """
+                                    {
+                                      "title": "Compte supprimé",
+                                      "status": 410,
+                                      "detail": "Ce compte a été supprimé.",
+                                      "instance": "/api/v1/auth/login",
+                                      "code": "ACCOUNT_DELETED"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
             ),
         ],
     )
@@ -79,7 +146,11 @@ interface AuthApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Email vérifié, access token délivré"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Email vérifié, access token délivré",
+                content = [Content(schema = Schema(implementation = VerifyEmailResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "400",
                 description = "Code invalide ou expiré",
