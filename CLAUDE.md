@@ -679,11 +679,16 @@ C'est le seul usage autorisé de JPA dans ce projet — jamais pour des requête
 spring:
   jpa:
     hibernate:
-      ddl-auto: create          # Recrée les tables à chaque démarrage
+      ddl-auto: update          # Met à jour le schéma sans effacer les données existantes
     show-sql: false             # Activer ponctuellement pour debug, jamais en continu
   datasource:
     url: jdbc:postgresql://localhost:5432/kara_dev
 ```
+
+> `update` (et non `create`) est utilisé pour que les données de dev survivent aux
+> redémarrages. Si une migration de schéma incompatible bloque le démarrage
+> (changement de type de colonne, contrainte non satisfaite par les données
+> existantes), il faut réinitialiser manuellement la base locale.
 
 #### Environnement de production (`application-prod.yml`)
 
