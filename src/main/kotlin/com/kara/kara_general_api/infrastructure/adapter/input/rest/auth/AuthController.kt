@@ -8,6 +8,11 @@ import com.kara.kara_general_api.domain.port.input.auth.LoginCommand
 import com.kara.kara_general_api.domain.port.input.auth.LoginIdentifier
 import com.kara.kara_general_api.domain.port.input.auth.LoginResult
 import com.kara.kara_general_api.domain.port.input.auth.LoginUseCase
+import com.kara.kara_general_api.domain.port.input.auth.LogoutCommand
+import com.kara.kara_general_api.domain.port.input.auth.LogoutUseCase
+import com.kara.kara_general_api.domain.port.input.auth.RefreshTokenCommand
+import com.kara.kara_general_api.domain.port.input.auth.RefreshTokenResult
+import com.kara.kara_general_api.domain.port.input.auth.RefreshTokenUseCase
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
@@ -20,6 +25,9 @@ import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LogoutRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
@@ -40,6 +48,8 @@ class AuthController(
     private val verifyEmailUseCase: VerifyEmailUseCase,
     private val forgotPasswordUseCase: ForgotPasswordUseCase,
     private val resetPasswordUseCase: ResetPasswordUseCase,
+    private val refreshTokenUseCase: RefreshTokenUseCase,
+    private val logoutUseCase: LogoutUseCase,
 ) : AuthApi {
 
     override fun register(request: RegisterRequest): ResponseEntity<Any> {
@@ -103,6 +113,8 @@ class AuthController(
                     LoginResponse(
                         accessToken = result.accessToken.value,
                         expiresIn = result.accessToken.expiresInSeconds,
+                        refreshToken = result.refreshToken.value,
+                        refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
                         user = UserResponse.from(result.user),
                     ),
                 )
@@ -151,6 +163,8 @@ class AuthController(
                     VerifyEmailResponse(
                         accessToken = result.accessToken.value,
                         expiresIn = result.accessToken.expiresInSeconds,
+                        refreshToken = result.refreshToken.value,
+                        refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
                     ),
                 )
 
@@ -261,5 +275,37 @@ class AuthController(
                     },
                 )
         }
+    }
+
+    override fun refresh(request: RefreshTokenRequest): ResponseEntity<Any> {
+        val command = RefreshTokenCommand(refreshToken = request.refreshToken)
+
+        return when (val result = refreshTokenUseCase.refresh(command)) {
+            is RefreshTokenResult.Success ->
+                ResponseEntity.ok(
+                    RefreshTokenResponse(
+                        accessToken = result.accessToken.value,
+                        expiresIn = result.accessToken.expiresInSeconds,
+                        refreshToken = result.refreshToken.value,
+                        refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
+                    ),
+                )
+
+            RefreshTokenResult.InvalidToken ->
+                ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.UNAUTHORIZED,
+                        "Le refresh token est invalide, expiré ou a déjà été utilisé.",
+                    ).apply {
+                        title = "Refresh token invalide"
+                        setProperty("code", "INVALID_REFRESH_TOKEN")
+                    },
+                )
+        }
+    }
+
+    override fun logout(request: LogoutRequest): ResponseEntity<Any> {
+        logoutUseCase.logout(LogoutCommand(refreshToken = request.refreshToken))
+        return ResponseEntity.noContent().build()
     }
 }

@@ -2,6 +2,7 @@ package com.kara.kara_general_api.domain.port.input.auth
 
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.port.output.AccessToken
+import com.kara.kara_general_api.domain.port.output.RefreshToken
 
 interface VerifyEmailUseCase {
     fun verify(command: VerifyEmailCommand): VerifyEmailResult
@@ -13,7 +14,7 @@ data class VerifyEmailCommand(
 )
 
 sealed interface VerifyEmailResult {
-    data class Success(val accessToken: AccessToken) : VerifyEmailResult
+    data class Success(val accessToken: AccessToken, val refreshToken: RefreshToken) : VerifyEmailResult
 
     data object UserNotFound : VerifyEmailResult
 

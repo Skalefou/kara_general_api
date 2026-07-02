@@ -10,6 +10,9 @@ import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordResult
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.LoginResult
 import com.kara.kara_general_api.domain.port.input.auth.LoginUseCase
+import com.kara.kara_general_api.domain.port.input.auth.LogoutUseCase
+import com.kara.kara_general_api.domain.port.input.auth.RefreshTokenResult
+import com.kara.kara_general_api.domain.port.input.auth.RefreshTokenUseCase
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
 import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordResult
@@ -17,6 +20,7 @@ import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
 import com.kara.kara_general_api.domain.port.output.AccessToken
+import com.kara.kara_general_api.domain.port.output.RefreshToken
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
@@ -56,6 +60,12 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var resetPasswordUseCase: ResetPasswordUseCase
+
+    @MockkBean
+    private lateinit var refreshTokenUseCase: RefreshTokenUseCase
+
+    @MockkBean
+    private lateinit var logoutUseCase: LogoutUseCase
 
     private val requestBody =
         """
@@ -135,7 +145,11 @@ class AuthControllerTest {
     @Test
     fun `should return 200 with access token and user when login succeeds`() {
         every { loginUseCase.login(any()) } returns
-            LoginResult.Success(user, AccessToken(value = "jwt-token", expiresInSeconds = 900))
+            LoginResult.Success(
+                user,
+                AccessToken(value = "jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+            )
 
         mockMvc.perform(
             post("/api/v1/auth/login")
@@ -145,6 +159,8 @@ class AuthControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").value("jwt-token"))
             .andExpect(jsonPath("$.expiresIn").value(900))
+            .andExpect(jsonPath("$.refreshToken").value("refresh-token-value"))
+            .andExpect(jsonPath("$.refreshTokenExpiresIn").value(604800))
             .andExpect(jsonPath("$.user.email").value("client@kara.app"))
             .andExpect(jsonPath("$.user.password_hash").doesNotExist())
     }
@@ -199,7 +215,10 @@ class AuthControllerTest {
     @Test
     fun `should return 200 with access token when verification code is valid`() {
         every { verifyEmailUseCase.verify(any()) } returns
-            VerifyEmailResult.Success(AccessToken(value = "jwt-token", expiresInSeconds = 900))
+            VerifyEmailResult.Success(
+                AccessToken(value = "jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+            )
 
         mockMvc.perform(
             post("/api/v1/auth/verify-email")
@@ -209,6 +228,8 @@ class AuthControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").value("jwt-token"))
             .andExpect(jsonPath("$.expiresIn").value(900))
+            .andExpect(jsonPath("$.refreshToken").value("refresh-token-value"))
+            .andExpect(jsonPath("$.refreshTokenExpiresIn").value(604800))
     }
 
     @Test
@@ -309,5 +330,49 @@ class AuthControllerTest {
         )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+    }
+
+    @Test
+    fun `should return 200 with new tokens when refresh succeeds`() {
+        every { refreshTokenUseCase.refresh(any()) } returns
+            RefreshTokenResult.Success(
+                AccessToken(value = "new-jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "new-refresh-token", expiresInSeconds = 604800),
+            )
+
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"refreshToken": "old-refresh-token"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").value("new-jwt-token"))
+            .andExpect(jsonPath("$.expiresIn").value(900))
+            .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"))
+            .andExpect(jsonPath("$.refreshTokenExpiresIn").value(604800))
+    }
+
+    @Test
+    fun `should return 401 when refresh token is invalid`() {
+        every { refreshTokenUseCase.refresh(any()) } returns RefreshTokenResult.InvalidToken
+
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"refreshToken": "unknown-token"}"""),
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
+    }
+
+    @Test
+    fun `should return 204 when logout is called`() {
+        every { logoutUseCase.logout(any()) } returns Unit
+
+        mockMvc.perform(
+            post("/api/v1/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"refreshToken": "some-refresh-token"}"""),
+        ).andExpect(status().isNoContent)
     }
 }

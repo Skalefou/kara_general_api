@@ -11,6 +11,8 @@ import com.kara.kara_general_api.domain.port.input.auth.LoginIdentifier
 import com.kara.kara_general_api.domain.port.input.auth.LoginResult
 import com.kara.kara_general_api.domain.port.output.AccessToken
 import com.kara.kara_general_api.domain.port.output.PasswordHasher
+import com.kara.kara_general_api.domain.port.output.RefreshToken
+import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.TokenService
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import io.mockk.every
@@ -27,7 +29,8 @@ class LoginServiceTest {
     private val userRepository = mockk<UserRepository>()
     private val passwordHasher = mockk<PasswordHasher>()
     private val tokenService = mockk<TokenService>()
-    private val sut = LoginService(userRepository, passwordHasher, tokenService)
+    private val refreshTokenRepository = mockk<RefreshTokenRepository>()
+    private val sut = LoginService(userRepository, passwordHasher, tokenService, refreshTokenRepository)
 
     private val email = Email("client@kara.app")
     private val phoneNumber = PhoneNumber("0612345678")
@@ -53,11 +56,13 @@ class LoginServiceTest {
         every { userRepository.findByEmail(email) } returns user
         every { passwordHasher.matches(command.password, user.hashedPassword) } returns true
         every { tokenService.generateAccessToken(user) } returns AccessToken("jwt-token", 900)
+        every { refreshTokenRepository.issue(user.id) } returns RefreshToken("refresh-token-value", 604800)
 
         val result = sut.login(command)
 
         assertIs<LoginResult.Success>(result)
         assertEquals("jwt-token", result.accessToken.value)
+        assertEquals("refresh-token-value", result.refreshToken.value)
         assertEquals(user, result.user)
     }
 
@@ -67,6 +72,7 @@ class LoginServiceTest {
         every { userRepository.findByPhoneNumber(phoneNumber) } returns user
         every { passwordHasher.matches(command.password, user.hashedPassword) } returns true
         every { tokenService.generateAccessToken(user) } returns AccessToken("jwt-token", 900)
+        every { refreshTokenRepository.issue(user.id) } returns RefreshToken("refresh-token-value", 604800)
 
         val result = sut.login(command)
 

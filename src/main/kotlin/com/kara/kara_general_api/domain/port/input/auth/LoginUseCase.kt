@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.output.AccessToken
+import com.kara.kara_general_api.domain.port.output.RefreshToken
 
 sealed interface LoginIdentifier {
     data class ByEmail(val email: Email) : LoginIdentifier
@@ -17,7 +18,7 @@ data class LoginCommand(
 )
 
 sealed interface LoginResult {
-    data class Success(val user: User, val accessToken: AccessToken) : LoginResult
+    data class Success(val user: User, val accessToken: AccessToken, val refreshToken: RefreshToken) : LoginResult
 
     data object UserNotFound : LoginResult
 

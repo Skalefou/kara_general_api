@@ -3,6 +3,9 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LogoutRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
@@ -209,5 +212,62 @@ interface AuthApi {
     @PostMapping("/reset-password")
     fun resetPassword(
         @Valid @RequestBody request: ResetPasswordRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Renouveler l'access token",
+        description = "Échange un refresh token valide contre un nouveau couple access token / refresh token " +
+            "(rotation : l'ancien refresh token est invalidé).",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Nouveau couple de tokens délivré",
+                content = [Content(schema = Schema(implementation = RefreshTokenResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Refresh token invalide, expiré ou déjà utilisé",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "INVALID_REFRESH_TOKEN",
+                                value = """
+                                    {
+                                      "title": "Refresh token invalide",
+                                      "status": 401,
+                                      "detail": "Le refresh token est invalide, expiré ou a déjà été utilisé.",
+                                      "instance": "/api/v1/auth/refresh",
+                                      "code": "INVALID_REFRESH_TOKEN"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @PostMapping("/refresh")
+    fun refresh(
+        @Valid @RequestBody request: RefreshTokenRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Se déconnecter",
+        description = "Révoque le refresh token fourni. Retourne toujours 204, y compris si le token est déjà " +
+            "invalide ou inconnu (anti-énumération).",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Refresh token révoqué (ou déjà invalide/inconnu, silencieusement ignoré)"),
+        ],
+    )
+    @PostMapping("/logout")
+    fun logout(
+        @Valid @RequestBody request: LogoutRequest,
     ): ResponseEntity<Any>
 }

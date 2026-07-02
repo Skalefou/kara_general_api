@@ -10,6 +10,8 @@ import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.output.AccessToken
 import com.kara.kara_general_api.domain.port.output.EmailVerificationCodeRepository
+import com.kara.kara_general_api.domain.port.output.RefreshToken
+import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.TokenService
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import io.mockk.every
@@ -27,7 +29,8 @@ class VerifyEmailServiceTest {
     private val userRepository = mockk<UserRepository>()
     private val emailVerificationCodeRepository = mockk<EmailVerificationCodeRepository>()
     private val tokenService = mockk<TokenService>()
-    private val sut = VerifyEmailService(userRepository, emailVerificationCodeRepository, tokenService)
+    private val refreshTokenRepository = mockk<RefreshTokenRepository>()
+    private val sut = VerifyEmailService(userRepository, emailVerificationCodeRepository, tokenService, refreshTokenRepository)
 
     private val command = VerifyEmailCommand(email = Email("client@kara.app"), code = "123456")
 
@@ -53,11 +56,13 @@ class VerifyEmailServiceTest {
         every { userRepository.markEmailVerified(user.id) } returns Unit
         every { emailVerificationCodeRepository.delete(command.email) } returns Unit
         every { tokenService.generateAccessToken(any()) } returns AccessToken("jwt-token", 900)
+        every { refreshTokenRepository.issue(user.id) } returns RefreshToken("refresh-token-value", 604800)
 
         val result = sut.verify(command)
 
         assertIs<VerifyEmailResult.Success>(result)
         assertEquals("jwt-token", result.accessToken.value)
+        assertEquals("refresh-token-value", result.refreshToken.value)
         verify { userRepository.markEmailVerified(user.id) }
         verify { emailVerificationCodeRepository.delete(command.email) }
     }

@@ -8,6 +8,10 @@ data class LoginResponse(
     val accessToken: String,
     @field:Schema(description = "Durée de validité du token, en secondes", example = "900")
     val expiresIn: Long,
+    @field:Schema(description = "Refresh token opaque à conserver pour renouveler l'access token")
+    val refreshToken: String,
+    @field:Schema(description = "Durée de validité du refresh token, en secondes", example = "604800")
+    val refreshTokenExpiresIn: Long,
     @field:Schema(description = "Profil de l'utilisateur connecté")
     val user: UserResponse,
 )

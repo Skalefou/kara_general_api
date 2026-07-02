@@ -5,6 +5,7 @@ import com.kara.kara_general_api.domain.port.input.auth.LoginIdentifier
 import com.kara.kara_general_api.domain.port.input.auth.LoginResult
 import com.kara.kara_general_api.domain.port.input.auth.LoginUseCase
 import com.kara.kara_general_api.domain.port.output.PasswordHasher
+import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.TokenService
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
@@ -14,6 +15,7 @@ class LoginService(
     private val userRepository: UserRepository,
     private val passwordHasher: PasswordHasher,
     private val tokenService: TokenService,
+    private val refreshTokenRepository: RefreshTokenRepository,
 ) : LoginUseCase {
 
     override fun login(command: LoginCommand): LoginResult {
@@ -32,6 +34,7 @@ class LoginService(
         }
 
         val accessToken = tokenService.generateAccessToken(user)
-        return LoginResult.Success(user, accessToken)
+        val refreshToken = refreshTokenRepository.issue(user.id)
+        return LoginResult.Success(user, accessToken, refreshToken)
     }
 }

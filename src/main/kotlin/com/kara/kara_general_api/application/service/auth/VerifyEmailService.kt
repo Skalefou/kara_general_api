@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
 import com.kara.kara_general_api.domain.port.output.EmailVerificationCodeRepository
+import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.TokenService
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
@@ -13,6 +14,7 @@ class VerifyEmailService(
     private val userRepository: UserRepository,
     private val emailVerificationCodeRepository: EmailVerificationCodeRepository,
     private val tokenService: TokenService,
+    private val refreshTokenRepository: RefreshTokenRepository,
 ) : VerifyEmailUseCase {
 
     override fun verify(command: VerifyEmailCommand): VerifyEmailResult {
@@ -31,7 +33,9 @@ class VerifyEmailService(
         userRepository.markEmailVerified(user.id)
         emailVerificationCodeRepository.delete(command.email)
 
-        val accessToken = tokenService.generateAccessToken(user.verifyEmail())
-        return VerifyEmailResult.Success(accessToken)
+        val verifiedUser = user.verifyEmail()
+        val accessToken = tokenService.generateAccessToken(verifiedUser)
+        val refreshToken = refreshTokenRepository.issue(verifiedUser.id)
+        return VerifyEmailResult.Success(accessToken, refreshToken)
     }
 }
