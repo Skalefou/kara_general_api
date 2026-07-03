@@ -1,8 +1,10 @@
 package com.kara.kara_general_api.infrastructure.config
 
+import com.kara.kara_general_api.domain.model.user.UserRole
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.invoke
@@ -31,6 +33,10 @@ class SecurityConfig {
                 authorize("/swagger-ui/**", permitAll)
                 authorize("/swagger-ui.html", permitAll)
                 authorize("/v3/api-docs/**", permitAll)
+                authorize(HttpMethod.GET, "/api/v1/rooms/**", permitAll)
+                authorize(HttpMethod.POST, "/api/v1/rooms", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.PATCH, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.DELETE, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {
