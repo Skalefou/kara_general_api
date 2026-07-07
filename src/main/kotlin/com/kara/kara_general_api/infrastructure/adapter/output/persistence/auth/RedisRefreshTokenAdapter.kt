@@ -23,17 +23,32 @@ class RedisRefreshTokenAdapter(
     override fun issue(userId: UserId): RefreshToken {
         val value = generateTokenValue()
         redisTemplate.opsForValue().set(key(value), userId.value.toString(), REFRESH_TOKEN_TTL)
+        // Index inverse userId -> tokens, pour pouvoir tout révoquer d'un coup.
+        redisTemplate.opsForSet().add(userKey(userId.value.toString()), value)
+        redisTemplate.expire(userKey(userId.value.toString()), REFRESH_TOKEN_TTL)
         return RefreshToken(value = value, expiresInSeconds = REFRESH_TOKEN_TTL.toSeconds())
     }
 
     override fun redeem(token: String): UUID? {
         val storedUserId = redisTemplate.opsForValue().get(key(token)) ?: return null
         redisTemplate.delete(key(token))
+        redisTemplate.opsForSet().remove(userKey(storedUserId), token)
         return UUID.fromString(storedUserId)
     }
 
     override fun revoke(token: String) {
+        val storedUserId = redisTemplate.opsForValue().get(key(token))
         redisTemplate.delete(key(token))
+        if (storedUserId != null) {
+            redisTemplate.opsForSet().remove(userKey(storedUserId), token)
+        }
+    }
+
+    override fun revokeAllForUser(userId: UserId) {
+        val setKey = userKey(userId.value.toString())
+        val tokens = redisTemplate.opsForSet().members(setKey) ?: emptySet()
+        tokens.forEach { redisTemplate.delete(key(it)) }
+        redisTemplate.delete(setKey)
     }
 
     private fun generateTokenValue(): String {
@@ -43,4 +58,6 @@ class RedisRefreshTokenAdapter(
     }
 
     private fun key(token: String): String = "refresh-token:$token"
+
+    private fun userKey(userId: String): String = "refresh-tokens:user:$userId"
 }

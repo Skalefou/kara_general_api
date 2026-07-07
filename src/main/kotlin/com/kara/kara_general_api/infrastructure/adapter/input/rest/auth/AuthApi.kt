@@ -139,6 +139,41 @@ interface AuthApi {
                     ),
                 ],
             ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Compte désactivé ou mot de passe temporaire expiré",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "ACCOUNT_DEACTIVATED",
+                                value = """
+                                    {
+                                      "title": "Compte désactivé",
+                                      "status": 403,
+                                      "detail": "Ce compte a été désactivé. Contactez un administrateur.",
+                                      "instance": "/api/v1/auth/login",
+                                      "code": "ACCOUNT_DEACTIVATED"
+                                    }
+                                """,
+                            ),
+                            ExampleObject(
+                                name = "TEMP_PASSWORD_EXPIRED",
+                                value = """
+                                    {
+                                      "title": "Mot de passe temporaire expiré",
+                                      "status": 403,
+                                      "detail": "Le mot de passe temporaire a expiré. Demandez une nouvelle invitation.",
+                                      "instance": "/api/v1/auth/login",
+                                      "code": "TEMP_PASSWORD_EXPIRED"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
         ],
     )
     @PostMapping("/login")

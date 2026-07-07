@@ -20,6 +20,10 @@ class RefreshTokenService(
         val userId = refreshTokenRepository.redeem(command.refreshToken) ?: return RefreshTokenResult.InvalidToken
         val user = userRepository.findById(UserId(userId)) ?: return RefreshTokenResult.InvalidToken
 
+        if (user.deactivatedAt != null) {
+            return RefreshTokenResult.InvalidToken
+        }
+
         val accessToken = tokenService.generateAccessToken(user)
         val refreshToken = refreshTokenRepository.issue(user.id)
         return RefreshTokenResult.Success(accessToken, refreshToken)

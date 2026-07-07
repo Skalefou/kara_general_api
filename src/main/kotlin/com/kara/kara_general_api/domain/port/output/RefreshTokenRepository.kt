@@ -14,4 +14,7 @@ interface RefreshTokenRepository {
     fun redeem(token: String): UUID?
 
     fun revoke(token: String)
+
+    /** Révoque tous les refresh tokens actifs d'un utilisateur (ex. désactivation de compte). */
+    fun revokeAllForUser(userId: UserId)
 }

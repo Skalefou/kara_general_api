@@ -3,6 +3,7 @@ package com.kara.kara_general_api.application.service.admin
 import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountCommand
 import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountResult
 import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountUseCase
+import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class DeactivateAccountService(
     private val userRepository: UserRepository,
+    private val refreshTokenRepository: RefreshTokenRepository,
 ) : DeactivateAccountUseCase {
 
     @Transactional
@@ -20,6 +22,8 @@ class DeactivateAccountService(
         }
 
         userRepository.update(user.deactivate())
+        // Coupe immédiatement les sessions actives (les access tokens courants expirent sous ≤15 min).
+        refreshTokenRepository.revokeAllForUser(command.userId)
 
         return DeactivateAccountResult.Success
     }

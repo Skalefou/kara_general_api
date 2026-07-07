@@ -80,4 +80,15 @@ class RefreshTokenServiceTest {
         assertEquals(RefreshTokenResult.InvalidToken, result)
         verify(exactly = 0) { refreshTokenRepository.issue(any()) }
     }
+
+    @Test
+    fun `should return InvalidToken without issuing a new token when the account is deactivated`() {
+        every { refreshTokenRepository.redeem(command.refreshToken) } returns user.id.value
+        every { userRepository.findById(user.id) } returns user.copy(deactivatedAt = Instant.now())
+
+        val result = sut.refresh(command)
+
+        assertEquals(RefreshTokenResult.InvalidToken, result)
+        verify(exactly = 0) { refreshTokenRepository.issue(any()) }
+    }
 }

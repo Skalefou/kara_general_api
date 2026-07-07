@@ -8,6 +8,7 @@ import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountCommand
 import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountResult
+import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -23,7 +24,8 @@ import kotlin.test.assertNotNull
 class DeactivateAccountServiceTest {
 
     private val userRepository = mockk<UserRepository>(relaxed = true)
-    private val sut = DeactivateAccountService(userRepository)
+    private val refreshTokenRepository = mockk<RefreshTokenRepository>(relaxed = true)
+    private val sut = DeactivateAccountService(userRepository, refreshTokenRepository)
 
     private val userId = UserId(UUID.randomUUID())
 
@@ -52,6 +54,7 @@ class DeactivateAccountServiceTest {
 
         assertEquals(DeactivateAccountResult.Success, result)
         assertNotNull(saved.captured.deactivatedAt)
+        verify { refreshTokenRepository.revokeAllForUser(userId) }
     }
 
     @Test
@@ -62,6 +65,7 @@ class DeactivateAccountServiceTest {
 
         assertEquals(DeactivateAccountResult.UserNotFound, result)
         verify(exactly = 0) { userRepository.update(any()) }
+        verify(exactly = 0) { refreshTokenRepository.revokeAllForUser(any()) }
     }
 
     @Test
@@ -72,5 +76,6 @@ class DeactivateAccountServiceTest {
 
         assertEquals(DeactivateAccountResult.AlreadyDeactivated, result)
         verify(exactly = 0) { userRepository.update(any()) }
+        verify(exactly = 0) { refreshTokenRepository.revokeAllForUser(any()) }
     }
 }
