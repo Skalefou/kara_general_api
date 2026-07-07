@@ -298,3 +298,190 @@ client.test("Status is 204 NO_CONTENT", function() {
   client.assert(response.status === 204, "Expected 204, got " + response.status);
 });
 %}
+
+
+### ÉTAPE 3 — Inscrire un compte dédié aux tests de mise à jour du profil
+POST {{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "profile-me@example.com",
+  "password": "Pr0fil3M3!",
+  "firstName": "Test",
+  "lastName": "Profil",
+  "phoneNumber": "+33600000003",
+  "birthDate": "2000-01-01"
+}
+
+> {%
+client.test("Status is 201 CREATED", function() {
+  client.assert(response.status === 201, "Expected 201, got " + response.status);
+});
+%}
+
+### Lecture du code de vérification depuis Redis -> stocke dans {{profileVerifCode}}
+GET {{host}}/api/v1/test/auth/verification-code?email=profile-me@example.com
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.global.set("profileVerifCode", response.body.code);
+%}
+
+### Vérification email -> stocke le token dans {{profileToken}}
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "profile-me@example.com",
+  "code": "{{profileVerifCode}}"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.global.set("profileToken", response.body.accessToken);
+%}
+
+### Mise à jour partielle du profil (sans email) -> 200, les champs non fournis restent inchangés
+PATCH {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{profileToken}}
+
+{
+  "firstName": "Jeanne",
+  "phoneNumber": "+33711223344",
+  "birthDate": "1995-06-20"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("firstName mis à jour", function() {
+  client.assert(response.body.firstName === "Jeanne", "Unexpected firstName: " + response.body.firstName);
+});
+client.test("lastName inchangé (non fourni)", function() {
+  client.assert(response.body.lastName === "Profil", "lastName aurait dû rester 'Profil', reçu: " + response.body.lastName);
+});
+client.test("phoneNumber mis à jour", function() {
+  client.assert(response.body.phoneNumber === "+33711223344", "Unexpected phoneNumber: " + response.body.phoneNumber);
+});
+client.test("email inchangé et toujours vérifié", function() {
+  client.assert(response.body.email === "profile-me@example.com", "email modifié à tort");
+  client.assert(response.body.emailVerified === true, "emailVerified aurait dû rester true");
+});
+%}
+
+### Numéro de téléphone invalide -> 400 INVALID_REQUEST
+PATCH {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{profileToken}}
+
+{
+  "phoneNumber": "not-a-phone"
+}
+
+> {%
+client.test("Status is 400 BAD_REQUEST", function() {
+  client.assert(response.status === 400, "Expected 400, got " + response.status);
+});
+%}
+
+### Changement d'email -> 200, email mis à jour et emailVerified repasse à false
+PATCH {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{profileToken}}
+
+{
+  "email": "profile-me-new@example.com"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("email mis à jour", function() {
+  client.assert(response.body.email === "profile-me-new@example.com", "Unexpected email: " + response.body.email);
+});
+client.test("emailVerified repasse à false", function() {
+  client.assert(response.body.emailVerified === false, "emailVerified aurait dû repasser à false");
+});
+%}
+
+### Un nouveau code de vérification a été envoyé au nouvel email -> stocke dans {{profileNewVerifCode}}
+GET {{host}}/api/v1/test/auth/verification-code?email=profile-me-new@example.com
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+client.test("Code présent en Redis pour le nouvel email", function() {
+  client.assert(!!response.body.code, "Code absent — la resynchronisation email a-t-elle bien eu lieu ?");
+});
+client.global.set("profileNewVerifCode", response.body.code);
+%}
+
+### Re-vérification du nouvel email -> 200, l'email redevient vérifié
+POST {{host}}/api/v1/auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "profile-me-new@example.com",
+  "code": "{{profileNewVerifCode}}"
+}
+
+> {%
+client.test("Status is 200 OK", function() {
+  client.assert(response.status === 200, "Expected 200, got " + response.status);
+});
+%}
+
+### Changement d'email vers une adresse déjà utilisée -> 409 EMAIL_ALREADY_USED
+PATCH {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{profileToken}}
+
+{
+  "email": "admin@karapi.com"
+}
+
+> {%
+client.test("Status is 409 CONFLICT", function() {
+  client.assert(response.status === 409, "Expected 409, got " + response.status);
+});
+client.test("Body contains EMAIL_ALREADY_USED code", function() {
+  client.assert(response.body.code === "EMAIL_ALREADY_USED", "Unexpected code: " + response.body.code);
+});
+%}
+
+### Sans authentification -> 401
+PATCH {{host}}/api/v1/users/me
+Content-Type: application/json
+
+{
+  "firstName": "Anonyme"
+}
+
+> {%
+client.test("Status is 401 UNAUTHORIZED", function() {
+  client.assert(response.status === 401, "Expected 401, got " + response.status);
+});
+%}
+
+### Nettoyage : suppression du compte profile-me (email courant : profile-me-new@example.com)
+DELETE {{host}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{profileToken}}
+
+{
+  "password": "Pr0fil3M3!"
+}
+
+> {%
+client.test("Status is 204 NO_CONTENT", function() {
+  client.assert(response.status === 204, "Expected 204, got " + response.status);
+});
+%}
