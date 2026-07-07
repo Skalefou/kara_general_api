@@ -2,6 +2,7 @@ package com.kara.kara_general_api.application.service.auth
 
 import com.kara.kara_general_api.domain.model.user.PasswordPolicy
 import com.kara.kara_general_api.domain.model.user.User
+import com.kara.kara_general_api.domain.model.user.UserRole
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
 import com.kara.kara_general_api.domain.port.input.auth.RegisterUseCase
@@ -30,7 +31,7 @@ class RegisterService(
             return RegisterResult.EmailAlreadyUsed
         }
 
-        val passwordIssues = PasswordPolicy.validate(command.plainPassword)
+        val passwordIssues = PasswordPolicy.validate(command.plainPassword, UserRole.CLIENT)
         if (passwordIssues.isNotEmpty()) {
             return RegisterResult.InvalidPassword(passwordIssues)
         }

@@ -452,6 +452,24 @@ Les notifications push (FCM) sont **planifiées automatiquement** à la confirma
 
 ---
 
+
+### Réinitialisation du mot de passe via code (OTP)
+- Accessible depuis l'écran de connexion (utilisateur non authentifié) et
+  depuis l'écran de profil (utilisateur authentifié, email pré-rempli et non
+  modifiable)
+- `POST /api/v1/auth/forgot-password` `{ email }` : envoie un code par email,
+  répond toujours 204 même si l'email est inconnu (anti-énumération)
+- `POST /api/v1/auth/reset-password` `{ email, code, newPassword }` : valide
+  le code et remplace le mot de passe (204 succès, 400 code invalide/expiré
+  ou mot de passe non conforme, 404 compte introuvable)
+- Politique de mot de passe pour **cette route uniquement** : au moins 8
+  caractères, une lettre et un chiffre — **différente** de la politique des
+  comptes créés par un administrateur (32 caractères minimum, majuscule,
+  minuscule, chiffre, caractère spécial, cf. section "Comptes serveur" pour les administrateurs et serveurs
+  ci-dessus, qui reste inchangée)
+- Pour les utilisateurs classiques (client) juste une lettre, un chiffre, une majuscule, minimum 8 caractères
+
+
 ## 🔌 Contrats API (REST)
 
 ### Conventions globales

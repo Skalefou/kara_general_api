@@ -32,7 +32,7 @@ class ResetPasswordService(
             return ResetPasswordResult.InvalidCode
         }
 
-        val passwordIssues = PasswordPolicy.validate(command.newPassword)
+        val passwordIssues = PasswordPolicy.validate(command.newPassword, user.role)
         if (passwordIssues.isNotEmpty()) {
             return ResetPasswordResult.InvalidPassword(passwordIssues)
         }
