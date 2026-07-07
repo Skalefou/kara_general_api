@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
 import com.kara.kara_general_api.domain.model.room.Room
+import com.kara.kara_general_api.domain.model.room.RoomStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 import java.util.UUID
@@ -20,6 +21,8 @@ data class RoomResponse(
     val country: String,
     @field:Schema(description = "Date de création de la salle")
     val createdAt: Instant,
+    @field:Schema(description = "Statut de la salle", example = "OPEN")
+    val status: RoomStatus,
 ) {
     companion object {
         fun from(room: Room): RoomResponse =
@@ -31,6 +34,7 @@ data class RoomResponse(
                 postalCode = room.address.postalCode,
                 country = room.address.country,
                 createdAt = room.createdAt,
+                status = room.status,
             )
     }
 }

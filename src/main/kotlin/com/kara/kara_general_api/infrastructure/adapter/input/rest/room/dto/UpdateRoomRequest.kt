@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
+import com.kara.kara_general_api.domain.model.room.RoomStatus
 import io.swagger.v3.oas.annotations.media.Schema
 
 data class UpdateRoomRequest(
@@ -13,4 +14,9 @@ data class UpdateRoomRequest(
     val postalCode: String? = null,
     @field:Schema(description = "Pays", example = "France")
     val country: String? = null,
+    @field:Schema(
+        description = "Statut de la salle : OPEN (réservable) ou CLOSED (fermée temporairement)",
+        example = "CLOSED",
+    )
+    val status: RoomStatus? = null,
 )

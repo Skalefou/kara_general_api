@@ -60,6 +60,7 @@ class RoomController(
                 city = request.city,
                 postalCode = request.postalCode,
                 country = request.country,
+                status = request.status,
             )
         return when (val result = updateRoomUseCase.updateRoom(command)) {
             is UpdateRoomResult.Success -> ResponseEntity.ok(RoomResponse.from(result.room))

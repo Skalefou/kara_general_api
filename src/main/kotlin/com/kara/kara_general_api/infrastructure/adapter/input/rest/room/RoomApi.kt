@@ -54,7 +54,11 @@ interface RoomApi {
     @Operation(summary = "Consulter une salle")
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Salle trouvée"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Salle trouvée",
+                content = [Content(schema = Schema(implementation = RoomResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "Salle introuvable",

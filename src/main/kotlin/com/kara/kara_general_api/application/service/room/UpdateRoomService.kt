@@ -23,7 +23,12 @@ class UpdateRoomService(
                 postalCode = command.postalCode ?: existing.address.postalCode,
                 country = command.country ?: existing.address.country,
             )
-        val updated = existing.update(name = command.name ?: existing.name, address = mergedAddress)
+        val updated =
+            existing.update(
+                name = command.name ?: existing.name,
+                address = mergedAddress,
+                status = command.status ?: existing.status,
+            )
         return UpdateRoomResult.Success(roomRepository.save(updated))
     }
 }

@@ -2,6 +2,7 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.room.RoomStatus
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Component
@@ -22,5 +23,6 @@ class RoomRowMapper : RowMapper<Room> {
                     country = rs.getString("country"),
                 ),
             createdAt = rs.getTimestamp("created_at").toInstant(),
+            status = RoomStatus.valueOf(rs.getString("status")),
         )
 }

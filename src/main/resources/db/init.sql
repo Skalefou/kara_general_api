@@ -23,5 +23,6 @@ CREATE TABLE IF NOT EXISTS rooms (
     city        VARCHAR(100) NOT NULL,
     postal_code VARCHAR(20)  NOT NULL,
     country     VARCHAR(100) NOT NULL,
+    status      VARCHAR(50)  NOT NULL DEFAULT 'OPEN',
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );

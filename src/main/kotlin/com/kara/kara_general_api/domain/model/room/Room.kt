@@ -8,12 +8,14 @@ data class Room(
     val name: String,
     val address: Address,
     val createdAt: Instant,
+    val status: RoomStatus = RoomStatus.OPEN,
 ) {
     init {
         require(name.isNotBlank()) { "Le nom de la salle est obligatoire" }
     }
 
-    fun update(name: String, address: Address): Room = copy(name = name, address = address)
+    fun update(name: String, address: Address, status: RoomStatus): Room =
+        copy(name = name, address = address, status = status)
 
     companion object {
         fun create(name: String, address: Address): Room =
@@ -22,6 +24,7 @@ data class Room(
                 name = name,
                 address = address,
                 createdAt = Instant.now(),
+                status = RoomStatus.OPEN,
             )
     }
 }

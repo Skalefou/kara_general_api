@@ -161,6 +161,19 @@ class RoomControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 200 when admin closes a room via status`() {
+        every { updateRoomUseCase.updateRoom(any()) } returns UpdateRoomResult.Success(room)
+
+        mockMvc.perform(
+            patch("/api/v1/rooms/$ROOM_ID")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"status": "CLOSED"}"""),
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("OPEN"))
+    }
+
+    @Test
     @WithMockUser(roles = ["CLIENT"])
     fun `should return 403 when non-admin updates a room`() {
         mockMvc.perform(

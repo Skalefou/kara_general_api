@@ -17,14 +17,15 @@ class RoomRepositoryAdapter(
     override fun save(room: Room): Room {
         val sql =
             """
-            INSERT INTO rooms (id, name, street, city, postal_code, country, created_at)
-            VALUES (:id, :name, :street, :city, :postalCode, :country, :createdAt)
+            INSERT INTO rooms (id, name, street, city, postal_code, country, status, created_at)
+            VALUES (:id, :name, :street, :city, :postalCode, :country, :status, :createdAt)
             ON CONFLICT (id) DO UPDATE SET
                 name        = EXCLUDED.name,
                 street      = EXCLUDED.street,
                 city        = EXCLUDED.city,
                 postal_code = EXCLUDED.postal_code,
-                country     = EXCLUDED.country
+                country     = EXCLUDED.country,
+                status      = EXCLUDED.status
             """.trimIndent()
         jdbc.update(
             sql,
@@ -35,6 +36,7 @@ class RoomRepositoryAdapter(
                 .addValue("city", room.address.city)
                 .addValue("postalCode", room.address.postalCode)
                 .addValue("country", room.address.country)
+                .addValue("status", room.status.name)
                 .addValue("createdAt", Timestamp.from(room.createdAt)),
         )
         return room
@@ -43,7 +45,7 @@ class RoomRepositoryAdapter(
     override fun findById(id: RoomId): Room? {
         val sql =
             """
-            SELECT id, name, street, city, postal_code, country, created_at
+            SELECT id, name, street, city, postal_code, country, status, created_at
             FROM rooms
             WHERE id = :id
             """.trimIndent()
@@ -53,7 +55,7 @@ class RoomRepositoryAdapter(
     override fun findAll(page: Int, size: Int): List<Room> {
         val sql =
             """
-            SELECT id, name, street, city, postal_code, country, created_at
+            SELECT id, name, street, city, postal_code, country, status, created_at
             FROM rooms
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
