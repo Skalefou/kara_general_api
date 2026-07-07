@@ -2,9 +2,7 @@
 
 ## 🎯 Objectif principal
 
-Produire un code de **qualité professionnelle et maintenable** suivant les
-standards de l'industrie pour une API Spring Boot d'entreprise, en respectant
-scrupuleusement l'**Architecture Hexagonale (Ports & Adapters)**.
+Code **qualité pro et maintenable**, standards industrie, API Spring Boot entreprise. Respect strict **Architecture Hexagonale (Ports & Adapters)**.
 
 ## 🛠️ Stack technique
 
@@ -34,18 +32,15 @@ scrupuleusement l'**Architecture Hexagonale (Ports & Adapters)**.
 
 ### Principes fondamentaux (IMPÉRATIF)
 
-- **Hexagone = Domaine pur** : le cœur métier ne connaît **aucune**
-  dépendance vers Spring, JPA, HTTP ou toute librairie d'infrastructure
-- **Ports** : interfaces définies dans le domaine, jamais dans l'infra
-  - **Ports primaires (input)** : ce que l'application *offre* (use cases)
-  - **Ports secondaires (output)** : ce que l'application *demande* (repos, services externes)
-- **Adaptateurs** : implémentations concrètes branchées sur les ports
-  - **Adaptatuers primaires (driving)** : REST, WebSocket — *appellent* les ports input
-  - **Adaptateurs secondaires (driven)** : JPA, FCM, Stripe — *implémentent* les ports output
-- **Dependency Rule** : les dépendances pointent **toujours vers l'intérieur**
-  (infrastructure → application → domain). Jamais l'inverse.
-- **Testabilité** : 100 % du domaine et de l'application testable sans
-  Spring context (MockK suffit)
+- **Hexagone = Domaine pur** : cœur métier connaît **aucune** dépendance Spring, JPA, HTTP, librairie infra
+- **Ports** : interfaces dans domaine, jamais dans infra
+  - **Ports primaires (input)** : ce que l'app *offre* (use cases)
+  - **Ports secondaires (output)** : ce que l'app *demande* (repos, services externes)
+- **Adaptateurs** : implémentations concrètes branchées sur ports
+  - **Adaptateurs primaires (driving)** : REST, WebSocket — *appellent* ports input
+  - **Adaptateurs secondaires (driven)** : JPA, FCM, Stripe — *implémentent* ports output
+- **Dependency Rule** : dépendances pointent **toujours vers l'intérieur** (infrastructure, application, domain). Jamais l'inverse.
+- **Testabilité** : 100 % domaine et application testable sans Spring context (MockK suffit)
 
 ### Structure des packages (IMPÉRATIF)
 
@@ -274,11 +269,11 @@ https://docs.spring.io/spring-boot/docs/4.1.0/reference/html/
 
 ### Contexte
 
-Kara est une plateforme de location de salles de fête à l'heure.
-L'API expose les fonctionnalités pour **deux applications front** :
+Kara = plateforme location salles de fête à l'heure.
+API expose fonctionnalités pour **deux apps front** :
 
-- **App A** (clients) : invités, clients — réservation, paiement, événement en live
-- **App B** (staff)  : serveurs, administrateurs — gestion opérationnelle
+- **App A** (clients) : invités, clients — réservation, paiement, événement live
+- **App B** (staff)  : serveurs, admins — gestion opérationnelle
 
 **Rôles (UserRole) :**
 
@@ -303,11 +298,11 @@ L'API expose les fonctionnalités pour **deux applications front** :
 | `CreateServerAccountUseCase` | ADMIN            | Crée un compte SERVER avec un mot de passe temporaire de 32 caractères, valable 24h, envoyé par email |
 | `ForceChangePasswordUseCase` | SERVER (first login) | Oblige le changement de mot de passe à la première connexion            |
 
-**Règles de sécurité mot de passe :**
-- Minimum 32 caractères
-- Au moins 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial (`!`, `*`, `&`, `$`, `€`, …)
+**Règles sécurité mot de passe :**
+- Min 32 caractères
+- Min 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial (`!`, `*`, `&`, `$`, `€`, …)
 - Mot de passe temporaire invalide après 24h
-- Toute nouvelle invitation invalidation l'ancienne
+- Nouvelle invitation invalide l'ancienne
 
 ---
 
@@ -354,10 +349,10 @@ data class Room(
 | `ListAllBookingsUseCase`      | ADMIN         | Consulte toutes les réservations de la plateforme                                             |
 
 **Règles métier critiques :**
-- Minimum 2 personnes par réservation, maximum la capacité de la salle
-- Les créneaux indisponibles sont bloqués en lecture (`GetRoomAvailabilityUseCase`)
-- Une réservation passe de `PENDING` → `CONFIRMED` uniquement quand la totalité du paiement est reçue
-- Une réservation `ACTIVE` s'ouvre à l'heure prévue et se ferme automatiquement à la fin du créneau
+- Min 2 personnes par réservation, max capacité salle
+- Créneaux indisponibles bloqués en lecture (`GetRoomAvailabilityUseCase`)
+- Réservation passe `PENDING` → `CONFIRMED` uniquement quand totalité paiement reçue
+- Réservation `ACTIVE` s'ouvre à l'heure prévue, ferme auto à fin créneau
 
 ---
 
@@ -376,11 +371,11 @@ data class Room(
 | `DownloadAllInvoicesUseCase`| ADMIN   | Télécharge l'ensemble des factures de la plateforme                                          |
 
 **Règles métier critiques :**
-- En mode cagnotte : **aucun prélèvement** tant que tous n'ont pas payé leur part
-- Si la cagnotte n'est pas complétée dans le délai imparti → réservation annulée, **zéro prélèvement**
-- Une facture est émise pour **chaque** paiement individuel réalisé
-- Un email de confirmation (date, heure, lieu) est envoyé une fois le paiement total reçu
-- Pour le MVP : **seul le paiement CB est disponible**
+- Mode cagnotte : **aucun prélèvement** tant que tous n'ont pas payé leur part
+- Cagnotte non complétée dans délai imparti → réservation annulée, **zéro prélèvement**
+- Facture émise pour **chaque** paiement individuel
+- Email confirmation (date, heure, lieu) envoyé une fois paiement total reçu
+- MVP : **seul paiement CB disponible**
 
 ---
 
@@ -397,16 +392,16 @@ data class Room(
 | `RequestUberUseCase`            | CLIENT  | Suggestion Uber (deep link vers l'app Uber avec adresse de la salle)            |
 
 **Règles métier critiques :**
-- Le chat est **lisible en lecture** 30 minutes après la fin de la réservation, mais **plus modifiable**
-- Chaque message affiche un avertissement : « l'administration Kara a accès aux messages »
-- L'alerte d'urgence déclenche vibration + son fort côté SERVER (WebSocket push)
-- L'alerte de commande déclenche vibration + son côté SERVER (WebSocket push)
+- Chat **lisible** 30 min après fin réservation, mais **plus modifiable**
+- Chaque message affiche avertissement : « l'administration Kara a accès aux messages »
+- Alerte urgence déclenche vibration + son fort côté SERVER (WebSocket push)
+- Alerte commande déclenche vibration + son côté SERVER (WebSocket push)
 
 ---
 
 ### 6. Notifications (`notification/`)
 
-Les notifications push (FCM) sont **planifiées automatiquement** à la confirmation de réservation.
+Notifications push (FCM) **planifiées automatiquement** à confirmation réservation.
 
 | Déclencheur                         | Délai avant réservation | Destinataire |
 |-------------------------------------|-------------------------|--------------|
@@ -454,20 +449,11 @@ Les notifications push (FCM) sont **planifiées automatiquement** à la confirma
 
 
 ### Réinitialisation du mot de passe via code (OTP)
-- Accessible depuis l'écran de connexion (utilisateur non authentifié) et
-  depuis l'écran de profil (utilisateur authentifié, email pré-rempli et non
-  modifiable)
-- `POST /api/v1/auth/forgot-password` `{ email }` : envoie un code par email,
-  répond toujours 204 même si l'email est inconnu (anti-énumération)
-- `POST /api/v1/auth/reset-password` `{ email, code, newPassword }` : valide
-  le code et remplace le mot de passe (204 succès, 400 code invalide/expiré
-  ou mot de passe non conforme, 404 compte introuvable)
-- Politique de mot de passe pour **cette route uniquement** : au moins 8
-  caractères, une lettre et un chiffre — **différente** de la politique des
-  comptes créés par un administrateur (32 caractères minimum, majuscule,
-  minuscule, chiffre, caractère spécial, cf. section "Comptes serveur" pour les administrateurs et serveurs
-  ci-dessus, qui reste inchangée)
-- Pour les utilisateurs classiques (client) juste une lettre, un chiffre, une majuscule, minimum 8 caractères
+- Accessible depuis écran connexion (non authentifié) et écran profil (authentifié, email pré-rempli non modifiable)
+- `POST /api/v1/auth/forgot-password` `{ email }` : envoie code par email, répond toujours 204 même si email inconnu (anti-énumération)
+- `POST /api/v1/auth/reset-password` `{ email, code, newPassword }` : valide code et remplace mot de passe (204 succès, 400 code invalide/expiré ou mot de passe non conforme, 404 compte introuvable)
+- Politique mot de passe pour **cette route uniquement** : min 8 caractères, une lettre et un chiffre — **différente** de la politique des comptes créés par admin (32 caractères min, majuscule, minuscule, chiffre, caractère spécial, cf. section "Comptes serveur" ci-dessus, inchangée)
+- Utilisateurs classiques (client) : une lettre, un chiffre, une majuscule, min 8 caractères
 
 
 ## 🔌 Contrats API (REST)
@@ -548,10 +534,10 @@ GET    /api/v1/admin/chats
 
 ### JWT (RS256)
 
-- **Access token** : durée de vie 15 minutes
-- **Refresh token** : durée de vie 7 jours, stocké en Redis avec possibilité de révocation
-- **Blacklist** : logout invalide le token en Redis (clé `blacklist:<jti>`)
-- Jamais de secret JWT en clair dans le code — utiliser les variables d'environnement
+- **Access token** : durée vie 15 min
+- **Refresh token** : durée vie 7 jours, stocké Redis, révocable
+- **Blacklist** : logout invalide token en Redis (clé `blacklist:<jti>`)
+- Jamais secret JWT en clair dans code — utiliser variables d'environnement
 
 ### Règles Spring Security
 
@@ -570,12 +556,12 @@ http.authorizeHttpRequests { auth ->
 ### Mots de passe
 
 - Hachage : **bcrypt** (cost factor 12)
-- Jamais de mot de passe en clair en base, en log ou en réponse API
+- Jamais mot de passe en clair en base, log ou réponse API
 
 ### RGPD
 
-- `DeleteAccountUseCase` : anonymise les données personnelles (soft delete + nullification des PII)
-- Logs : pas de données personnelles dans les logs applicatifs
+- `DeleteAccountUseCase` : anonymise données personnelles (soft delete + nullification PII)
+- Logs : pas de données personnelles dans logs applicatifs
 
 ---
 
@@ -612,8 +598,8 @@ class BookingControllerTest {
 }
 ```
 
-- Les tests suivent la convention **Given / When / Then**
-- Les noms de tests sont en **backtick lisible** : `\`should throw when...\``
+- Tests suivent convention **Given / When / Then**
+- Noms tests en **backtick lisible** : `\`should throw when...\``
 - Un test = un comportement, jamais plusieurs assertions non liées
 
 ---
@@ -684,13 +670,11 @@ dependencies {
 
 ### Stratégie DDL : dev vs production (IMPÉRATIF)
 
-La création des tables suit **deux stratégies distinctes** selon l'environnement.
-Elles ne sont **jamais interchangeables**.
+Création tables suit **deux stratégies distinctes** selon environnement. **Jamais interchangeables**.
 
 #### Environnement de développement (`application-dev.yml`)
 
-Hibernate génère automatiquement les tables à partir des classes `@Entity`.
-C'est le seul usage autorisé de JPA dans ce projet — jamais pour des requêtes.
+Hibernate génère auto les tables depuis classes `@Entity`. Seul usage JPA autorisé dans ce projet — jamais pour requêtes.
 
 ```yaml
 # src/main/resources/application-dev.yml
@@ -703,16 +687,11 @@ spring:
     url: jdbc:postgresql://localhost:5432/kara_dev
 ```
 
-> `update` (et non `create`) est utilisé pour que les données de dev survivent aux
-> redémarrages. Si une migration de schéma incompatible bloque le démarrage
-> (changement de type de colonne, contrainte non satisfaite par les données
-> existantes), il faut réinitialiser manuellement la base locale.
+> `update` (et non `create`) pour que données dev survivent aux redémarrages. Si migration schéma incompatible bloque démarrage (changement type colonne, contrainte non satisfaite par données existantes), réinitialiser manuellement la base locale.
 
 #### Environnement de production (`application-prod.yml`)
 
-Hibernate est **désactivé pour le DDL**. Le schéma est géré exclusivement
-par `init.sql`, versionné dans le dépôt et appliqué manuellement ou via
-le pipeline CI/CD.
+Hibernate **désactivé pour DDL**. Schéma géré exclusivement par `init.sql`, versionné dans dépôt, appliqué manuellement ou via pipeline CI/CD.
 
 ```yaml
 # src/main/resources/application-prod.yml
@@ -733,7 +712,7 @@ src/main/resources/
     └── init.sql                # Schéma complet production — source de vérité
 ```
 
-`init.sql` contient l'intégralité du DDL de production :
+`init.sql` contient intégralité DDL production :
 ```sql
 -- init.sql (extrait)
 CREATE TABLE IF NOT EXISTS users (
@@ -759,11 +738,7 @@ CREATE TABLE IF NOT EXISTS rooms (
 
 ### Requêtes SQL — `NamedParameterJdbcTemplate` (IMPÉRATIF)
 
-**Aucun `JpaRepository`, `CrudRepository` ou méthode dérivée Spring Data
-n'est autorisé dans ce projet.** Toutes les requêtes SQL sont écrites
-explicitement dans les adaptateurs de persistance. Cette règle garantit
-un contrôle total sur le type et la performance de chaque requête envoyée
-à PostgreSQL.
+**Aucun `JpaRepository`, `CrudRepository` ou méthode dérivée Spring Data autorisé dans ce projet.** Toutes requêtes SQL écrites explicitement dans adaptateurs persistance. Garantit contrôle total sur type et performance de chaque requête envoyée à PostgreSQL.
 
 #### Structure d'un adaptateur JDBC
 
@@ -896,11 +871,11 @@ class BookingEntity(
 
 ### Règles SQL impératives
 
-- **Jamais** de `SELECT *` en production — lister explicitement les colonnes nécessaires
-- **Toujours** utiliser des paramètres nommés (`:param`) — jamais de concaténation de chaînes
-- Les requêtes complexes (jointures multiples, agrégations) sont **commentées** en tête de méthode
-- Les colonnes sensibles (`password_hash`, `stripe_customer_id`) ne sont **jamais** loguées
-- Les transactions sont déclarées au niveau du service applicatif (`@Transactional`) et non dans les adaptateurs
+- **Jamais** `SELECT *` en production — lister explicitement colonnes nécessaires
+- **Toujours** paramètres nommés (`:param`) — jamais concaténation de chaînes
+- Requêtes complexes (jointures multiples, agrégations) **commentées** en tête de méthode
+- Colonnes sensibles (`password_hash`, `stripe_customer_id`) **jamais** loguées
+- Transactions déclarées au niveau service applicatif (`@Transactional`), pas dans adaptateurs
 
 ---
 
@@ -925,10 +900,10 @@ class BookingEntity(
    }
    ```
 
-3. **Pas d'exceptions pour le flux métier** — retourner des types résultat
-   - Les exceptions sont réservées aux **erreurs techniques** inattendues
+3. **Pas d'exceptions pour flux métier** — retourner types résultat
+   - Exceptions réservées aux **erreurs techniques** inattendues
 
-4. **Extension functions** pour enrichir les modèles sans les polluer
+4. **Extension functions** pour enrichir modèles sans les polluer
    ```kotlin
    fun Booking.totalPrice(): Money =
        room.pricePerPersonPerHour * participants.size * duration.toHours()
@@ -943,9 +918,9 @@ class BookingEntity(
    }
    ```
 
-6. **Nullabilité explicite** — jamais de `!!` en dehors des tests
+6. **Nullabilité explicite** — jamais `!!` hors tests
 
-7. **`suspend fun` pour les appels I/O** si Coroutines activées (optionnel MVP)
+7. **`suspend fun` pour appels I/O** si Coroutines activées (optionnel MVP)
 
 ### Nommage
 
@@ -965,9 +940,9 @@ class BookingEntity(
 
 ## 🌍 Internationalisation des erreurs
 
-- Les messages d'erreur API sont en **français** pour l'affichage utilisateur
-- Les logs applicatifs sont en **anglais**
-- Les codes d'erreur sont des `SCREAMING_SNAKE_CASE` : `ROOM_NOT_FOUND`, `SLOT_UNAVAILABLE`
+- Messages d'erreur API en **français** pour affichage utilisateur
+- Logs applicatifs en **anglais**
+- Codes d'erreur en `SCREAMING_SNAKE_CASE` : `ROOM_NOT_FOUND`, `SLOT_UNAVAILABLE`
 
 ```json
 {
@@ -985,8 +960,8 @@ class BookingEntity(
 
 - Tests automatiques sur chaque PR (`./gradlew test`)
 - Linting strict (`./gradlew ktlintCheck`)
-- Build de l'image Docker (`./gradlew bootBuildImage`)
-- Couverture de test minimale : **80% globale, 100% domain**
+- Build image Docker (`./gradlew bootBuildImage`)
+- Couverture test minimale : **80% globale, 100% domain**
 
 ## 📝 Avant chaque commit
 
@@ -1057,19 +1032,19 @@ chore(db): add BookingEntity for hibernate dev DDL generation
 ### Pull Requests
 
 - Titre descriptif (`feat/fix/refactor/test/chore`)
-- Description des changements + impact sur l'architecture
+- Description changements + impact architecture
 - Tests passent en CI
-- Aucune régression sur le domain pur
+- Aucune régression sur domain pur
 - Code review requise avant merge
 
 ---
 
 ## 📞 Support et questions
 
-En cas de doute sur l'architecture ou les bonnes pratiques :
+En cas de doute sur architecture ou bonnes pratiques :
 1. Consulter ce `CLAUDE.md`
-2. Référencer la documentation officielle Spring Boot 4.x
-3. Appliquer la règle de dépendance : **le domain ne connaît rien de l'extérieur**
-4. Demander une review de code
+2. Référencer documentation officielle Spring Boot 4.x
+3. Appliquer règle de dépendance : **le domain ne connaît rien de l'extérieur**
+4. Demander review de code
 
 **Rappelez-vous : l'hexagone protège le métier. Tout ce qui change (framework, BDD, API tierce) reste à l'extérieur.**
