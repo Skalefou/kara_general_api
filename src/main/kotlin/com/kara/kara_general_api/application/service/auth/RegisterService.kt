@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.auth
 
+import com.kara.kara_general_api.domain.model.user.PasswordPolicy
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.port.input.auth.RegisterCommand
 import com.kara.kara_general_api.domain.port.input.auth.RegisterResult
@@ -29,7 +30,7 @@ class RegisterService(
             return RegisterResult.EmailAlreadyUsed
         }
 
-        val passwordIssues = validatePassword(command.plainPassword)
+        val passwordIssues = PasswordPolicy.validate(command.plainPassword)
         if (passwordIssues.isNotEmpty()) {
             return RegisterResult.InvalidPassword(passwordIssues)
         }
@@ -64,13 +65,5 @@ class RegisterService(
         emailService.sendVerificationCode(user.email, verificationCode)
 
         return RegisterResult.Success(user)
-    }
-
-    private fun validatePassword(password: String): List<String> {
-        val issues = mutableListOf<String>()
-        if (password.length < 8) issues += "Le mot de passe doit contenir au moins 8 caractères"
-        if (!password.any { it.isDigit() }) issues += "Le mot de passe doit contenir au moins un chiffre"
-        if (!password.any { it.isLetter() }) issues += "Le mot de passe doit contenir au moins une lettre"
-        return issues
     }
 }

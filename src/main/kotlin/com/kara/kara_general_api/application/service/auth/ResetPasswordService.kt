@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.auth
 
+import com.kara.kara_general_api.domain.model.user.PasswordPolicy
 import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordCommand
 import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordResult
 import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
@@ -31,7 +32,7 @@ class ResetPasswordService(
             return ResetPasswordResult.InvalidCode
         }
 
-        val passwordIssues = validatePassword(command.newPassword)
+        val passwordIssues = PasswordPolicy.validate(command.newPassword)
         if (passwordIssues.isNotEmpty()) {
             return ResetPasswordResult.InvalidPassword(passwordIssues)
         }
@@ -41,13 +42,5 @@ class ResetPasswordService(
         passwordResetCodeRepository.delete(command.email)
 
         return ResetPasswordResult.Success
-    }
-
-    private fun validatePassword(password: String): List<String> {
-        val issues = mutableListOf<String>()
-        if (password.length < 8) issues += "Le mot de passe doit contenir au moins 8 caractères"
-        if (!password.any { it.isDigit() }) issues += "Le mot de passe doit contenir au moins un chiffre"
-        if (!password.any { it.isLetter() }) issues += "Le mot de passe doit contenir au moins une lettre"
-        return issues
     }
 }
