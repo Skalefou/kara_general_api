@@ -18,13 +18,22 @@ data class LoginCommand(
 )
 
 sealed interface LoginResult {
-    data class Success(val user: User, val accessToken: AccessToken, val refreshToken: RefreshToken) : LoginResult
+    data class Success(
+        val user: User,
+        val accessToken: AccessToken,
+        val refreshToken: RefreshToken,
+        val mustChangePassword: Boolean,
+    ) : LoginResult
 
     data object UserNotFound : LoginResult
 
     data object InvalidCredentials : LoginResult
 
     data object AccountDeleted : LoginResult
+
+    data object AccountDeactivated : LoginResult
+
+    data object TempPasswordExpired : LoginResult
 }
 
 interface LoginUseCase {

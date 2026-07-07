@@ -5,6 +5,7 @@ import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import java.time.Instant
 
 interface UserRepository {
     fun existsByEmail(email: Email): Boolean
@@ -19,9 +20,17 @@ interface UserRepository {
 
     fun findById(id: UserId): User?
 
+    fun findAll(page: Int, size: Int): List<User>
+
+    fun count(): Long
+
     fun markEmailVerified(id: UserId)
 
     fun anonymize(id: UserId)
 
+    /** Applique un mot de passe définitif et lève le changement forcé (remet à zéro les champs temporaires). */
     fun updatePassword(id: UserId, hashedPassword: HashedPassword)
+
+    /** Renouvelle l'invitation : nouveau mot de passe temporaire, changement forcé, nouvelle expiration. */
+    fun applyReinvitation(id: UserId, hashedPassword: HashedPassword, tempPasswordExpiresAt: Instant)
 }

@@ -304,6 +304,11 @@ API expose fonctionnalités pour **deux apps front** :
 - Mot de passe temporaire invalide après 24h
 - Nouvelle invitation invalide l'ancienne
 
+**Comptes serveur — cycle de vie (login) :**
+- Compte serveur : `must_change_password=true` + `temp_password_expires_at` (now+24h) à la création/réinvitation ; email non soumis à vérification (créé par un ADMIN)
+- Login rejette un compte désactivé (`ACCOUNT_DEACTIVATED`, 403) et un mot de passe temporaire expiré (`TEMP_PASSWORD_EXPIRED`, 403)
+- Login réussi renvoie `mustChangePassword` ; changement forcé via `POST /api/v1/auth/change-password` (efface les champs temporaires)
+
 ---
 
 ### 2. Catalogue Salles (`room/`)
@@ -482,6 +487,12 @@ GET    /api/v1/users/me/payment-methods
 POST   /api/v1/users/me/payment-methods
 DELETE /api/v1/users/me/payment-methods/{id}
 
+GET    /api/v1/users                          (ADMIN)  liste paginée ?page&size
+POST   /api/v1/users                          (ADMIN)  crée un compte SERVER
+PATCH  /api/v1/users/{id}                      (ADMIN)  modifie un compte
+POST   /api/v1/users/{id}/reinvite            (ADMIN)  régénère le mot de passe temporaire
+POST   /api/v1/users/{id}/deactivate          (ADMIN)  désactive le compte
+
 GET    /api/v1/rooms                          (GUEST/CLIENT)
 GET    /api/v1/rooms/{id}                     (GUEST/CLIENT)
 GET    /api/v1/rooms/{id}/availability        (GUEST/CLIENT)
@@ -511,8 +522,8 @@ PATCH  /api/v1/bookings/{id}/cart
 GET    /api/v1/bookings/{id}/chat
 POST   /api/v1/bookings/{id}/chat
 
-GET    /api/v1/admin/accounts
-POST   /api/v1/admin/accounts/server
+# Gestion des comptes serveur exposée sous /api/v1/users (ADMIN, cf. bloc users ci-dessus).
+# /api/v1/admin/accounts* : cible historique, remplacée par /api/v1/users.
 GET    /api/v1/admin/invoices/export
 GET    /api/v1/admin/chats
 ```
@@ -716,11 +727,15 @@ src/main/resources/
 ```sql
 -- init.sql (extrait)
 CREATE TABLE IF NOT EXISTS users (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email       VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role        VARCHAR(50)  NOT NULL,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email                    VARCHAR(255) NOT NULL UNIQUE,
+    password_hash            VARCHAR(255) NOT NULL,
+    role                     VARCHAR(50)  NOT NULL,
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    -- Gestion des comptes serveur (créés par un ADMIN)
+    deactivated_at           TIMESTAMPTZ,              -- désactivation : login refusé, compte visible
+    must_change_password     BOOLEAN NOT NULL DEFAULT FALSE, -- changement forcé à la 1re connexion
+    temp_password_expires_at TIMESTAMPTZ              -- expiration du mot de passe temporaire (24h)
 );
 
 CREATE TABLE IF NOT EXISTS rooms (

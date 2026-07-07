@@ -1,7 +1,11 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 
+import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import com.kara.kara_general_api.domain.port.input.auth.ChangePasswordCommand
+import com.kara.kara_general_api.domain.port.input.auth.ChangePasswordResult
+import com.kara.kara_general_api.domain.port.input.auth.ChangePasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordCommand
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.LoginCommand
@@ -22,6 +26,7 @@ import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ChangePasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
@@ -37,8 +42,10 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.User
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -50,6 +57,7 @@ class AuthController(
     private val resetPasswordUseCase: ResetPasswordUseCase,
     private val refreshTokenUseCase: RefreshTokenUseCase,
     private val logoutUseCase: LogoutUseCase,
+    private val changePasswordUseCase: ChangePasswordUseCase,
 ) : AuthApi {
 
     override fun register(request: RegisterRequest): ResponseEntity<Any> {
@@ -116,6 +124,7 @@ class AuthController(
                         refreshToken = result.refreshToken.value,
                         refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
                         user = UserResponse.from(result.user),
+                        mustChangePassword = result.mustChangePassword,
                     ),
                 )
 
@@ -149,6 +158,75 @@ class AuthController(
                     ).apply {
                         title = "Compte supprimé"
                         setProperty("code", "ACCOUNT_DELETED")
+                    },
+                )
+
+            LoginResult.AccountDeactivated ->
+                ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.FORBIDDEN,
+                        "Ce compte a été désactivé. Contactez un administrateur.",
+                    ).apply {
+                        title = "Compte désactivé"
+                        setProperty("code", "ACCOUNT_DEACTIVATED")
+                    },
+                )
+
+            LoginResult.TempPasswordExpired ->
+                ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.FORBIDDEN,
+                        "Le mot de passe temporaire a expiré. Demandez une nouvelle invitation.",
+                    ).apply {
+                        title = "Mot de passe temporaire expiré"
+                        setProperty("code", "TEMP_PASSWORD_EXPIRED")
+                    },
+                )
+        }
+    }
+
+    override fun changePassword(request: ChangePasswordRequest, authentication: Authentication): ResponseEntity<Any> {
+        val command =
+            ChangePasswordCommand(
+                userId = UserId(UUID.fromString(authentication.name)),
+                currentPassword = request.currentPassword,
+                newPassword = request.newPassword,
+            )
+
+        return when (val result = changePasswordUseCase.changePassword(command)) {
+            ChangePasswordResult.Success ->
+                ResponseEntity.noContent().build()
+
+            ChangePasswordResult.UserNotFound ->
+                ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND,
+                        "Aucun compte ne correspond à cet identifiant.",
+                    ).apply {
+                        title = "Compte introuvable"
+                        setProperty("code", "USER_NOT_FOUND")
+                    },
+                )
+
+            ChangePasswordResult.InvalidCurrentPassword ->
+                ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.UNAUTHORIZED,
+                        "Le mot de passe actuel est incorrect.",
+                    ).apply {
+                        title = "Mot de passe incorrect"
+                        setProperty("code", "INVALID_CURRENT_PASSWORD")
+                    },
+                )
+
+            is ChangePasswordResult.WeakPassword ->
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.BAD_REQUEST,
+                        result.reasons.joinToString(" "),
+                    ).apply {
+                        title = "Mot de passe invalide"
+                        setProperty("code", "WEAK_PASSWORD")
                     },
                 )
         }

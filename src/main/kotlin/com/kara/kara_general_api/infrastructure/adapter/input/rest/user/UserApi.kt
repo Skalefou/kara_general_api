@@ -1,7 +1,9 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.user
 
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserListResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -14,8 +16,13 @@ import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestParam
+import java.util.UUID
 
 @Tag(name = "Utilisateur", description = "Gestion du compte utilisateur")
 interface UserApi {
@@ -72,5 +79,114 @@ interface UserApi {
     fun updateProfile(
         @Valid @RequestBody request: UpdateProfileRequest,
         authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Lister tous les comptes",
+        description = "Réservé aux administrateurs. Retourne une page de comptes (tous rôles confondus).",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @GetMapping
+    fun listAccounts(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): ResponseEntity<UserListResponse>
+
+    @Operation(
+        summary = "Créer un compte serveur",
+        description = "Réservé aux administrateurs. Génère un mot de passe temporaire (32 caractères, valable 24h) " +
+            "et envoie une invitation par email.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "201", description = "Compte serveur créé avec succès"),
+            ApiResponse(
+                responseCode = "409",
+                description = "Email déjà utilisé",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping
+    fun createServerAccount(
+        @Valid @RequestBody request: CreateServerAccountRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Modifier un compte",
+        description = "Réservé aux administrateurs. Met à jour les champs fournis d'un compte identifié par son id.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Compte mis à jour avec succès"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "Email déjà utilisé",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PatchMapping("/{id}")
+    fun updateAccount(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateProfileRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Réinviter un compte serveur",
+        description = "Réservé aux administrateurs. Génère un nouveau mot de passe temporaire, invalide l'ancien " +
+            "et renvoie une invitation par email.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Invitation renvoyée avec succès"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "Le compte n'est pas un compte serveur",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/{id}/reinvite")
+    fun reinviteServerAccount(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Désactiver un compte",
+        description = "Réservé aux administrateurs. Le compte ne peut plus se connecter mais reste visible.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Compte désactivé avec succès"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "Compte déjà désactivé",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/{id}/deactivate")
+    fun deactivateAccount(
+        @PathVariable id: UUID,
     ): ResponseEntity<Any>
 }

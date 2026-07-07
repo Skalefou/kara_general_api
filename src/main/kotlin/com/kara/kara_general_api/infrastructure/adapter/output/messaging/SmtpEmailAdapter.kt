@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Component
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Component
 class SmtpEmailAdapter(
@@ -48,5 +52,28 @@ class SmtpEmailAdapter(
             true,
         )
         mailSender.send(message)
+    }
+
+    override fun sendServerInvitation(email: Email, firstName: String, temporaryPassword: String, expiresAt: Instant) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Votre compte serveur Kara")
+        helper.setText(
+            "<p>Bonjour $firstName,</p>" +
+                "<p>Un compte serveur Kara a été créé pour vous.</p>" +
+                "<p>Mot de passe temporaire : <strong>$temporaryPassword</strong></p>" +
+                "<p>Ce mot de passe est valable jusqu'au ${INVITATION_DATE_FORMATTER.format(expiresAt)}. " +
+                "Vous devrez le changer lors de votre première connexion.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
+
+    private companion object {
+        val INVITATION_DATE_FORMATTER: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH'h'mm", Locale.FRANCE)
+                .withZone(ZoneId.of("Europe/Paris"))
     }
 }

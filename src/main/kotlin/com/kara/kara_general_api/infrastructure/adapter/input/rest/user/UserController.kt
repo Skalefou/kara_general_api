@@ -3,14 +3,27 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.user
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import com.kara.kara_general_api.domain.port.input.admin.CreateServerAccountCommand
+import com.kara.kara_general_api.domain.port.input.admin.CreateServerAccountResult
+import com.kara.kara_general_api.domain.port.input.admin.CreateServerAccountUseCase
+import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountCommand
+import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountResult
+import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountUseCase
+import com.kara.kara_general_api.domain.port.input.admin.ListAllAccountsQuery
+import com.kara.kara_general_api.domain.port.input.admin.ListAllAccountsUseCase
+import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountCommand
+import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountResult
+import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountUseCase
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountCommand
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountResult
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileCommand
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileUseCase
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -25,6 +38,10 @@ import java.util.UUID
 class UserController(
     private val deleteAccountUseCase: DeleteAccountUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
+    private val createServerAccountUseCase: CreateServerAccountUseCase,
+    private val listAllAccountsUseCase: ListAllAccountsUseCase,
+    private val reinviteServerAccountUseCase: ReinviteServerAccountUseCase,
+    private val deactivateAccountUseCase: DeactivateAccountUseCase,
 ) : UserApi {
 
     override fun deleteAccount(request: DeleteAccountRequest, authentication: Authentication): ResponseEntity<Any> {
@@ -50,22 +67,84 @@ class UserController(
                 )
 
             DeleteAccountResult.UserNotFound ->
-                ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucun compte ne correspond à cet identifiant.",
-                    ).apply {
-                        title = "Compte introuvable"
-                        setProperty("code", "USER_NOT_FOUND")
-                    },
-                )
+                userNotFound()
         }
     }
 
-    override fun updateProfile(request: UpdateProfileRequest, authentication: Authentication): ResponseEntity<Any> {
+    override fun updateProfile(request: UpdateProfileRequest, authentication: Authentication): ResponseEntity<Any> =
+        updateProfile(UserId(UUID.fromString(authentication.name)), request)
+
+    override fun listAccounts(page: Int, size: Int): ResponseEntity<UserListResponse> {
+        val accountPage = listAllAccountsUseCase.listAllAccounts(ListAllAccountsQuery(page = page, size = size))
+        return ResponseEntity.ok(UserListResponse.from(accountPage))
+    }
+
+    override fun createServerAccount(request: CreateServerAccountRequest): ResponseEntity<Any> {
+        val command =
+            CreateServerAccountCommand(
+                email = Email(request.email),
+                firstName = request.firstName,
+                lastName = request.lastName,
+                phoneNumber = PhoneNumber(request.phoneNumber),
+                birthDate = request.birthDate,
+            )
+
+        return when (val result = createServerAccountUseCase.createServerAccount(command)) {
+            is CreateServerAccountResult.Success ->
+                ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(result.user))
+
+            CreateServerAccountResult.EmailAlreadyUsed ->
+                emailAlreadyUsed()
+        }
+    }
+
+    override fun updateAccount(id: UUID, request: UpdateProfileRequest): ResponseEntity<Any> =
+        updateProfile(UserId(id), request)
+
+    override fun reinviteServerAccount(id: UUID): ResponseEntity<Any> =
+        when (reinviteServerAccountUseCase.reinvite(ReinviteServerAccountCommand(userId = UserId(id)))) {
+            ReinviteServerAccountResult.Success ->
+                ResponseEntity.noContent().build()
+
+            ReinviteServerAccountResult.UserNotFound ->
+                userNotFound()
+
+            ReinviteServerAccountResult.NotAServer ->
+                ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.CONFLICT,
+                        "Ce compte n'est pas un compte serveur.",
+                    ).apply {
+                        title = "Compte non serveur"
+                        setProperty("code", "NOT_A_SERVER")
+                    },
+                )
+        }
+
+    override fun deactivateAccount(id: UUID): ResponseEntity<Any> =
+        when (deactivateAccountUseCase.deactivate(DeactivateAccountCommand(userId = UserId(id)))) {
+            DeactivateAccountResult.Success ->
+                ResponseEntity.noContent().build()
+
+            DeactivateAccountResult.UserNotFound ->
+                userNotFound()
+
+            DeactivateAccountResult.AlreadyDeactivated ->
+                ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.CONFLICT,
+                        "Ce compte est déjà désactivé.",
+                    ).apply {
+                        title = "Compte déjà désactivé"
+                        setProperty("code", "ALREADY_DEACTIVATED")
+                    },
+                )
+        }
+
+    private fun updateProfile(userId: UserId, request: UpdateProfileRequest): ResponseEntity<Any> {
         val command =
             UpdateProfileCommand(
-                userId = UserId(UUID.fromString(authentication.name)),
+                userId = userId,
                 firstName = request.firstName?.requireNotBlank("firstName"),
                 lastName = request.lastName?.requireNotBlank("lastName"),
                 phoneNumber = request.phoneNumber?.let { PhoneNumber(it) },
@@ -78,28 +157,34 @@ class UserController(
                 ResponseEntity.ok(UserResponse.from(result.user))
 
             UpdateProfileResult.UserNotFound ->
-                ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucun compte ne correspond à cet identifiant.",
-                    ).apply {
-                        title = "Compte introuvable"
-                        setProperty("code", "USER_NOT_FOUND")
-                    },
-                )
+                userNotFound()
 
             UpdateProfileResult.EmailAlreadyUsed ->
-                ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.CONFLICT,
-                        "Cette adresse email est déjà utilisée.",
-                    ).apply {
-                        title = "Email déjà utilisé"
-                        setProperty("code", "EMAIL_ALREADY_USED")
-                    },
-                )
+                emailAlreadyUsed()
         }
     }
+
+    private fun userNotFound(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND,
+                "Aucun compte ne correspond à cet identifiant.",
+            ).apply {
+                title = "Compte introuvable"
+                setProperty("code", "USER_NOT_FOUND")
+            },
+        )
+
+    private fun emailAlreadyUsed(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "Cette adresse email est déjà utilisée.",
+            ).apply {
+                title = "Email déjà utilisé"
+                setProperty("code", "EMAIL_ALREADY_USED")
+            },
+        )
 
     private fun String.requireNotBlank(field: String): String {
         require(isNotBlank()) { "Le champ $field ne peut pas être vide." }

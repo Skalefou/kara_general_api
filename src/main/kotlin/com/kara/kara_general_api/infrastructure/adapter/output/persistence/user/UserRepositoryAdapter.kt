@@ -11,6 +11,12 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Component
 import java.sql.Date
 import java.sql.Timestamp
+import java.time.Instant
+
+private const val USER_COLUMNS =
+    "id, email, password_hash, first_name, last_name, phone_number, birth_date, role, " +
+        "firebase_uid, created_at, email_verified, deleted_at, deactivated_at, " +
+        "must_change_password, temp_password_expires_at"
 
 @Component
 class UserRepositoryAdapter(
@@ -28,9 +34,11 @@ class UserRepositoryAdapter(
         val sql =
             """
             INSERT INTO users (id, email, password_hash, first_name, last_name,
-                                phone_number, birth_date, role, firebase_uid, created_at, email_verified)
+                                phone_number, birth_date, role, firebase_uid, created_at,
+                                email_verified, deactivated_at, must_change_password, temp_password_expires_at)
             VALUES (:id, :email, :passwordHash, :firstName, :lastName,
-                    :phoneNumber, :birthDate, :role, :firebaseUid, :createdAt, :emailVerified)
+                    :phoneNumber, :birthDate, :role, :firebaseUid, :createdAt,
+                    :emailVerified, :deactivatedAt, :mustChangePassword, :tempPasswordExpiresAt)
             """.trimIndent()
         jdbc.update(
             sql,
@@ -45,7 +53,10 @@ class UserRepositoryAdapter(
                 .addValue("role", user.role.name)
                 .addValue("firebaseUid", user.firebaseUid)
                 .addValue("createdAt", Timestamp.from(user.createdAt))
-                .addValue("emailVerified", user.emailVerified),
+                .addValue("emailVerified", user.emailVerified)
+                .addValue("deactivatedAt", user.deactivatedAt?.let { Timestamp.from(it) })
+                .addValue("mustChangePassword", user.mustChangePassword)
+                .addValue("tempPasswordExpiresAt", user.tempPasswordExpiresAt?.let { Timestamp.from(it) }),
         )
         return user
     }
@@ -54,12 +65,15 @@ class UserRepositoryAdapter(
         val sql =
             """
             UPDATE users SET
-                email          = :email,
-                first_name     = :firstName,
-                last_name      = :lastName,
-                phone_number   = :phoneNumber,
-                birth_date     = :birthDate,
-                email_verified = :emailVerified
+                email                    = :email,
+                first_name               = :firstName,
+                last_name                = :lastName,
+                phone_number             = :phoneNumber,
+                birth_date               = :birthDate,
+                email_verified           = :emailVerified,
+                deactivated_at           = :deactivatedAt,
+                must_change_password     = :mustChangePassword,
+                temp_password_expires_at = :tempPasswordExpiresAt
             WHERE id = :id
               AND deleted_at IS NULL
             """.trimIndent()
@@ -72,7 +86,10 @@ class UserRepositoryAdapter(
                 .addValue("lastName", user.lastName)
                 .addValue("phoneNumber", user.phoneNumber.value)
                 .addValue("birthDate", Date.valueOf(user.birthDate))
-                .addValue("emailVerified", user.emailVerified),
+                .addValue("emailVerified", user.emailVerified)
+                .addValue("deactivatedAt", user.deactivatedAt?.let { Timestamp.from(it) })
+                .addValue("mustChangePassword", user.mustChangePassword)
+                .addValue("tempPasswordExpiresAt", user.tempPasswordExpiresAt?.let { Timestamp.from(it) }),
         )
         return user
     }
@@ -80,8 +97,7 @@ class UserRepositoryAdapter(
     override fun findByEmail(email: Email): User? {
         val sql =
             """
-            SELECT id, email, password_hash, first_name, last_name, phone_number,
-                   birth_date, role, firebase_uid, created_at, email_verified, deleted_at
+            SELECT $USER_COLUMNS
             FROM users
             WHERE email = :email
             """.trimIndent()
@@ -91,8 +107,7 @@ class UserRepositoryAdapter(
     override fun findByPhoneNumber(phoneNumber: PhoneNumber): User? {
         val sql =
             """
-            SELECT id, email, password_hash, first_name, last_name, phone_number,
-                   birth_date, role, firebase_uid, created_at, email_verified, deleted_at
+            SELECT $USER_COLUMNS
             FROM users
             WHERE phone_number = :phoneNumber
             """.trimIndent()
@@ -102,13 +117,33 @@ class UserRepositoryAdapter(
     override fun findById(id: UserId): User? {
         val sql =
             """
-            SELECT id, email, password_hash, first_name, last_name, phone_number,
-                   birth_date, role, firebase_uid, created_at, email_verified, deleted_at
+            SELECT $USER_COLUMNS
             FROM users
             WHERE id = :id
               AND deleted_at IS NULL
             """.trimIndent()
         return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
+    }
+
+    override fun findAll(page: Int, size: Int): List<User> {
+        val sql =
+            """
+            SELECT $USER_COLUMNS
+            FROM users
+            WHERE deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT :limit OFFSET :offset
+            """.trimIndent()
+        return jdbc.query(
+            sql,
+            mapOf("limit" to size, "offset" to page * size),
+            rowMapper,
+        )
+    }
+
+    override fun count(): Long {
+        val sql = "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
+        return jdbc.queryForObject(sql, emptyMap<String, Any>(), Long::class.java) ?: 0
     }
 
     override fun markEmailVerified(id: UserId) {
@@ -117,8 +152,34 @@ class UserRepositoryAdapter(
     }
 
     override fun updatePassword(id: UserId, hashedPassword: HashedPassword) {
-        val sql = "UPDATE users SET password_hash = :passwordHash WHERE id = :id"
+        val sql =
+            """
+            UPDATE users SET
+                password_hash            = :passwordHash,
+                must_change_password     = false,
+                temp_password_expires_at = NULL
+            WHERE id = :id
+            """.trimIndent()
         jdbc.update(sql, mapOf("id" to id.value, "passwordHash" to hashedPassword.value))
+    }
+
+    override fun applyReinvitation(id: UserId, hashedPassword: HashedPassword, tempPasswordExpiresAt: Instant) {
+        val sql =
+            """
+            UPDATE users SET
+                password_hash            = :passwordHash,
+                must_change_password     = true,
+                temp_password_expires_at = :tempPasswordExpiresAt
+            WHERE id = :id
+              AND deleted_at IS NULL
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("passwordHash", hashedPassword.value)
+                .addValue("tempPasswordExpiresAt", Timestamp.from(tempPasswordExpiresAt)),
+        )
     }
 
     override fun anonymize(id: UserId) {

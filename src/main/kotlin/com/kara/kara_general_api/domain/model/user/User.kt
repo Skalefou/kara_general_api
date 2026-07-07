@@ -19,6 +19,9 @@ data class User(
     val createdAt: Instant,
     val emailVerified: Boolean = false,
     val deletedAt: Instant? = null,
+    val deactivatedAt: Instant? = null,
+    val mustChangePassword: Boolean = false,
+    val tempPasswordExpiresAt: Instant? = null,
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
 
@@ -36,6 +39,27 @@ data class User(
         )
 
     fun changeEmail(newEmail: Email): User = copy(email = newEmail, emailVerified = false)
+
+    fun deactivate(): User = copy(deactivatedAt = Instant.now())
+
+    /** Renouvelle l'invitation : nouveau mot de passe temporaire, changement forcé, expiration remise à jour. */
+    fun reinvited(newHashedPassword: HashedPassword, tempPasswordExpiresAt: Instant): User =
+        copy(
+            hashedPassword = newHashedPassword,
+            mustChangePassword = true,
+            tempPasswordExpiresAt = tempPasswordExpiresAt,
+        )
+
+    /** Applique un mot de passe définitif choisi par l'utilisateur et lève le changement forcé. */
+    fun passwordChanged(newHashedPassword: HashedPassword): User =
+        copy(
+            hashedPassword = newHashedPassword,
+            mustChangePassword = false,
+            tempPasswordExpiresAt = null,
+        )
+
+    fun isTempPasswordExpired(now: Instant): Boolean =
+        mustChangePassword && tempPasswordExpiresAt != null && tempPasswordExpiresAt.isBefore(now)
 
     companion object {
         fun register(
@@ -59,6 +83,36 @@ data class User(
                 firebaseUid = firebaseUid,
                 createdAt = Instant.now(),
                 emailVerified = false,
+            )
+
+        /**
+         * Compte serveur créé par un administrateur : rôle SERVER, email considéré de confiance
+         * (pas de flux de vérification), mot de passe temporaire à changer à la première connexion.
+         */
+        fun createServerAccount(
+            email: Email,
+            hashedPassword: HashedPassword,
+            firstName: String,
+            lastName: String,
+            phoneNumber: PhoneNumber,
+            birthDate: LocalDate,
+            firebaseUid: String,
+            tempPasswordExpiresAt: Instant,
+        ): User =
+            User(
+                id = UserId.generate(),
+                email = email,
+                hashedPassword = hashedPassword,
+                firstName = firstName,
+                lastName = lastName,
+                phoneNumber = phoneNumber,
+                birthDate = birthDate,
+                role = UserRole.SERVER,
+                firebaseUid = firebaseUid,
+                createdAt = Instant.now(),
+                emailVerified = true,
+                mustChangePassword = true,
+                tempPasswordExpiresAt = tempPasswordExpiresAt,
             )
     }
 }

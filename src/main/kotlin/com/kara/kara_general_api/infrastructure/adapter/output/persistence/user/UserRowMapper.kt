@@ -27,5 +27,8 @@ class UserRowMapper : RowMapper<User> {
             createdAt = rs.getTimestamp("created_at").toInstant(),
             emailVerified = rs.getBoolean("email_verified"),
             deletedAt = rs.getTimestamp("deleted_at")?.toInstant(),
+            deactivatedAt = rs.getTimestamp("deactivated_at")?.toInstant(),
+            mustChangePassword = rs.getBoolean("must_change_password"),
+            tempPasswordExpiresAt = rs.getTimestamp("temp_password_expires_at")?.toInstant(),
         )
 }

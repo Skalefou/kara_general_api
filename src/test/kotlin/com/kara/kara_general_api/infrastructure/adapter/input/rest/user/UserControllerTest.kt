@@ -6,6 +6,14 @@ import com.kara.kara_general_api.domain.model.user.UserRole
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import com.kara.kara_general_api.domain.port.input.admin.AccountPage
+import com.kara.kara_general_api.domain.port.input.admin.CreateServerAccountResult
+import com.kara.kara_general_api.domain.port.input.admin.CreateServerAccountUseCase
+import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountResult
+import com.kara.kara_general_api.domain.port.input.admin.DeactivateAccountUseCase
+import com.kara.kara_general_api.domain.port.input.admin.ListAllAccountsUseCase
+import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountResult
+import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountUseCase
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountResult
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileResult
@@ -21,7 +29,9 @@ import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
@@ -43,6 +53,18 @@ class UserControllerTest {
 
     @MockkBean
     private lateinit var updateProfileUseCase: UpdateProfileUseCase
+
+    @MockkBean
+    private lateinit var createServerAccountUseCase: CreateServerAccountUseCase
+
+    @MockkBean
+    private lateinit var listAllAccountsUseCase: ListAllAccountsUseCase
+
+    @MockkBean
+    private lateinit var reinviteServerAccountUseCase: ReinviteServerAccountUseCase
+
+    @MockkBean
+    private lateinit var deactivateAccountUseCase: DeactivateAccountUseCase
 
     private val user =
         User(
@@ -167,5 +189,122 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"firstName": "Janet"}"""),
         ).andExpect(status().isUnauthorized)
+    }
+
+    private val createServerRequestBody =
+        """
+        {
+          "email": "server@example.com",
+          "firstName": "Jane",
+          "lastName": "Doe",
+          "phoneNumber": "+33612345678",
+          "birthDate": "1990-01-15"
+        }
+        """.trimIndent()
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 201 when a server account is created`() {
+        every { createServerAccountUseCase.createServerAccount(any()) } returns
+            CreateServerAccountResult.Success(user.copy(role = UserRole.SERVER))
+
+        mockMvc.perform(
+            post("/api/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createServerRequestBody),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.role").value("SERVER"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 409 when creating a server account with a used email`() {
+        every { createServerAccountUseCase.createServerAccount(any()) } returns CreateServerAccountResult.EmailAlreadyUsed
+
+        mockMvc.perform(
+            post("/api/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createServerRequestBody),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["CLIENT"])
+    fun `should return 403 when a non-admin creates a server account`() {
+        mockMvc.perform(
+            post("/api/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createServerRequestBody),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 200 with a page of accounts`() {
+        every { listAllAccountsUseCase.listAllAccounts(any()) } returns
+            AccountPage(accounts = listOf(user), page = 0, size = 20, totalElements = 1)
+
+        mockMvc.perform(get("/api/v1/users"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.users[0].email").value("jane.doe@example.com"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 200 when an admin updates an account by id`() {
+        every { updateProfileUseCase.updateProfile(any()) } returns UpdateProfileResult.Success(user)
+
+        mockMvc.perform(
+            patch("/api/v1/users/$USER_ID")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"firstName": "Janet"}"""),
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 204 when a server account is reinvited`() {
+        every { reinviteServerAccountUseCase.reinvite(any()) } returns ReinviteServerAccountResult.Success
+
+        mockMvc.perform(post("/api/v1/users/$USER_ID/reinvite"))
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 409 when reinviting an account that is not a server`() {
+        every { reinviteServerAccountUseCase.reinvite(any()) } returns ReinviteServerAccountResult.NotAServer
+
+        mockMvc.perform(post("/api/v1/users/$USER_ID/reinvite"))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("NOT_A_SERVER"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 204 when an account is deactivated`() {
+        every { deactivateAccountUseCase.deactivate(any()) } returns DeactivateAccountResult.Success
+
+        mockMvc.perform(post("/api/v1/users/$USER_ID/deactivate"))
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return 409 when deactivating an already deactivated account`() {
+        every { deactivateAccountUseCase.deactivate(any()) } returns DeactivateAccountResult.AlreadyDeactivated
+
+        mockMvc.perform(post("/api/v1/users/$USER_ID/deactivate"))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("ALREADY_DEACTIVATED"))
+    }
+
+    @Test
+    fun `should return 401 when listing accounts unauthenticated`() {
+        mockMvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized)
     }
 }

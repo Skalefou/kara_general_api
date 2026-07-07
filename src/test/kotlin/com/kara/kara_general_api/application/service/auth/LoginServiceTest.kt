@@ -23,6 +23,7 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class LoginServiceTest {
 
@@ -109,5 +110,42 @@ class LoginServiceTest {
         val result = sut.login(command)
 
         assertEquals(LoginResult.AccountDeleted, result)
+    }
+
+    @Test
+    fun `should return AccountDeactivated when the account has been deactivated`() {
+        val command = LoginCommand(identifier = LoginIdentifier.ByEmail(email), password = "S3cur3P@ssw0rd")
+        every { userRepository.findByEmail(email) } returns user.copy(deactivatedAt = Instant.now())
+
+        val result = sut.login(command)
+
+        assertEquals(LoginResult.AccountDeactivated, result)
+    }
+
+    @Test
+    fun `should return TempPasswordExpired when the temporary password has expired`() {
+        val command = LoginCommand(identifier = LoginIdentifier.ByEmail(email), password = "S3cur3P@ssw0rd")
+        every { userRepository.findByEmail(email) } returns
+            user.copy(mustChangePassword = true, tempPasswordExpiresAt = Instant.now().minusSeconds(1))
+        every { passwordHasher.matches(command.password, user.hashedPassword) } returns true
+
+        val result = sut.login(command)
+
+        assertEquals(LoginResult.TempPasswordExpired, result)
+    }
+
+    @Test
+    fun `should flag mustChangePassword when the temporary password is still valid`() {
+        val command = LoginCommand(identifier = LoginIdentifier.ByEmail(email), password = "S3cur3P@ssw0rd")
+        every { userRepository.findByEmail(email) } returns
+            user.copy(mustChangePassword = true, tempPasswordExpiresAt = Instant.now().plusSeconds(3600))
+        every { passwordHasher.matches(command.password, user.hashedPassword) } returns true
+        every { tokenService.generateAccessToken(any()) } returns AccessToken("jwt-token", 900)
+        every { refreshTokenRepository.issue(user.id) } returns RefreshToken("refresh-token-value", 604800)
+
+        val result = sut.login(command)
+
+        assertIs<LoginResult.Success>(result)
+        assertTrue(result.mustChangePassword)
     }
 }

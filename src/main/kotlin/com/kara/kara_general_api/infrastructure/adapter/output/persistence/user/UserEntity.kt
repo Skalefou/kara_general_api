@@ -36,4 +36,10 @@ class UserEntity(
     var emailVerified: Boolean = false,
     @Column(name = "deleted_at", columnDefinition = "timestamptz")
     var deletedAt: Instant? = null,
+    @Column(name = "deactivated_at", columnDefinition = "timestamptz")
+    var deactivatedAt: Instant? = null,
+    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default false")
+    var mustChangePassword: Boolean = false,
+    @Column(name = "temp_password_expires_at", columnDefinition = "timestamptz")
+    var tempPasswordExpiresAt: Instant? = null,
 )

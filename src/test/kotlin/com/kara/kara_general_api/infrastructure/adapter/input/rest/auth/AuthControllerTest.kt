@@ -6,6 +6,8 @@ import com.kara.kara_general_api.domain.model.user.UserRole
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
+import com.kara.kara_general_api.domain.port.input.auth.ChangePasswordResult
+import com.kara.kara_general_api.domain.port.input.auth.ChangePasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordResult
 import com.kara.kara_general_api.domain.port.input.auth.ForgotPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.LoginResult
@@ -30,6 +32,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithAnonymousUser
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -66,6 +69,9 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var logoutUseCase: LogoutUseCase
+
+    @MockkBean
+    private lateinit var changePasswordUseCase: ChangePasswordUseCase
 
     private val requestBody =
         """
@@ -149,6 +155,7 @@ class AuthControllerTest {
                 user,
                 AccessToken(value = "jwt-token", expiresInSeconds = 900),
                 RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+                mustChangePassword = false,
             )
 
         mockMvc.perform(
@@ -163,6 +170,33 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.refreshTokenExpiresIn").value(604800))
             .andExpect(jsonPath("$.user.email").value("client@kara.app"))
             .andExpect(jsonPath("$.user.password_hash").doesNotExist())
+            .andExpect(jsonPath("$.mustChangePassword").value(false))
+    }
+
+    @Test
+    fun `should return 403 when the account has been deactivated`() {
+        every { loginUseCase.login(any()) } returns LoginResult.AccountDeactivated
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("ACCOUNT_DEACTIVATED"))
+    }
+
+    @Test
+    fun `should return 403 when the temporary password has expired`() {
+        every { loginUseCase.login(any()) } returns LoginResult.TempPasswordExpired
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("TEMP_PASSWORD_EXPIRED"))
     }
 
     @Test
@@ -374,5 +408,58 @@ class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"refreshToken": "some-refresh-token"}"""),
         ).andExpect(status().isNoContent)
+    }
+
+    private val changePasswordRequestBody =
+        """{"currentPassword": "OldP@ssw0rd", "newPassword": "N3wStr0ngP@ssw0rd"}"""
+
+    @Test
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000")
+    fun `should return 204 when password is changed successfully`() {
+        every { changePasswordUseCase.changePassword(any()) } returns ChangePasswordResult.Success
+
+        mockMvc.perform(
+            post("/api/v1/auth/change-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(changePasswordRequestBody),
+        ).andExpect(status().isNoContent)
+    }
+
+    @Test
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000")
+    fun `should return 401 when the current password is incorrect`() {
+        every { changePasswordUseCase.changePassword(any()) } returns ChangePasswordResult.InvalidCurrentPassword
+
+        mockMvc.perform(
+            post("/api/v1/auth/change-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(changePasswordRequestBody),
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("INVALID_CURRENT_PASSWORD"))
+    }
+
+    @Test
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000")
+    fun `should return 400 when the new password is too weak`() {
+        every { changePasswordUseCase.changePassword(any()) } returns
+            ChangePasswordResult.WeakPassword(listOf("Le mot de passe doit contenir au moins 8 caractères"))
+
+        mockMvc.perform(
+            post("/api/v1/auth/change-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(changePasswordRequestBody),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("WEAK_PASSWORD"))
+    }
+
+    @Test
+    fun `should return 401 when changing password unauthenticated`() {
+        mockMvc.perform(
+            post("/api/v1/auth/change-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(changePasswordRequestBody),
+        ).andExpect(status().isUnauthorized)
     }
 }

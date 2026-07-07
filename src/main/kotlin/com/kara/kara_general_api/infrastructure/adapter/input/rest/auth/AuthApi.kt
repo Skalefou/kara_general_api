@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.auth
 
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ChangePasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
@@ -18,10 +19,12 @@ import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 
@@ -269,5 +272,37 @@ interface AuthApi {
     @PostMapping("/logout")
     fun logout(
         @Valid @RequestBody request: LogoutRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Changer son mot de passe",
+        description = "Remplace le mot de passe de l'utilisateur authentifié après vérification du mot de passe " +
+            "actuel. Utilisé notamment pour le changement forcé à la première connexion d'un compte serveur.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Mot de passe changé avec succès"),
+            ApiResponse(
+                responseCode = "400",
+                description = "Nouveau mot de passe non conforme à la politique",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Mot de passe actuel incorrect",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/change-password")
+    fun changePassword(
+        @Valid @RequestBody request: ChangePasswordRequest,
+        authentication: Authentication,
     ): ResponseEntity<Any>
 }

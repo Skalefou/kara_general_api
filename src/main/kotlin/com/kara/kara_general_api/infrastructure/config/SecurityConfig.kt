@@ -27,6 +27,7 @@ class SecurityConfig {
             httpBasic { disable() }
             formLogin { disable() }
             authorizeHttpRequests {
+                authorize(HttpMethod.POST, "/api/v1/auth/change-password", authenticated)
                 authorize("/api/v1/auth/**", permitAll)
                 authorize("/api/v1/test/**", permitAll)
                 authorize("/error", permitAll)
@@ -37,6 +38,10 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/rooms", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
+                authorize("/api/v1/users/me", authenticated)
+                authorize("/api/v1/users/me/**", authenticated)
+                authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))
+                authorize("/api/v1/users/**", hasRole(UserRole.ADMIN.name))
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

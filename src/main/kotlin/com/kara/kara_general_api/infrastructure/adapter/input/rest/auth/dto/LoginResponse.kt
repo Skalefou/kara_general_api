@@ -14,4 +14,9 @@ data class LoginResponse(
     val refreshTokenExpiresIn: Long,
     @field:Schema(description = "Profil de l'utilisateur connecté")
     val user: UserResponse,
+    @field:Schema(
+        description = "Indique que l'utilisateur doit changer son mot de passe temporaire avant toute autre action",
+        example = "false",
+    )
+    val mustChangePassword: Boolean,
 )

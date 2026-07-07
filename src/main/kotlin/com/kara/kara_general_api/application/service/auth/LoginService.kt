@@ -9,6 +9,7 @@ import com.kara.kara_general_api.domain.port.output.RefreshTokenRepository
 import com.kara.kara_general_api.domain.port.output.TokenService
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
+import java.time.Instant
 
 @Service
 class LoginService(
@@ -29,12 +30,20 @@ class LoginService(
             return LoginResult.AccountDeleted
         }
 
+        if (user.deactivatedAt != null) {
+            return LoginResult.AccountDeactivated
+        }
+
         if (!passwordHasher.matches(command.password, user.hashedPassword)) {
             return LoginResult.InvalidCredentials
         }
 
+        if (user.isTempPasswordExpired(Instant.now())) {
+            return LoginResult.TempPasswordExpired
+        }
+
         val accessToken = tokenService.generateAccessToken(user)
         val refreshToken = refreshTokenRepository.issue(user.id)
-        return LoginResult.Success(user, accessToken, refreshToken)
+        return LoginResult.Success(user, accessToken, refreshToken, mustChangePassword = user.mustChangePassword)
     }
 }
