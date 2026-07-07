@@ -41,3 +41,4 @@ out/
 
 # Fichier d'environnement
 .env
+private.pem
