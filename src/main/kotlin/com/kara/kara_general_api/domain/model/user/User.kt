@@ -22,8 +22,6 @@ data class User(
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
 
-    fun changePassword(hashedPassword: HashedPassword): User = copy(hashedPassword = hashedPassword)
-
     fun updateProfile(
         firstName: String?,
         lastName: String?,
