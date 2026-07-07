@@ -149,6 +149,18 @@ class RoomControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 200 when admin updates a room with a partial body`() {
+        every { updateRoomUseCase.updateRoom(any()) } returns UpdateRoomResult.Success(room)
+
+        mockMvc.perform(
+            patch("/api/v1/rooms/$ROOM_ID")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "Salle Lune"}"""),
+        ).andExpect(status().isOk)
+    }
+
+    @Test
     @WithMockUser(roles = ["CLIENT"])
     fun `should return 403 when non-admin updates a room`() {
         mockMvc.perform(

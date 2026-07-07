@@ -52,7 +52,15 @@ class RoomController(
         }
 
     override fun updateRoom(id: UUID, request: UpdateRoomRequest): ResponseEntity<Any> {
-        val command = UpdateRoomCommand(id = RoomId(id), name = request.name, address = request.toAddress())
+        val command =
+            UpdateRoomCommand(
+                id = RoomId(id),
+                name = request.name,
+                street = request.street,
+                city = request.city,
+                postalCode = request.postalCode,
+                country = request.country,
+            )
         return when (val result = updateRoomUseCase.updateRoom(command)) {
             is UpdateRoomResult.Success -> ResponseEntity.ok(RoomResponse.from(result.room))
             UpdateRoomResult.NotFound -> roomNotFound()
@@ -66,9 +74,6 @@ class RoomController(
         }
 
     private fun CreateRoomRequest.toAddress(): Address =
-        Address(street = street, city = city, postalCode = postalCode, country = country)
-
-    private fun UpdateRoomRequest.toAddress(): Address =
         Address(street = street, city = city, postalCode = postalCode, country = country)
 
     private fun roomNotFound(): ResponseEntity<Any> =

@@ -16,4 +16,9 @@ interface FirebaseAuthGateway {
     fun deleteUser(firebaseUserId: FirebaseUserId)
 
     fun updatePassword(firebaseUserId: FirebaseUserId, plainPassword: String)
+
+    /**
+     * @throws EmailAlreadyUsedException si l'email est déjà enregistré côté Firebase
+     */
+    fun updateEmail(firebaseUserId: FirebaseUserId, email: Email)
 }

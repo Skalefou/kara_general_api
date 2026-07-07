@@ -28,8 +28,15 @@ class UpdateRoomServiceTest {
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             createdAt = Instant.now(),
         )
-    private val newAddress = Address(street = "5 avenue Foch", city = "Lyon", postalCode = "69000", country = "France")
-    private val command = UpdateRoomCommand(id = roomId, name = "Salle Lune", address = newAddress)
+    private val command =
+        UpdateRoomCommand(
+            id = roomId,
+            name = "Salle Lune",
+            street = "5 avenue Foch",
+            city = "Lyon",
+            postalCode = "69000",
+            country = "France",
+        )
 
     @Test
     fun `should update and persist room when it exists`() {
@@ -41,8 +48,34 @@ class UpdateRoomServiceTest {
 
         val success = assertIs<UpdateRoomResult.Success>(result)
         assertEquals("Salle Lune", success.room.name)
-        assertEquals(newAddress, success.room.address)
+        assertEquals(
+            Address(street = "5 avenue Foch", city = "Lyon", postalCode = "69000", country = "France"),
+            success.room.address,
+        )
         assertEquals(roomId, success.room.id)
+    }
+
+    @Test
+    fun `should keep existing values for fields not provided`() {
+        every { roomRepository.findById(roomId) } returns existingRoom
+        val savedRoom = slot<Room>()
+        every { roomRepository.save(capture(savedRoom)) } answers { savedRoom.captured }
+
+        val partialCommand =
+            UpdateRoomCommand(
+                id = roomId,
+                name = "Salle Lune",
+                street = null,
+                city = null,
+                postalCode = null,
+                country = null,
+            )
+
+        val result = sut.updateRoom(partialCommand)
+
+        val success = assertIs<UpdateRoomResult.Success>(result)
+        assertEquals("Salle Lune", success.room.name)
+        assertEquals(existingRoom.address, success.room.address)
     }
 
     @Test

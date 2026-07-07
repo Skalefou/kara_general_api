@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.user
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -13,6 +14,7 @@ import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.RequestBody
 
 @Tag(name = "Utilisateur", description = "Gestion du compte utilisateur")
@@ -41,6 +43,34 @@ interface UserApi {
     @DeleteMapping("/me")
     fun deleteAccount(
         @Valid @RequestBody request: DeleteAccountRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Modifier son profil",
+        description = "Met à jour les champs fournis du profil (les autres restent inchangés). " +
+            "En cas de changement d'email, l'email repasse en non vérifié et un code de vérification " +
+            "est envoyé à la nouvelle adresse.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Profil mis à jour avec succès"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "Email déjà utilisé",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PatchMapping("/me")
+    fun updateProfile(
+        @Valid @RequestBody request: UpdateProfileRequest,
         authentication: Authentication,
     ): ResponseEntity<Any>
 }

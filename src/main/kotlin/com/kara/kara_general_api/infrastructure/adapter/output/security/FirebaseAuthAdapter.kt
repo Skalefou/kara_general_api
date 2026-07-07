@@ -43,6 +43,21 @@ class FirebaseAuthAdapter(
         )
     }
 
+    override fun updateEmail(firebaseUserId: FirebaseUserId, email: Email) {
+        try {
+            firebaseAuth.updateUser(
+                UserRecord.UpdateRequest(firebaseUserId.value)
+                    .setEmail(email.value)
+                    .setEmailVerified(false),
+            )
+        } catch (e: FirebaseAuthException) {
+            if (e.authErrorCode == AuthErrorCode.EMAIL_ALREADY_EXISTS) {
+                throw EmailAlreadyUsedException(email)
+            }
+            throw e
+        }
+    }
+
     private fun recoverFromAmbiguousFailure(email: Email): UserRecord? =
         try {
             firebaseAuth.getUserByEmail(email.value)

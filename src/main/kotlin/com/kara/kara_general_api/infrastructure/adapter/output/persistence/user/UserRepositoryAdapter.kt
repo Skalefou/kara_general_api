@@ -50,6 +50,33 @@ class UserRepositoryAdapter(
         return user
     }
 
+    override fun update(user: User): User {
+        val sql =
+            """
+            UPDATE users SET
+                email          = :email,
+                first_name     = :firstName,
+                last_name      = :lastName,
+                phone_number   = :phoneNumber,
+                birth_date     = :birthDate,
+                email_verified = :emailVerified
+            WHERE id = :id
+              AND deleted_at IS NULL
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", user.id.value)
+                .addValue("email", user.email.value)
+                .addValue("firstName", user.firstName)
+                .addValue("lastName", user.lastName)
+                .addValue("phoneNumber", user.phoneNumber.value)
+                .addValue("birthDate", Date.valueOf(user.birthDate))
+                .addValue("emailVerified", user.emailVerified),
+        )
+        return user
+    }
+
     override fun findByEmail(email: Email): User? {
         val sql =
             """

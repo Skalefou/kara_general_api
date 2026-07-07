@@ -24,6 +24,21 @@ data class User(
 
     fun changePassword(hashedPassword: HashedPassword): User = copy(hashedPassword = hashedPassword)
 
+    fun updateProfile(
+        firstName: String?,
+        lastName: String?,
+        phoneNumber: PhoneNumber?,
+        birthDate: LocalDate?,
+    ): User =
+        copy(
+            firstName = firstName ?: this.firstName,
+            lastName = lastName ?: this.lastName,
+            phoneNumber = phoneNumber ?: this.phoneNumber,
+            birthDate = birthDate ?: this.birthDate,
+        )
+
+    fun changeEmail(newEmail: Email): User = copy(email = newEmail, emailVerified = false)
+
     companion object {
         fun register(
             email: Email,
