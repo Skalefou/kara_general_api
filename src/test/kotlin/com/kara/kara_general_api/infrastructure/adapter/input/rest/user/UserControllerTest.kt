@@ -16,6 +16,12 @@ import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountRe
 import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountUseCase
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountResult
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountUseCase
+import com.kara.kara_general_api.domain.port.input.user.DeleteProfilePhotoResult
+import com.kara.kara_general_api.domain.port.input.user.DeleteProfilePhotoUseCase
+import com.kara.kara_general_api.domain.port.input.user.GetProfilePhotoResult
+import com.kara.kara_general_api.domain.port.input.user.GetProfilePhotoUseCase
+import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoResult
+import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileUseCase
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
@@ -26,10 +32,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -65,6 +73,15 @@ class UserControllerTest {
 
     @MockkBean
     private lateinit var deactivateAccountUseCase: DeactivateAccountUseCase
+
+    @MockkBean
+    private lateinit var updateProfilePhotoUseCase: UpdateProfilePhotoUseCase
+
+    @MockkBean
+    private lateinit var getProfilePhotoUseCase: GetProfilePhotoUseCase
+
+    @MockkBean
+    private lateinit var deleteProfilePhotoUseCase: DeleteProfilePhotoUseCase
 
     private val user =
         User(
@@ -306,5 +323,75 @@ class UserControllerTest {
     @Test
     fun `should return 401 when listing accounts unauthenticated`() {
         mockMvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized)
+    }
+
+    private fun photoFile(contentType: String = MediaType.IMAGE_JPEG_VALUE) =
+        MockMultipartFile("file", "photo.jpg", contentType, byteArrayOf(1, 2, 3))
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 200 with a signed url when a profile photo is uploaded`() {
+        every { updateProfilePhotoUseCase.updatePhoto(any()) } returns
+            UpdateProfilePhotoResult.Success("https://signed.example/photo")
+
+        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.photoUrl").value("https://signed.example/photo"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 415 when the profile photo type is not supported`() {
+        every { updateProfilePhotoUseCase.updatePhoto(any()) } returns UpdateProfilePhotoResult.InvalidImageType
+
+        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile("text/plain")))
+            .andExpect(status().isUnsupportedMediaType)
+            .andExpect(jsonPath("$.code").value("INVALID_IMAGE_TYPE"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 413 when the profile photo is too large`() {
+        every { updateProfilePhotoUseCase.updatePhoto(any()) } returns UpdateProfilePhotoResult.ImageTooLarge
+
+        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
+            .andExpect(status().isPayloadTooLarge)
+            .andExpect(jsonPath("$.code").value("IMAGE_TOO_LARGE"))
+    }
+
+    @Test
+    fun `should return 401 when uploading a profile photo unauthenticated`() {
+        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 200 with the signed url of the profile photo`() {
+        every { getProfilePhotoUseCase.getPhotoUrl(any()) } returns
+            GetProfilePhotoResult.Success("https://signed.example/photo")
+
+        mockMvc.perform(get("/api/v1/users/me/photo"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.photoUrl").value("https://signed.example/photo"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 404 when no profile photo is set`() {
+        every { getProfilePhotoUseCase.getPhotoUrl(any()) } returns GetProfilePhotoResult.NoPhoto
+
+        mockMvc.perform(get("/api/v1/users/me/photo"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("PROFILE_PHOTO_NOT_FOUND"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 204 when a profile photo is deleted`() {
+        every { deleteProfilePhotoUseCase.deletePhoto(any()) } returns DeleteProfilePhotoResult.Success
+
+        mockMvc.perform(delete("/api/v1/users/me/photo"))
+            .andExpect(status().isNoContent)
     }
 }

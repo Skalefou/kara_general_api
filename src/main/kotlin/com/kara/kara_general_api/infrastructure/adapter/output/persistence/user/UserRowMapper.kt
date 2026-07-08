@@ -30,5 +30,6 @@ class UserRowMapper : RowMapper<User> {
             deactivatedAt = rs.getTimestamp("deactivated_at")?.toInstant(),
             mustChangePassword = rs.getBoolean("must_change_password"),
             tempPasswordExpiresAt = rs.getTimestamp("temp_password_expires_at")?.toInstant(),
+            photoKey = rs.getString("photo_object_key"),
         )
 }

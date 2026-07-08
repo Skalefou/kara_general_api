@@ -17,11 +17,19 @@ import com.kara.kara_general_api.domain.port.input.admin.ReinviteServerAccountUs
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountCommand
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountResult
 import com.kara.kara_general_api.domain.port.input.user.DeleteAccountUseCase
+import com.kara.kara_general_api.domain.port.input.user.DeleteProfilePhotoResult
+import com.kara.kara_general_api.domain.port.input.user.DeleteProfilePhotoUseCase
+import com.kara.kara_general_api.domain.port.input.user.GetProfilePhotoResult
+import com.kara.kara_general_api.domain.port.input.user.GetProfilePhotoUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileCommand
+import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoCommand
+import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoResult
+import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
@@ -31,6 +39,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @RestController
@@ -42,6 +51,9 @@ class UserController(
     private val listAllAccountsUseCase: ListAllAccountsUseCase,
     private val reinviteServerAccountUseCase: ReinviteServerAccountUseCase,
     private val deactivateAccountUseCase: DeactivateAccountUseCase,
+    private val updateProfilePhotoUseCase: UpdateProfilePhotoUseCase,
+    private val getProfilePhotoUseCase: GetProfilePhotoUseCase,
+    private val deleteProfilePhotoUseCase: DeleteProfilePhotoUseCase,
 ) : UserApi {
 
     override fun deleteAccount(request: DeleteAccountRequest, authentication: Authentication): ResponseEntity<Any> {
@@ -73,6 +85,58 @@ class UserController(
 
     override fun updateProfile(request: UpdateProfileRequest, authentication: Authentication): ResponseEntity<Any> =
         updateProfile(UserId(UUID.fromString(authentication.name)), request)
+
+    override fun uploadProfilePhoto(file: MultipartFile, authentication: Authentication): ResponseEntity<Any> {
+        val command =
+            UpdateProfilePhotoCommand(
+                userId = UserId(UUID.fromString(authentication.name)),
+                bytes = file.bytes,
+                contentType = file.contentType,
+            )
+
+        return when (val result = updateProfilePhotoUseCase.updatePhoto(command)) {
+            is UpdateProfilePhotoResult.Success ->
+                ResponseEntity.ok(ProfilePhotoResponse(result.photoUrl))
+
+            UpdateProfilePhotoResult.UserNotFound ->
+                userNotFound()
+
+            UpdateProfilePhotoResult.InvalidImageType ->
+                invalidImageType()
+
+            UpdateProfilePhotoResult.ImageTooLarge ->
+                imageTooLarge()
+        }
+    }
+
+    override fun getProfilePhoto(authentication: Authentication): ResponseEntity<Any> =
+        when (val result = getProfilePhotoUseCase.getPhotoUrl(UserId(UUID.fromString(authentication.name)))) {
+            is GetProfilePhotoResult.Success ->
+                ResponseEntity.ok(ProfilePhotoResponse(result.photoUrl))
+
+            GetProfilePhotoResult.UserNotFound ->
+                userNotFound()
+
+            GetProfilePhotoResult.NoPhoto ->
+                ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND,
+                        "Aucune photo de profil n'a été définie.",
+                    ).apply {
+                        title = "Photo introuvable"
+                        setProperty("code", "PROFILE_PHOTO_NOT_FOUND")
+                    },
+                )
+        }
+
+    override fun deleteProfilePhoto(authentication: Authentication): ResponseEntity<Any> =
+        when (deleteProfilePhotoUseCase.deletePhoto(UserId(UUID.fromString(authentication.name)))) {
+            DeleteProfilePhotoResult.Success ->
+                ResponseEntity.noContent().build()
+
+            DeleteProfilePhotoResult.UserNotFound ->
+                userNotFound()
+        }
 
     override fun listAccounts(page: Int, size: Int): ResponseEntity<UserListResponse> {
         val accountPage = listAllAccountsUseCase.listAllAccounts(ListAllAccountsQuery(page = page, size = size))
@@ -183,6 +247,28 @@ class UserController(
             ).apply {
                 title = "Email déjà utilisé"
                 setProperty("code", "EMAIL_ALREADY_USED")
+            },
+        )
+
+    private fun invalidImageType(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "Format d'image non supporté. Formats acceptés : JPEG, PNG, WebP, AVIF, HEIC.",
+            ).apply {
+                title = "Format d'image non supporté"
+                setProperty("code", "INVALID_IMAGE_TYPE")
+            },
+        )
+
+    private fun imageTooLarge(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "L'image dépasse la taille maximale autorisée (5 Mo).",
+            ).apply {
+                title = "Image trop volumineuse"
+                setProperty("code", "IMAGE_TOO_LARGE")
             },
         )
 

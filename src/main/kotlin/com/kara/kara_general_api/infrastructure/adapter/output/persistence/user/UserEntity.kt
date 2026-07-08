@@ -42,4 +42,6 @@ class UserEntity(
     var mustChangePassword: Boolean = false,
     @Column(name = "temp_password_expires_at", columnDefinition = "timestamptz")
     var tempPasswordExpiresAt: Instant? = null,
+    @Column(name = "photo_object_key", columnDefinition = "varchar(512)")
+    var photoObjectKey: String? = null,
 )

@@ -2,16 +2,23 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.room.RoomImage
+import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
+import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
+import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomResult
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.GetRoomResult
 import com.kara.kara_general_api.domain.port.input.room.GetRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.ListRoomsUseCase
+import com.kara.kara_general_api.domain.port.input.room.RemoveRoomImageResult
+import com.kara.kara_general_api.domain.port.input.room.RemoveRoomImageUseCase
 import com.kara.kara_general_api.domain.port.input.room.RoomPage
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomUseCase
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
@@ -20,10 +27,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -56,6 +65,15 @@ class RoomControllerTest {
 
     @MockkBean
     private lateinit var deleteRoomUseCase: DeleteRoomUseCase
+
+    @MockkBean
+    private lateinit var addRoomImageUseCase: AddRoomImageUseCase
+
+    @MockkBean
+    private lateinit var removeRoomImageUseCase: RemoveRoomImageUseCase
+
+    @MockkBean
+    private lateinit var imageStorage: ImageStoragePort
 
     private val room =
         Room(
@@ -206,5 +224,62 @@ class RoomControllerTest {
     fun `should return 403 when non-admin deletes a room`() {
         mockMvc.perform(delete("/api/v1/rooms/$ROOM_ID"))
             .andExpect(status().isForbidden)
+    }
+
+    private fun imageFile(contentType: String = MediaType.IMAGE_JPEG_VALUE) =
+        MockMultipartFile("file", "room.jpg", contentType, byteArrayOf(1, 2, 3))
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 201 with the public url when admin adds a room image`() {
+        val image = RoomImage(RoomImageId(UUID.randomUUID()), "rooms/$ROOM_ID/img.jpg", 0)
+        every { addRoomImageUseCase.addImage(any()) } returns
+            AddRoomImageResult.Success(image, "https://cdn.example/rooms/$ROOM_ID/img.jpg")
+
+        mockMvc.perform(multipart("/api/v1/rooms/$ROOM_ID/images").file(imageFile()))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.url").value("https://cdn.example/rooms/$ROOM_ID/img.jpg"))
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 415 when the room image type is not supported`() {
+        every { addRoomImageUseCase.addImage(any()) } returns AddRoomImageResult.InvalidImageType
+
+        mockMvc.perform(multipart("/api/v1/rooms/$ROOM_ID/images").file(imageFile("text/plain")))
+            .andExpect(status().isUnsupportedMediaType)
+            .andExpect(jsonPath("$.code").value("INVALID_IMAGE_TYPE"))
+    }
+
+    @Test
+    @WithMockUser(roles = ["CLIENT"])
+    fun `should return 403 when non-admin adds a room image`() {
+        mockMvc.perform(multipart("/api/v1/rooms/$ROOM_ID/images").file(imageFile()))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `should return 401 when unauthenticated adds a room image`() {
+        mockMvc.perform(multipart("/api/v1/rooms/$ROOM_ID/images").file(imageFile()))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 204 when admin removes a room image`() {
+        every { removeRoomImageUseCase.removeImage(any()) } returns RemoveRoomImageResult.Success
+
+        mockMvc.perform(delete("/api/v1/rooms/$ROOM_ID/images/${UUID.randomUUID()}"))
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 404 when admin removes an unknown room image`() {
+        every { removeRoomImageUseCase.removeImage(any()) } returns RemoveRoomImageResult.ImageNotFound
+
+        mockMvc.perform(delete("/api/v1/rooms/$ROOM_ID/images/${UUID.randomUUID()}"))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("ROOM_IMAGE_NOT_FOUND"))
     }
 }

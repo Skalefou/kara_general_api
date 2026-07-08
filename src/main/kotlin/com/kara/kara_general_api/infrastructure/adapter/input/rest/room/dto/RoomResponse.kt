@@ -23,9 +23,11 @@ data class RoomResponse(
     val createdAt: Instant,
     @field:Schema(description = "Statut de la salle", example = "OPEN")
     val status: RoomStatus,
+    @field:Schema(description = "Images publiques de la salle")
+    val images: List<RoomImageResponse>,
 ) {
     companion object {
-        fun from(room: Room): RoomResponse =
+        fun from(room: Room, publicUrl: (String) -> String): RoomResponse =
             RoomResponse(
                 id = room.id.value,
                 name = room.name,
@@ -35,6 +37,7 @@ data class RoomResponse(
                 country = room.address.country,
                 createdAt = room.createdAt,
                 status = room.status,
+                images = room.images.map { RoomImageResponse.from(it, publicUrl) },
             )
     }
 }

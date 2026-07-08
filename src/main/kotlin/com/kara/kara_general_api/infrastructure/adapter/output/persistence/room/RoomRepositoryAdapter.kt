@@ -2,17 +2,30 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.room.RoomImage
+import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.port.output.RoomRepository
+import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Component
 import java.sql.Timestamp
+import java.util.UUID
 
 @Component
 class RoomRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: RoomRowMapper,
 ) : RoomRepository {
+
+    private val imageRowMapper =
+        RowMapper { rs, _ ->
+            RoomImage(
+                id = RoomImageId(rs.getObject("id", UUID::class.java)),
+                objectKey = rs.getString("object_key"),
+                position = rs.getInt("position"),
+            )
+        }
 
     override fun save(room: Room): Room {
         val sql =
@@ -49,7 +62,8 @@ class RoomRepositoryAdapter(
             FROM rooms
             WHERE id = :id
             """.trimIndent()
-        return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
+        val room = jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull() ?: return null
+        return room.copy(images = findImages(id))
     }
 
     override fun findAll(page: Int, size: Int): List<Room> {
@@ -60,11 +74,10 @@ class RoomRepositoryAdapter(
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            mapOf("limit" to size, "offset" to page * size),
-            rowMapper,
-        )
+        val rooms = jdbc.query(sql, mapOf("limit" to size, "offset" to page * size), rowMapper)
+        if (rooms.isEmpty()) return rooms
+        val imagesByRoom = findImagesByRoomIds(rooms.map { it.id.value })
+        return rooms.map { it.copy(images = imagesByRoom[it.id.value].orEmpty()) }
     }
 
     override fun count(): Long {
@@ -76,5 +89,63 @@ class RoomRepositoryAdapter(
         val sql = "DELETE FROM rooms WHERE id = :id"
         val rows = jdbc.update(sql, mapOf("id" to id.value))
         return rows > 0
+    }
+
+    override fun addImage(roomId: RoomId, image: RoomImage): RoomImage {
+        val sql =
+            """
+            INSERT INTO room_images (id, room_id, object_key, position, created_at)
+            VALUES (:id, :roomId, :objectKey, :position, NOW())
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", image.id.value)
+                .addValue("roomId", roomId.value)
+                .addValue("objectKey", image.objectKey)
+                .addValue("position", image.position),
+        )
+        return image
+    }
+
+    override fun removeImage(roomId: RoomId, imageId: RoomImageId): Boolean {
+        val sql = "DELETE FROM room_images WHERE id = :id AND room_id = :roomId"
+        val rows =
+            jdbc.update(
+                sql,
+                mapOf("id" to imageId.value, "roomId" to roomId.value),
+            )
+        return rows > 0
+    }
+
+    private fun findImages(roomId: RoomId): List<RoomImage> {
+        val sql =
+            """
+            SELECT id, object_key, position
+            FROM room_images
+            WHERE room_id = :roomId
+            ORDER BY position ASC
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("roomId" to roomId.value), imageRowMapper)
+    }
+
+    private fun findImagesByRoomIds(roomIds: List<UUID>): Map<UUID, List<RoomImage>> {
+        val sql =
+            """
+            SELECT id, room_id, object_key, position
+            FROM room_images
+            WHERE room_id IN (:roomIds)
+            ORDER BY position ASC
+            """.trimIndent()
+        val rows =
+            jdbc.query(sql, mapOf("roomIds" to roomIds)) { rs, _ ->
+                rs.getObject("room_id", UUID::class.java) to
+                    RoomImage(
+                        id = RoomImageId(rs.getObject("id", UUID::class.java)),
+                        objectKey = rs.getString("object_key"),
+                        position = rs.getInt("position"),
+                    )
+            }
+        return rows.groupBy({ it.first }, { it.second })
     }
 }

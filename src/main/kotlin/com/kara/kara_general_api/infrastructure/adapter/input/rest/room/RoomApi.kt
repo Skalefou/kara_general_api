@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.MediaType
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @Tag(name = "Salles", description = "Gestion des salles")
@@ -104,4 +107,56 @@ interface RoomApi {
     )
     @DeleteMapping("/{id}")
     fun deleteRoom(@PathVariable id: UUID): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Ajouter une image à une salle",
+        description = "Réservé aux administrateurs. Image publique (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max) servie par le CDN.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "201", description = "Image ajoutée ; URL publique retournée"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Salle introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "413",
+                description = "Image trop volumineuse",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "415",
+                description = "Type d'image non supporté",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/{id}/images", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun addRoomImage(
+        @PathVariable id: UUID,
+        @RequestPart("file") file: MultipartFile,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Supprimer une image d'une salle",
+        description = "Réservé aux administrateurs.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Image supprimée avec succès"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Salle ou image introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @DeleteMapping("/{id}/images/{imageId}")
+    fun removeRoomImage(
+        @PathVariable id: UUID,
+        @PathVariable imageId: UUID,
+    ): ResponseEntity<Any>
 }

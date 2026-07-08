@@ -22,8 +22,12 @@ data class User(
     val deactivatedAt: Instant? = null,
     val mustChangePassword: Boolean = false,
     val tempPasswordExpiresAt: Instant? = null,
+    val photoKey: String? = null,
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
+
+    /** Associe (ou retire, si null) la clé de l'objet photo de profil stocké dans le CDN privé. */
+    fun withPhotoKey(photoKey: String?): User = copy(photoKey = photoKey)
 
     fun updateProfile(
         firstName: String?,

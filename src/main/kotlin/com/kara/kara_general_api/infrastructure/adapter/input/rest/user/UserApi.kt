@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.MediaType
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @Tag(name = "Utilisateur", description = "Gestion du compte utilisateur")
@@ -80,6 +83,68 @@ interface UserApi {
         @Valid @RequestBody request: UpdateProfileRequest,
         authentication: Authentication,
     ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Téléverser sa photo de profil",
+        description = "Image privée (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max). Accessible uniquement via une URL signée " +
+            "courte durée, retournée dans la réponse.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Photo enregistrée ; URL signée retournée"),
+            ApiResponse(
+                responseCode = "413",
+                description = "Image trop volumineuse",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "415",
+                description = "Type d'image non supporté",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/me/photo", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadProfilePhoto(
+        @RequestPart("file") file: MultipartFile,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Obtenir l'URL de sa photo de profil",
+        description = "Retourne une URL signée courte durée (15 min) vers la photo de profil.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "URL signée retournée"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Aucune photo de profil",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @GetMapping("/me/photo")
+    fun getProfilePhoto(authentication: Authentication): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Supprimer sa photo de profil",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Photo supprimée (ou aucune photo)"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Compte introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @DeleteMapping("/me/photo")
+    fun deleteProfilePhoto(authentication: Authentication): ResponseEntity<Any>
 
     @Operation(
         summary = "Lister tous les comptes",

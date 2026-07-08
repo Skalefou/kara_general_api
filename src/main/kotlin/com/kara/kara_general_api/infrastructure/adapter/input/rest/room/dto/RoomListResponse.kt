@@ -16,9 +16,9 @@ data class RoomListResponse(
     val totalPages: Int,
 ) {
     companion object {
-        fun from(roomPage: RoomPage): RoomListResponse =
+        fun from(roomPage: RoomPage, publicUrl: (String) -> String): RoomListResponse =
             RoomListResponse(
-                rooms = roomPage.rooms.map(RoomResponse::from),
+                rooms = roomPage.rooms.map { RoomResponse.from(it, publicUrl) },
                 page = roomPage.page,
                 size = roomPage.size,
                 totalElements = roomPage.totalElements,

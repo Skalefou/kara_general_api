@@ -1,6 +1,7 @@
 package com.kara.kara_general_api
 
 import com.google.firebase.auth.FirebaseAuth
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.NotificationService
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
@@ -18,6 +19,9 @@ class KaraGeneralApiApplicationTests {
 
     @MockkBean
     lateinit var notificationService: NotificationService
+
+    @MockkBean
+    lateinit var imageStoragePort: ImageStoragePort
 
     @Test
     fun contextLoads() {

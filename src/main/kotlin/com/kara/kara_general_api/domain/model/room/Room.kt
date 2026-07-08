@@ -9,6 +9,7 @@ data class Room(
     val address: Address,
     val createdAt: Instant,
     val status: RoomStatus = RoomStatus.OPEN,
+    val images: List<RoomImage> = emptyList(),
 ) {
     init {
         require(name.isNotBlank()) { "Le nom de la salle est obligatoire" }

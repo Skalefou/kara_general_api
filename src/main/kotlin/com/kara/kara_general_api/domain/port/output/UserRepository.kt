@@ -26,6 +26,9 @@ interface UserRepository {
 
     fun markEmailVerified(id: UserId)
 
+    /** Met à jour la clé de la photo de profil (null pour retirer la photo). */
+    fun updatePhotoKey(id: UserId, photoKey: String?)
+
     fun anonymize(id: UserId)
 
     /** Applique un mot de passe définitif et lève le changement forcé (remet à zéro les champs temporaires). */

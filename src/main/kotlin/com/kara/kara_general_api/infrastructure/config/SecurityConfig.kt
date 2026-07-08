@@ -36,6 +36,7 @@ class SecurityConfig {
                 authorize("/v3/api-docs/**", permitAll)
                 authorize(HttpMethod.GET, "/api/v1/rooms/**", permitAll)
                 authorize(HttpMethod.POST, "/api/v1/rooms", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.POST, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/me", authenticated)

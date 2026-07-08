@@ -5,9 +5,20 @@ import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleMaxUploadSize(ex: MaxUploadSizeExceededException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.PAYLOAD_TOO_LARGE,
+            "L'image dépasse la taille maximale autorisée (5 Mo).",
+        ).apply {
+            title = "Image trop volumineuse"
+            setProperty("code", "IMAGE_TOO_LARGE")
+        }
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ProblemDetail =

@@ -16,7 +16,7 @@ import java.time.Instant
 private const val USER_COLUMNS =
     "id, email, password_hash, first_name, last_name, phone_number, birth_date, role, " +
         "firebase_uid, created_at, email_verified, deleted_at, deactivated_at, " +
-        "must_change_password, temp_password_expires_at"
+        "must_change_password, temp_password_expires_at, photo_object_key"
 
 @Component
 class UserRepositoryAdapter(
@@ -151,6 +151,16 @@ class UserRepositoryAdapter(
         jdbc.update(sql, mapOf("id" to id.value))
     }
 
+    override fun updatePhotoKey(id: UserId, photoKey: String?) {
+        val sql = "UPDATE users SET photo_object_key = :photoKey WHERE id = :id AND deleted_at IS NULL"
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("photoKey", photoKey),
+        )
+    }
+
     override fun updatePassword(id: UserId, hashedPassword: HashedPassword) {
         val sql =
             """
@@ -192,9 +202,10 @@ class UserRepositoryAdapter(
                 last_name      = 'Supprimé',
                 phone_number   = '0000000000',
                 birth_date     = '1970-01-01',
-                firebase_uid   = :anonymizedFirebaseUid,
-                deleted_at     = NOW(),
-                email_verified = false
+                firebase_uid     = :anonymizedFirebaseUid,
+                deleted_at       = NOW(),
+                email_verified   = false,
+                photo_object_key = NULL
             WHERE id = :id
             """.trimIndent()
         jdbc.update(
