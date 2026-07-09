@@ -27,6 +27,7 @@ import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileUseCase
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoResponse
@@ -40,7 +41,10 @@ import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import java.time.Duration
 import java.util.UUID
+
+private val PHOTO_URL_TTL: Duration = Duration.ofMinutes(15)
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -54,7 +58,10 @@ class UserController(
     private val updateProfilePhotoUseCase: UpdateProfilePhotoUseCase,
     private val getProfilePhotoUseCase: GetProfilePhotoUseCase,
     private val deleteProfilePhotoUseCase: DeleteProfilePhotoUseCase,
+    private val imageStorage: ImageStoragePort,
 ) : UserApi {
+
+    private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
 
     override fun deleteAccount(request: DeleteAccountRequest, authentication: Authentication): ResponseEntity<Any> {
         val command =
@@ -140,7 +147,7 @@ class UserController(
 
     override fun listAccounts(page: Int, size: Int): ResponseEntity<UserListResponse> {
         val accountPage = listAllAccountsUseCase.listAllAccounts(ListAllAccountsQuery(page = page, size = size))
-        return ResponseEntity.ok(UserListResponse.from(accountPage))
+        return ResponseEntity.ok(UserListResponse.from(accountPage, ::signedPhotoUrl))
     }
 
     override fun createServerAccount(request: CreateServerAccountRequest): ResponseEntity<Any> {
@@ -155,7 +162,7 @@ class UserController(
 
         return when (val result = createServerAccountUseCase.createServerAccount(command)) {
             is CreateServerAccountResult.Success ->
-                ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(result.user))
+                ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(result.user, ::signedPhotoUrl))
 
             CreateServerAccountResult.EmailAlreadyUsed ->
                 emailAlreadyUsed()
@@ -218,7 +225,7 @@ class UserController(
 
         return when (val result = updateProfileUseCase.updateProfile(command)) {
             is UpdateProfileResult.Success ->
-                ResponseEntity.ok(UserResponse.from(result.user))
+                ResponseEntity.ok(UserResponse.from(result.user, ::signedPhotoUrl))
 
             UpdateProfileResult.UserNotFound ->
                 userNotFound()

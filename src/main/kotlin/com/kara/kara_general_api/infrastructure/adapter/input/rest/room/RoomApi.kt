@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.CreateRoomRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomImageResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.UpdateRoomRequest
@@ -36,7 +37,11 @@ interface RoomApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "201", description = "Salle créée avec succès"),
+            ApiResponse(
+                responseCode = "201",
+                description = "Salle créée avec succès",
+                content = [Content(schema = Schema(implementation = RoomResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "400",
                 description = "Requête invalide",
@@ -79,7 +84,11 @@ interface RoomApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Salle modifiée avec succès"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Salle modifiée avec succès",
+                content = [Content(schema = Schema(implementation = RoomResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "Salle introuvable",
@@ -115,7 +124,11 @@ interface RoomApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "201", description = "Image ajoutée ; URL publique retournée"),
+            ApiResponse(
+                responseCode = "201",
+                description = "Image ajoutée ; URL publique retournée",
+                content = [Content(schema = Schema(implementation = RoomImageResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "Salle introuvable",

@@ -22,9 +22,15 @@ data class UserResponse(
     val role: String,
     @field:Schema(description = "Indique si l'email a été vérifié")
     val emailVerified: Boolean,
+    @field:Schema(description = "URL signée courte durée vers la photo de profil (null si absente)")
+    val photoUrl: String?,
 ) {
     companion object {
-        fun from(user: User): UserResponse =
+        /**
+         * [photoUrl] résout une clé d'objet en URL signée. Omis (null) dans les contextes qui n'exposent
+         * pas la photo (ex. réponses d'authentification) : le champ `photoUrl` est alors null.
+         */
+        fun from(user: User, photoUrl: ((String) -> String)? = null): UserResponse =
             UserResponse(
                 id = user.id.value,
                 email = user.email.value,
@@ -34,6 +40,7 @@ data class UserResponse(
                 birthDate = user.birthDate,
                 role = user.role.name,
                 emailVerified = user.emailVerified,
+                photoUrl = user.photoKey?.let { key -> photoUrl?.invoke(key) },
             )
     }
 }

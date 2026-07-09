@@ -24,6 +24,7 @@ import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfilePhotoUseCase
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileResult
 import com.kara.kara_general_api.domain.port.input.user.UpdateProfileUseCase
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
@@ -82,6 +83,9 @@ class UserControllerTest {
 
     @MockkBean
     private lateinit var deleteProfilePhotoUseCase: DeleteProfilePhotoUseCase
+
+    @MockkBean
+    private lateinit var imageStorage: ImageStoragePort
 
     private val user =
         User(
@@ -268,6 +272,29 @@ class UserControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.totalElements").value(1))
             .andExpect(jsonPath("$.users[0].email").value("jane.doe@example.com"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should expose a signed photo url for accounts that have a photo`() {
+        every { listAllAccountsUseCase.listAllAccounts(any()) } returns
+            AccountPage(accounts = listOf(user.copy(photoKey = "profiles/x.jpg")), page = 0, size = 20, totalElements = 1)
+        every { imageStorage.signedUrl("profiles/x.jpg", any()) } returns "https://signed.example/x"
+
+        mockMvc.perform(get("/api/v1/users"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.users[0].photoUrl").value("https://signed.example/x"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["ADMIN"])
+    fun `should return a null photo url for accounts without a photo`() {
+        every { listAllAccountsUseCase.listAllAccounts(any()) } returns
+            AccountPage(accounts = listOf(user), page = 0, size = 20, totalElements = 1)
+
+        mockMvc.perform(get("/api/v1/users"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.users[0].photoUrl").isEmpty)
     }
 
     @Test

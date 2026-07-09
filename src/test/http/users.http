@@ -53,7 +53,7 @@ client.test("Body contains accessToken", function() {
   client.assert(!!response.body.accessToken, "Missing accessToken");
 });
 client.global.set("token", response.body.accessToken);
-%}m
+%}
 
 ### Sans authentification -> 401
 DELETE {{host}}/api/v1/users/me

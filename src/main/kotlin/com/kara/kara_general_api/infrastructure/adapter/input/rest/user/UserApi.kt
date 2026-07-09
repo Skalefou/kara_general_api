@@ -2,8 +2,10 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.user
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserListResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -65,7 +67,11 @@ interface UserApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Profil mis à jour avec succès"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Profil mis à jour avec succès",
+                content = [Content(schema = Schema(implementation = UserResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "Compte introuvable",
@@ -92,7 +98,11 @@ interface UserApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Photo enregistrée ; URL signée retournée"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Photo enregistrée ; URL signée retournée",
+                content = [Content(schema = Schema(implementation = ProfilePhotoResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "413",
                 description = "Image trop volumineuse",
@@ -118,7 +128,11 @@ interface UserApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "URL signée retournée"),
+            ApiResponse(
+                responseCode = "200",
+                description = "URL signée retournée",
+                content = [Content(schema = Schema(implementation = ProfilePhotoResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "Aucune photo de profil",
@@ -165,7 +179,11 @@ interface UserApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "201", description = "Compte serveur créé avec succès"),
+            ApiResponse(
+                responseCode = "201",
+                description = "Compte serveur créé avec succès",
+                content = [Content(schema = Schema(implementation = UserResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "409",
                 description = "Email déjà utilisé",
@@ -185,7 +203,11 @@ interface UserApi {
     )
     @ApiResponses(
         value = [
-            ApiResponse(responseCode = "200", description = "Compte mis à jour avec succès"),
+            ApiResponse(
+                responseCode = "200",
+                description = "Compte mis à jour avec succès",
+                content = [Content(schema = Schema(implementation = UserResponse::class))],
+            ),
             ApiResponse(
                 responseCode = "404",
                 description = "Compte introuvable",
