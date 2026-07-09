@@ -38,6 +38,7 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.Regi
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -45,7 +46,10 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.Duration
 import java.util.UUID
+
+private val PHOTO_URL_TTL: Duration = Duration.ofMinutes(15)
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -58,7 +62,10 @@ class AuthController(
     private val refreshTokenUseCase: RefreshTokenUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val changePasswordUseCase: ChangePasswordUseCase,
+    private val imageStorage: ImageStoragePort,
 ) : AuthApi {
+
+    private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
 
     override fun register(request: RegisterRequest): ResponseEntity<Any> {
         val command =
@@ -123,7 +130,7 @@ class AuthController(
                         expiresIn = result.accessToken.expiresInSeconds,
                         refreshToken = result.refreshToken.value,
                         refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
-                        user = UserResponse.from(result.user),
+                        user = UserResponse.from(result.user, ::signedPhotoUrl),
                         mustChangePassword = result.mustChangePassword,
                     ),
                 )

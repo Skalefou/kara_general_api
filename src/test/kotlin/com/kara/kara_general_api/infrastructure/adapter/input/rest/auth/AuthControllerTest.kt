@@ -22,6 +22,7 @@ import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
 import com.kara.kara_general_api.domain.port.output.AccessToken
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.RefreshToken
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
@@ -72,6 +73,9 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var changePasswordUseCase: ChangePasswordUseCase
+
+    @MockkBean
+    private lateinit var imageStorage: ImageStoragePort
 
     private val requestBody =
         """
@@ -171,6 +175,27 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.user.email").value("client@kara.app"))
             .andExpect(jsonPath("$.user.password_hash").doesNotExist())
             .andExpect(jsonPath("$.mustChangePassword").value(false))
+    }
+
+    @Test
+    fun `should return signed photoUrl when the user has a profile photo`() {
+        val userWithPhoto = user.withPhotoKey("users/abc/photo.jpg")
+        every { imageStorage.signedUrl("users/abc/photo.jpg", any()) } returns "https://signed.example/photo"
+        every { loginUseCase.login(any()) } returns
+            LoginResult.Success(
+                userWithPhoto,
+                AccessToken(value = "jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+                mustChangePassword = false,
+            )
+
+        mockMvc.perform(
+            post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequestBody),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.user.photoUrl").value("https://signed.example/photo"))
     }
 
     @Test
