@@ -80,6 +80,28 @@ class RoomRepositoryAdapterTest {
         assertFalse(adapter.countInBbox(paris) <= 3)
     }
 
+    @Test
+    fun `clustersInBbox aggregates rooms into non-empty grid cells within the bbox`() {
+        // Deux paquets bien séparés dans la bbox : sud-ouest et nord-est.
+        repeat(3) { saveRoom("SO $it", latitude = 48.81, longitude = 2.21) }
+        repeat(2) { saveRoom("NE $it", latitude = 48.89, longitude = 2.39) }
+        // Une salle hors bbox ne doit pas être agrégée.
+        saveRoom("Hors", latitude = 40.0, longitude = 2.30)
+
+        val clusters = adapter.clustersInBbox(paris, gridSize = 8)
+
+        // Deux cellules non vides ; les cellules vides sont absentes.
+        assertEquals(2, clusters.size)
+        // La somme des count == nombre de salles dans la bbox.
+        assertEquals(adapter.countInBbox(paris), clusters.sumOf { it.count })
+        // Chaque centroïde tombe dans la bbox demandée.
+        assertTrue(
+            clusters.all {
+                it.latitude in paris.minLat..paris.maxLat && it.longitude in paris.minLng..paris.maxLng
+            },
+        )
+    }
+
     private fun saveRoom(name: String, latitude: Double?, longitude: Double?): Room {
         val base =
             Room.create(

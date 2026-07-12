@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 
 import com.kara.kara_general_api.domain.model.room.Room
+import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
 import com.kara.kara_general_api.domain.model.room.RoomImageId
@@ -18,6 +19,7 @@ import com.kara.kara_general_api.domain.port.input.room.ListRoomsUseCase
 import com.kara.kara_general_api.domain.port.input.room.RemoveRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.RemoveRoomImageUseCase
 import com.kara.kara_general_api.domain.port.input.room.RoomPage
+import com.kara.kara_general_api.domain.port.input.room.ViewportMode
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomUseCase
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
@@ -114,16 +116,18 @@ class RoomControllerTest {
     }
 
     @Test
-    fun `should list within bbox and expose totalInBbox and truncated`() {
+    fun `should list within bbox in rooms mode`() {
         val querySlot = slot<ListRoomsQuery>()
         every { listRoomsUseCase.listRooms(capture(querySlot)) } returns
             RoomPage(
                 rooms = listOf(room),
                 page = 0,
                 size = 20,
-                totalElements = 250,
-                totalInBbox = 250,
-                truncated = true,
+                totalElements = 3,
+                totalInBbox = 3,
+                truncated = false,
+                mode = ViewportMode.ROOMS,
+                clusters = emptyList(),
             )
 
         mockMvc.perform(
@@ -133,10 +137,46 @@ class RoomControllerTest {
                 .param("maxLat", "48.9")
                 .param("maxLng", "2.4"),
         ).andExpect(status().isOk)
-            .andExpect(jsonPath("$.totalInBbox").value(250))
-            .andExpect(jsonPath("$.truncated").value(true))
+            .andExpect(jsonPath("$.mode").value("rooms"))
+            .andExpect(jsonPath("$.totalInBbox").value(3))
+            .andExpect(jsonPath("$.truncated").value(false))
+            .andExpect(jsonPath("$.rooms.length()").value(1))
+            .andExpect(jsonPath("$.clusters.length()").value(0))
 
         assertNotNull(querySlot.captured.bbox)
+    }
+
+    @Test
+    fun `should list within bbox in clusters mode`() {
+        every { listRoomsUseCase.listRooms(any()) } returns
+            RoomPage(
+                rooms = emptyList(),
+                page = 0,
+                size = 20,
+                totalElements = 640,
+                totalInBbox = 640,
+                truncated = false,
+                mode = ViewportMode.CLUSTERS,
+                clusters =
+                    listOf(
+                        RoomCluster(latitude = 48.86, longitude = 2.34, count = 420),
+                        RoomCluster(latitude = 48.89, longitude = 2.24, count = 220),
+                    ),
+            )
+
+        mockMvc.perform(
+            get("/api/v1/rooms")
+                .param("minLat", "48.5")
+                .param("minLng", "1.9")
+                .param("maxLat", "49.1")
+                .param("maxLng", "2.8"),
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.mode").value("clusters"))
+            .andExpect(jsonPath("$.totalInBbox").value(640))
+            .andExpect(jsonPath("$.rooms.length()").value(0))
+            .andExpect(jsonPath("$.clusters.length()").value(2))
+            .andExpect(jsonPath("$.clusters[0].count").value(420))
+            .andExpect(jsonPath("$.clusters[0].latitude").value(48.86))
     }
 
     @Test

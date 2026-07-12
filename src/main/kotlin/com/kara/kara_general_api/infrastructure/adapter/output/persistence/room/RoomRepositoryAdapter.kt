@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
+import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.output.RoomRepository
@@ -131,6 +132,41 @@ class RoomRepositoryAdapter(
                 "maxLng" to bbox.maxLng,
             )
         return jdbc.queryForObject(sql, params, Long::class.java) ?: 0
+    }
+
+    // Clustering serveur : chaque salle est rangée dans une cellule de grille via FLOOR sur des
+    // buckets calculés à partir de lat/lng, puis agrégée (centroïde AVG + COUNT) en SQL — pas de
+    // chargement en mémoire. Le WHERE bbox est servi par idx_rooms_lat_lng. NULLIF évite une
+    // division par zéro sur une bbox dégénérée (hauteur/largeur nulle) : tout tombe dans un groupe NULL.
+    override fun clustersInBbox(bbox: BoundingBox, gridSize: Int): List<RoomCluster> {
+        val cellHeight = (bbox.maxLat - bbox.minLat) / gridSize
+        val cellWidth = (bbox.maxLng - bbox.minLng) / gridSize
+        val sql =
+            """
+            SELECT AVG(latitude) AS lat, AVG(longitude) AS lng, COUNT(*) AS cnt
+            FROM rooms
+            WHERE latitude BETWEEN :minLat AND :maxLat
+              AND longitude BETWEEN :minLng AND :maxLng
+            GROUP BY
+                FLOOR((latitude - :minLat) / NULLIF(:cellHeight, 0)),
+                FLOOR((longitude - :minLng) / NULLIF(:cellWidth, 0))
+            """.trimIndent()
+        val params =
+            mapOf(
+                "minLat" to bbox.minLat,
+                "maxLat" to bbox.maxLat,
+                "minLng" to bbox.minLng,
+                "maxLng" to bbox.maxLng,
+                "cellHeight" to cellHeight,
+                "cellWidth" to cellWidth,
+            )
+        return jdbc.query(sql, params) { rs, _ ->
+            RoomCluster(
+                latitude = rs.getDouble("lat"),
+                longitude = rs.getDouble("lng"),
+                count = rs.getLong("cnt"),
+            )
+        }
     }
 
     override fun deleteById(id: RoomId): Boolean {

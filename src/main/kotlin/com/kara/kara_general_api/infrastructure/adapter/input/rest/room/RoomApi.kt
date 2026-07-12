@@ -61,9 +61,12 @@ interface RoomApi {
     @Operation(
         summary = "Lister les salles",
         description = "Pagination simple par défaut. Filtrage optionnel par fenêtre géographique (bbox) : " +
-            "fournir les 4 paramètres minLat/minLng/maxLat/maxLng ensemble. En mode bbox, page/size sont " +
-            "ignorés, le résultat est plafonné côté serveur (kara.rooms.viewport.max-results, défaut 200) " +
-            "et la réponse porte totalInBbox et truncated.",
+            "fournir les 4 paramètres minLat/minLng/maxLat/maxLng ensemble (aucune limite de taille de bbox). " +
+            "En mode bbox, page/size sont ignorés et la réponse porte mode, totalInBbox, truncated et clusters. " +
+            "Bascule automatique : si totalInBbox <= kara.rooms.viewport.max-results (défaut 1000) la réponse " +
+            "renvoie les salles unitaires (mode \"rooms\") ; sinon elle renvoie des agrégats de clustering " +
+            "serveur sur une grille N×N (mode \"clusters\", kara.rooms.viewport.cluster-grid-size, défaut 8), " +
+            "la somme des count des clusters valant totalInBbox.",
     )
     @ApiResponses(
         value = [
