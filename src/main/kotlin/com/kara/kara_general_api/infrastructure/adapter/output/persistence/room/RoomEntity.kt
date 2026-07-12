@@ -23,6 +23,10 @@ class RoomEntity(
     var postalCode: String,
     @Column(nullable = false, columnDefinition = "varchar(100)")
     var country: String,
+    @Column(columnDefinition = "double precision")
+    var latitude: Double? = null,
+    @Column(columnDefinition = "double precision")
+    var longitude: Double? = null,
     @Column(nullable = false, columnDefinition = "varchar(50)")
     var status: String = "OPEN",
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")

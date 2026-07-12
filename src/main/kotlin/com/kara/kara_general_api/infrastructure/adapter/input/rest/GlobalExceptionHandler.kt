@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest
 
+import com.kara.kara_general_api.domain.port.output.GeocodingException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -9,6 +10,16 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    @ExceptionHandler(GeocodingException::class)
+    fun handleGeocoding(ex: GeocodingException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_GATEWAY,
+            "Le service de géolocalisation est momentanément indisponible. Réessayez plus tard.",
+        ).apply {
+            title = "Service de géolocalisation indisponible"
+            setProperty("code", "GEOCODING_UNAVAILABLE")
+        }
 
     @ExceptionHandler(MaxUploadSizeExceededException::class)
     fun handleMaxUploadSize(ex: MaxUploadSizeExceededException): ProblemDetail =

@@ -34,7 +34,6 @@ class UpdateProfilePhotoService(
         imageStorage.upload(ImageVisibility.PRIVATE, newKey, command.bytes, contentType)
         userRepository.updatePhotoKey(user.id, newKey)
 
-        // Nettoyage de l'ancienne photo une fois la nouvelle référencée.
         user.photoKey?.let { imageStorage.delete(ImageVisibility.PRIVATE, it) }
 
         return UpdateProfilePhotoResult.Success(imageStorage.signedUrl(newKey, SIGNED_URL_TTL))

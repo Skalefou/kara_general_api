@@ -19,6 +19,10 @@ data class RoomResponse(
     val postalCode: String,
     @field:Schema(description = "Pays", example = "France")
     val country: String,
+    @field:Schema(description = "Latitude déduite de l'adresse", example = "48.8566")
+    val latitude: Double?,
+    @field:Schema(description = "Longitude déduite de l'adresse", example = "2.3522")
+    val longitude: Double?,
     @field:Schema(description = "Date de création de la salle")
     val createdAt: Instant,
     @field:Schema(description = "Statut de la salle", example = "OPEN")
@@ -35,6 +39,8 @@ data class RoomResponse(
                 city = room.address.city,
                 postalCode = room.address.postalCode,
                 country = room.address.country,
+                latitude = room.latitude,
+                longitude = room.longitude,
                 createdAt = room.createdAt,
                 status = room.status,
                 images = room.images.map { RoomImageResponse.from(it, publicUrl) },

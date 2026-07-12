@@ -2,19 +2,23 @@ package com.kara.kara_general_api.application.service.room
 
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomCommand
+import com.kara.kara_general_api.domain.port.input.room.CreateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomUseCase
+import com.kara.kara_general_api.domain.port.output.GeocodingPort
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CreateRoomService(
     private val roomRepository: RoomRepository,
+    private val geocodingPort: GeocodingPort,
 ) : CreateRoomUseCase {
 
-    @Transactional
-    override fun createRoom(command: CreateRoomCommand): Room {
-        val room = Room.create(name = command.name, address = command.address)
-        return roomRepository.save(room)
+    // Le géocodage (appel HTTP externe) est effectué hors transaction :
+    // l'unique écriture est le save final, atomique par lui-même.
+    override fun createRoom(command: CreateRoomCommand): CreateRoomResult {
+        val coordinates = geocodingPort.geocode(command.address) ?: return CreateRoomResult.AddressNotFound
+        val room = Room.create(name = command.name, address = command.address, coordinates = coordinates)
+        return CreateRoomResult.Success(roomRepository.save(room))
     }
 }

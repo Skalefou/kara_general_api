@@ -24,5 +24,7 @@ class RoomRowMapper : RowMapper<Room> {
                 ),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             status = RoomStatus.valueOf(rs.getString("status")),
+            latitude = rs.getObject("latitude", Double::class.javaObjectType),
+            longitude = rs.getObject("longitude", Double::class.javaObjectType),
         )
 }

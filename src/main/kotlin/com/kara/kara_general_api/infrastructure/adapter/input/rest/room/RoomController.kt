@@ -7,6 +7,7 @@ import com.kara.kara_general_api.domain.port.input.room.AddRoomImageCommand
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomCommand
+import com.kara.kara_general_api.domain.port.input.room.CreateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomResult
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomUseCase
@@ -47,10 +48,14 @@ class RoomController(
     private val imageStorage: ImageStoragePort,
 ) : RoomApi {
 
-    override fun createRoom(request: CreateRoomRequest): ResponseEntity<RoomResponse> {
+    override fun createRoom(request: CreateRoomRequest): ResponseEntity<Any> {
         val command = CreateRoomCommand(name = request.name, address = request.toAddress())
-        val room = createRoomUseCase.createRoom(command)
-        return ResponseEntity.status(HttpStatus.CREATED).body(RoomResponse.from(room, imageStorage::publicUrl))
+        return when (val result = createRoomUseCase.createRoom(command)) {
+            is CreateRoomResult.Success ->
+                ResponseEntity.status(HttpStatus.CREATED)
+                    .body(RoomResponse.from(result.room, imageStorage::publicUrl))
+            CreateRoomResult.AddressNotFound -> addressNotGeocodable()
+        }
     }
 
     override fun listRooms(page: Int, size: Int): ResponseEntity<RoomListResponse> {
@@ -78,6 +83,7 @@ class RoomController(
         return when (val result = updateRoomUseCase.updateRoom(command)) {
             is UpdateRoomResult.Success -> ResponseEntity.ok(RoomResponse.from(result.room, imageStorage::publicUrl))
             UpdateRoomResult.NotFound -> roomNotFound()
+            UpdateRoomResult.AddressNotFound -> addressNotGeocodable()
         }
     }
 
@@ -134,6 +140,17 @@ class RoomController(
             ).apply {
                 title = "Salle introuvable"
                 setProperty("code", "ROOM_NOT_FOUND")
+            },
+        )
+
+    private fun addressNotGeocodable(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "L'adresse fournie n'a pas pu être localisée. Vérifiez la rue, le code postal et la ville.",
+            ).apply {
+                title = "Adresse introuvable"
+                setProperty("code", "ADDRESS_NOT_GEOCODABLE")
             },
         )
 

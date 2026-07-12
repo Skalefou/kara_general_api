@@ -1,19 +1,22 @@
 package com.kara.kara_general_api.application.service.room
 
 import com.kara.kara_general_api.domain.model.room.vo.Address
+import com.kara.kara_general_api.domain.model.room.vo.Coordinates
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomCommand
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomUseCase
+import com.kara.kara_general_api.domain.port.output.GeocodingPort
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class UpdateRoomService(
     private val roomRepository: RoomRepository,
+    private val geocodingPort: GeocodingPort,
 ) : UpdateRoomUseCase {
 
-    @Transactional
+    // Le géocodage (appel HTTP externe) n'est déclenché que si l'adresse change,
+    // et reste hors transaction : l'unique écriture est le save final.
     override fun updateRoom(command: UpdateRoomCommand): UpdateRoomResult {
         val existing = roomRepository.findById(command.id) ?: return UpdateRoomResult.NotFound
         val mergedAddress =
@@ -23,11 +26,19 @@ class UpdateRoomService(
                 postalCode = command.postalCode ?: existing.address.postalCode,
                 country = command.country ?: existing.address.country,
             )
+        val coordinates =
+            if (mergedAddress == existing.address) {
+                // Adresse inchangée : on conserve les coordonnées existantes (éventuellement absentes).
+                existing.latitude?.let { lat -> existing.longitude?.let { lon -> Coordinates(lat, lon) } }
+            } else {
+                geocodingPort.geocode(mergedAddress) ?: return UpdateRoomResult.AddressNotFound
+            }
         val updated =
             existing.update(
                 name = command.name ?: existing.name,
                 address = mergedAddress,
                 status = command.status ?: existing.status,
+                coordinates = coordinates,
             )
         return UpdateRoomResult.Success(roomRepository.save(updated))
     }

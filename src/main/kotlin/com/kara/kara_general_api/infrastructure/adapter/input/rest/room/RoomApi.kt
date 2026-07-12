@@ -44,13 +44,18 @@ interface RoomApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Requête invalide",
+                description = "Requête invalide ou adresse non localisable (ADDRESS_NOT_GEOCODABLE)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "502",
+                description = "Service de géolocalisation indisponible (GEOCODING_UNAVAILABLE)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],
     )
     @PostMapping
-    fun createRoom(@Valid @RequestBody request: CreateRoomRequest): ResponseEntity<RoomResponse>
+    fun createRoom(@Valid @RequestBody request: CreateRoomRequest): ResponseEntity<Any>
 
     @Operation(summary = "Lister les salles")
     @GetMapping
@@ -90,8 +95,18 @@ interface RoomApi {
                 content = [Content(schema = Schema(implementation = RoomResponse::class))],
             ),
             ApiResponse(
+                responseCode = "400",
+                description = "Adresse non localisable (ADDRESS_NOT_GEOCODABLE)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
                 responseCode = "404",
                 description = "Salle introuvable",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "502",
+                description = "Service de géolocalisation indisponible (GEOCODING_UNAVAILABLE)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],

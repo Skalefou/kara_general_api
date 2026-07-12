@@ -7,6 +7,7 @@ import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
+import com.kara.kara_general_api.domain.port.input.room.CreateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomResult
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomUseCase
@@ -114,13 +115,26 @@ class RoomControllerTest {
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `should return 201 when admin creates a room`() {
-        every { createRoomUseCase.createRoom(any()) } returns room
+        every { createRoomUseCase.createRoom(any()) } returns CreateRoomResult.Success(room)
 
         mockMvc.perform(
             post("/api/v1/rooms")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(REQUEST_BODY),
         ).andExpect(status().isCreated)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 400 when created room address is not geocodable`() {
+        every { createRoomUseCase.createRoom(any()) } returns CreateRoomResult.AddressNotFound
+
+        mockMvc.perform(
+            post("/api/v1/rooms")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST_BODY),
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("ADDRESS_NOT_GEOCODABLE"))
     }
 
     @Test
@@ -164,6 +178,19 @@ class RoomControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(REQUEST_BODY),
         ).andExpect(status().isNotFound)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 400 when updated room address is not geocodable`() {
+        every { updateRoomUseCase.updateRoom(any()) } returns UpdateRoomResult.AddressNotFound
+
+        mockMvc.perform(
+            patch("/api/v1/rooms/$ROOM_ID")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST_BODY),
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("ADDRESS_NOT_GEOCODABLE"))
     }
 
     @Test

@@ -18,6 +18,8 @@ sealed interface UpdateRoomResult {
     data class Success(val room: Room) : UpdateRoomResult
 
     data object NotFound : UpdateRoomResult
+
+    data object AddressNotFound : UpdateRoomResult
 }
 
 interface UpdateRoomUseCase {

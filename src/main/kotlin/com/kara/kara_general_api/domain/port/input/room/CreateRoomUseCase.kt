@@ -8,6 +8,12 @@ data class CreateRoomCommand(
     val address: Address,
 )
 
+sealed interface CreateRoomResult {
+    data class Success(val room: Room) : CreateRoomResult
+
+    data object AddressNotFound : CreateRoomResult
+}
+
 interface CreateRoomUseCase {
-    fun createRoom(command: CreateRoomCommand): Room
+    fun createRoom(command: CreateRoomCommand): CreateRoomResult
 }
