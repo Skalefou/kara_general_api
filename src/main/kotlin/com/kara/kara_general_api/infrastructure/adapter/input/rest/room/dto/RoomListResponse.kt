@@ -14,6 +14,18 @@ data class RoomListResponse(
     val totalElements: Long,
     @field:Schema(description = "Nombre total de pages")
     val totalPages: Int,
+    @field:Schema(
+        description = "Nombre réel de salles dans la bbox avant plafonnement serveur. " +
+            "Présent uniquement en mode filtrage bbox.",
+        nullable = true,
+    )
+    val totalInBbox: Long? = null,
+    @field:Schema(
+        description = "Vrai si des salles dans la bbox ont été écartées par le plafond serveur. " +
+            "Présent uniquement en mode filtrage bbox.",
+        nullable = true,
+    )
+    val truncated: Boolean? = null,
 ) {
     companion object {
         fun from(roomPage: RoomPage, publicUrl: (String) -> String): RoomListResponse =
@@ -28,6 +40,8 @@ data class RoomListResponse(
                     } else {
                         ((roomPage.totalElements + roomPage.size - 1) / roomPage.size).toInt()
                     },
+                totalInBbox = roomPage.totalInBbox,
+                truncated = roomPage.truncated,
             )
     }
 }

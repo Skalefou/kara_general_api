@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS rooms (
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- Filtrage viewport (bbox) : sert le BETWEEN sur latitude/longitude (SELECT et COUNT).
+CREATE INDEX IF NOT EXISTS idx_rooms_lat_lng ON rooms (latitude, longitude);
+
 CREATE TABLE IF NOT EXISTS room_images (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,

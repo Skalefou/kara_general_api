@@ -6,6 +6,7 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.Room
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.UpdateRoomRequest
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -57,12 +58,40 @@ interface RoomApi {
     @PostMapping
     fun createRoom(@Valid @RequestBody request: CreateRoomRequest): ResponseEntity<Any>
 
-    @Operation(summary = "Lister les salles")
+    @Operation(
+        summary = "Lister les salles",
+        description = "Pagination simple par défaut. Filtrage optionnel par fenêtre géographique (bbox) : " +
+            "fournir les 4 paramètres minLat/minLng/maxLat/maxLng ensemble. En mode bbox, page/size sont " +
+            "ignorés, le résultat est plafonné côté serveur (kara.rooms.viewport.max-results, défaut 200) " +
+            "et la réponse porte totalInBbox et truncated.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Liste des salles",
+                content = [Content(schema = Schema(implementation = RoomListResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Paramètres bbox incomplets (BBOX_INCOMPLETE) ou invalides (BBOX_INVALID)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
     @GetMapping
     fun listRooms(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
-    ): ResponseEntity<RoomListResponse>
+        @Parameter(description = "Latitude sud de la bbox (coin sud-ouest). Requiert les 3 autres bornes.")
+        @RequestParam(required = false) minLat: Double?,
+        @Parameter(description = "Longitude ouest de la bbox (coin sud-ouest). Requiert les 3 autres bornes.")
+        @RequestParam(required = false) minLng: Double?,
+        @Parameter(description = "Latitude nord de la bbox (coin nord-est). Requiert les 3 autres bornes.")
+        @RequestParam(required = false) maxLat: Double?,
+        @Parameter(description = "Longitude est de la bbox (coin nord-est). Requiert les 3 autres bornes.")
+        @RequestParam(required = false) maxLng: Double?,
+    ): ResponseEntity<Any>
 
     @Operation(summary = "Consulter une salle")
     @ApiResponses(

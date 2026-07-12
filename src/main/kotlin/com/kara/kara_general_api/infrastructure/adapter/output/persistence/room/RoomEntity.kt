@@ -3,12 +3,16 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "rooms")
+@Table(
+    name = "rooms",
+    indexes = [Index(name = "idx_rooms_lat_lng", columnList = "latitude, longitude")],
+)
 class RoomEntity(
     @Id
     @Column(columnDefinition = "uuid")

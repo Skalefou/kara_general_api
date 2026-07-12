@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
 import com.kara.kara_general_api.domain.model.room.RoomImageId
+import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
@@ -87,6 +88,49 @@ class RoomRepositoryAdapter(
     override fun count(): Long {
         val sql = "SELECT COUNT(*) FROM rooms"
         return jdbc.queryForObject(sql, emptyMap<String, Any>(), Long::class.java) ?: 0
+    }
+
+    // Filtre viewport : le BETWEEN sur (latitude, longitude) est servi par l'index idx_rooms_lat_lng.
+    // TODO: ne gère pas l'antiméridien (bbox à cheval sur ±180°) — hors scope.
+    override fun findInBbox(bbox: BoundingBox, limit: Int): List<Room> {
+        val sql =
+            """
+            SELECT id, name, street, city, postal_code, country, latitude, longitude, status, created_at
+            FROM rooms
+            WHERE latitude BETWEEN :minLat AND :maxLat
+              AND longitude BETWEEN :minLng AND :maxLng
+            ORDER BY created_at DESC
+            LIMIT :limit
+            """.trimIndent()
+        val params =
+            MapSqlParameterSource()
+                .addValue("minLat", bbox.minLat)
+                .addValue("maxLat", bbox.maxLat)
+                .addValue("minLng", bbox.minLng)
+                .addValue("maxLng", bbox.maxLng)
+                .addValue("limit", limit)
+        val rooms = jdbc.query(sql, params, rowMapper)
+        if (rooms.isEmpty()) return rooms
+        val imagesByRoom = findImagesByRoomIds(rooms.map { it.id.value })
+        return rooms.map { it.copy(images = imagesByRoom[it.id.value].orEmpty()) }
+    }
+
+    override fun countInBbox(bbox: BoundingBox): Long {
+        val sql =
+            """
+            SELECT COUNT(*)
+            FROM rooms
+            WHERE latitude BETWEEN :minLat AND :maxLat
+              AND longitude BETWEEN :minLng AND :maxLng
+            """.trimIndent()
+        val params =
+            mapOf(
+                "minLat" to bbox.minLat,
+                "maxLat" to bbox.maxLat,
+                "minLng" to bbox.minLng,
+                "maxLng" to bbox.maxLng,
+            )
+        return jdbc.queryForObject(sql, params, Long::class.java) ?: 0
     }
 
     override fun deleteById(id: RoomId): Boolean {

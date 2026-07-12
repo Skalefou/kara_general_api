@@ -13,6 +13,7 @@ import com.kara.kara_general_api.domain.port.input.room.DeleteRoomResult
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.GetRoomResult
 import com.kara.kara_general_api.domain.port.input.room.GetRoomUseCase
+import com.kara.kara_general_api.domain.port.input.room.ListRoomsQuery
 import com.kara.kara_general_api.domain.port.input.room.ListRoomsUseCase
 import com.kara.kara_general_api.domain.port.input.room.RemoveRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.RemoveRoomImageUseCase
@@ -23,6 +24,10 @@ import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
+import io.mockk.slot
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -92,6 +97,87 @@ class RoomControllerTest {
         mockMvc.perform(get("/api/v1/rooms"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.totalElements").value(1))
+    }
+
+    @Test
+    fun `should list without bbox when no viewport param is provided`() {
+        val querySlot = slot<ListRoomsQuery>()
+        every { listRoomsUseCase.listRooms(capture(querySlot)) } returns
+            RoomPage(rooms = listOf(room), page = 0, size = 20, totalElements = 1)
+
+        mockMvc.perform(get("/api/v1/rooms"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalInBbox").doesNotExist())
+            .andExpect(jsonPath("$.truncated").doesNotExist())
+
+        assertNull(querySlot.captured.bbox)
+    }
+
+    @Test
+    fun `should list within bbox and expose totalInBbox and truncated`() {
+        val querySlot = slot<ListRoomsQuery>()
+        every { listRoomsUseCase.listRooms(capture(querySlot)) } returns
+            RoomPage(
+                rooms = listOf(room),
+                page = 0,
+                size = 20,
+                totalElements = 250,
+                totalInBbox = 250,
+                truncated = true,
+            )
+
+        mockMvc.perform(
+            get("/api/v1/rooms")
+                .param("minLat", "48.8")
+                .param("minLng", "2.2")
+                .param("maxLat", "48.9")
+                .param("maxLng", "2.4"),
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalInBbox").value(250))
+            .andExpect(jsonPath("$.truncated").value(true))
+
+        assertNotNull(querySlot.captured.bbox)
+    }
+
+    @Test
+    fun `should return 400 when only some bbox params are provided`() {
+        mockMvc.perform(
+            get("/api/v1/rooms")
+                .param("minLat", "48.8")
+                .param("minLng", "2.2")
+                .param("maxLat", "48.9"),
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BBOX_INCOMPLETE"))
+
+        verify(exactly = 0) { listRoomsUseCase.listRooms(any()) }
+    }
+
+    @Test
+    fun `should return 400 when bbox min latitude exceeds max latitude`() {
+        mockMvc.perform(
+            get("/api/v1/rooms")
+                .param("minLat", "49.0")
+                .param("minLng", "2.2")
+                .param("maxLat", "48.0")
+                .param("maxLng", "2.4"),
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BBOX_INVALID"))
+
+        verify(exactly = 0) { listRoomsUseCase.listRooms(any()) }
+    }
+
+    @Test
+    fun `should return 400 when bbox latitude is out of range`() {
+        mockMvc.perform(
+            get("/api/v1/rooms")
+                .param("minLat", "-91.0")
+                .param("minLng", "2.2")
+                .param("maxLat", "48.9")
+                .param("maxLng", "2.4"),
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("BBOX_INVALID"))
+
+        verify(exactly = 0) { listRoomsUseCase.listRooms(any()) }
     }
 
     @Test

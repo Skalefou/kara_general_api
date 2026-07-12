@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
+import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageCommand
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
@@ -58,8 +59,24 @@ class RoomController(
         }
     }
 
-    override fun listRooms(page: Int, size: Int): ResponseEntity<RoomListResponse> {
-        val roomPage = listRoomsUseCase.listRooms(ListRoomsQuery(page = page, size = size))
+    override fun listRooms(
+        page: Int,
+        size: Int,
+        minLat: Double?,
+        minLng: Double?,
+        maxLat: Double?,
+        maxLng: Double?,
+    ): ResponseEntity<Any> {
+        val corners = listOf(minLat, minLng, maxLat, maxLng)
+        val bbox =
+            when (corners.count { it != null }) {
+                0 -> null
+                4 ->
+                    runCatching { BoundingBox(minLat!!, minLng!!, maxLat!!, maxLng!!) }
+                        .getOrElse { return bboxInvalid(it.message) }
+                else -> return bboxIncomplete()
+            }
+        val roomPage = listRoomsUseCase.listRooms(ListRoomsQuery(page = page, size = size, bbox = bbox))
         return ResponseEntity.ok(RoomListResponse.from(roomPage, imageStorage::publicUrl))
     }
 
@@ -140,6 +157,28 @@ class RoomController(
             ).apply {
                 title = "Salle introuvable"
                 setProperty("code", "ROOM_NOT_FOUND")
+            },
+        )
+
+    private fun bboxIncomplete(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "Le filtrage par fenêtre géographique exige les 4 paramètres minLat, minLng, maxLat et maxLng.",
+            ).apply {
+                title = "Paramètres bbox incomplets"
+                setProperty("code", "BBOX_INCOMPLETE")
+            },
+        )
+
+    private fun bboxInvalid(detail: String?): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                detail ?: "Fenêtre géographique invalide.",
+            ).apply {
+                title = "Fenêtre géographique invalide"
+                setProperty("code", "BBOX_INVALID")
             },
         )
 
