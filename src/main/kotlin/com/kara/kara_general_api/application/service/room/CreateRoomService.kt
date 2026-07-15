@@ -23,6 +23,7 @@ class CreateRoomService(
                 name = command.name,
                 address = command.address,
                 pricePerPersonPerHour = command.pricePerPersonPerHour,
+                currency = command.currency,
                 coordinates = coordinates,
             )
         return CreateRoomResult.Success(roomRepository.save(room))

@@ -10,6 +10,7 @@ data class Room(
     val name: String,
     val address: Address,
     val pricePerPersonPerHour: BigDecimal,
+    val currency: Currency,
     val createdAt: Instant,
     val status: RoomStatus = RoomStatus.OPEN,
     val images: List<RoomImage> = emptyList(),
@@ -25,6 +26,7 @@ data class Room(
         name: String,
         address: Address,
         pricePerPersonPerHour: BigDecimal,
+        currency: Currency,
         status: RoomStatus,
         coordinates: Coordinates?,
     ): Room =
@@ -32,6 +34,7 @@ data class Room(
             name = name,
             address = address,
             pricePerPersonPerHour = pricePerPersonPerHour,
+            currency = currency,
             status = status,
             latitude = coordinates?.latitude,
             longitude = coordinates?.longitude,
@@ -42,6 +45,7 @@ data class Room(
             name: String,
             address: Address,
             pricePerPersonPerHour: BigDecimal,
+            currency: Currency,
             coordinates: Coordinates,
         ): Room =
             Room(
@@ -49,6 +53,7 @@ data class Room(
                 name = name,
                 address = address,
                 pricePerPersonPerHour = pricePerPersonPerHour,
+                currency = currency,
                 createdAt = Instant.now(),
                 status = RoomStatus.OPEN,
                 latitude = coordinates.latitude,

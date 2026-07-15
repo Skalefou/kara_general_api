@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.PositiveOrZero
@@ -17,8 +18,10 @@ data class UpdateRoomRequest(
     @field:Schema(description = "Pays", example = "France")
     val country: String? = null,
     @field:PositiveOrZero
-    @field:Schema(description = "Prix par personne et par heure (€)", example = "12.50")
+    @field:Schema(description = "Prix par personne et par heure", example = "12.50")
     val pricePerPersonPerHour: BigDecimal? = null,
+    @field:Schema(description = "Devise (code ISO 4217)", example = "EUR")
+    val currency: Currency? = null,
     @field:Schema(
         description = "Statut de la salle : OPEN (réservable) ou CLOSED (fermée temporairement)",
         example = "CLOSED",

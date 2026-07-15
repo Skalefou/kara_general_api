@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomId
@@ -52,7 +53,7 @@ import java.util.UUID
 private const val ROOM_ID = "550e8400-e29b-41d4-a716-446655440000"
 private const val REQUEST_BODY =
     """{"name": "Salle Étoile", "street": "12 rue de la Paix", "city": "Paris", "postalCode": "75002", """ +
-        """"country": "France", "pricePerPersonPerHour": 12.50}"""
+        """"country": "France", "pricePerPersonPerHour": 12.50, "currency": "EUR"}"""
 
 @WebMvcTest(RoomController::class)
 @Import(SecurityConfig::class)
@@ -91,6 +92,7 @@ class RoomControllerTest {
             name = "Salle Étoile",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
+            currency = Currency.EUR,
             createdAt = Instant.now(),
         )
 

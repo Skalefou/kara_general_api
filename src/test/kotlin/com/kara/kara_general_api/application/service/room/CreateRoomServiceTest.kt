@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.room
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.room.vo.Coordinates
@@ -24,7 +25,12 @@ class CreateRoomServiceTest {
 
     private val address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France")
     private val command =
-        CreateRoomCommand(name = "Salle Étoile", address = address, pricePerPersonPerHour = BigDecimal("12.50"))
+        CreateRoomCommand(
+            name = "Salle Étoile",
+            address = address,
+            pricePerPersonPerHour = BigDecimal("12.50"),
+            currency = Currency.EUR,
+        )
 
     @Test
     fun `should geocode address then create and persist room with coordinates`() {

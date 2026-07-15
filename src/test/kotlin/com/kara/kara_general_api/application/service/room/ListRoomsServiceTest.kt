@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.room
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomId
@@ -35,6 +36,7 @@ class ListRoomsServiceTest {
             name = "Salle Étoile",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
+            currency = Currency.EUR,
             createdAt = Instant.now(),
         )
 

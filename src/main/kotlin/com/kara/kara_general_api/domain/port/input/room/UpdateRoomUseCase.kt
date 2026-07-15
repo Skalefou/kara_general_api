@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.port.input.room
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomStatus
@@ -13,6 +14,7 @@ data class UpdateRoomCommand(
     val postalCode: String?,
     val country: String?,
     val pricePerPersonPerHour: BigDecimal?,
+    val currency: Currency?,
     val status: RoomStatus?,
 )
 

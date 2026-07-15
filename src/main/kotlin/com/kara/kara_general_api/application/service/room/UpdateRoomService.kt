@@ -38,6 +38,7 @@ class UpdateRoomService(
                 name = command.name ?: existing.name,
                 address = mergedAddress,
                 pricePerPersonPerHour = command.pricePerPersonPerHour ?: existing.pricePerPersonPerHour,
+                currency = command.currency ?: existing.currency,
                 status = command.status ?: existing.status,
                 coordinates = coordinates,
             )

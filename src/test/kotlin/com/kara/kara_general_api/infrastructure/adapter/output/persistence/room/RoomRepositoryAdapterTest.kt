@@ -2,6 +2,7 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 
 import com.google.firebase.auth.FirebaseAuth
 import com.kara.kara_general_api.TestcontainersConfiguration
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
@@ -109,6 +110,7 @@ class RoomRepositoryAdapterTest {
                 name = name,
                 address = Address(street = "1 rue Test", city = "Paris", postalCode = "75001", country = "France"),
                 pricePerPersonPerHour = BigDecimal("12.50"),
+                currency = Currency.EUR,
                 coordinates = Coordinates(latitude ?: 0.0, longitude ?: 0.0),
             )
         val room = base.copy(latitude = latitude, longitude = longitude)

@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.room
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomStatus
@@ -33,6 +34,7 @@ class UpdateRoomServiceTest {
             name = "Salle Étoile",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
+            currency = Currency.EUR,
             createdAt = Instant.now(),
             latitude = 48.8566,
             longitude = 2.3522,
@@ -46,6 +48,7 @@ class UpdateRoomServiceTest {
             postalCode = "69000",
             country = "France",
             pricePerPersonPerHour = null,
+            currency = null,
             status = null,
         )
 
@@ -85,6 +88,7 @@ class UpdateRoomServiceTest {
                 postalCode = null,
                 country = null,
                 pricePerPersonPerHour = null,
+                currency = null,
                 status = null,
             )
 
@@ -114,6 +118,7 @@ class UpdateRoomServiceTest {
                 postalCode = null,
                 country = null,
                 pricePerPersonPerHour = null,
+                currency = null,
                 status = RoomStatus.CLOSED,
             )
 

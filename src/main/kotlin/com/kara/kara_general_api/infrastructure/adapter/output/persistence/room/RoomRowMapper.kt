@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomStatus
@@ -23,6 +24,7 @@ class RoomRowMapper : RowMapper<Room> {
                     country = rs.getString("country"),
                 ),
             pricePerPersonPerHour = rs.getBigDecimal("price_per_person_per_hour"),
+            currency = Currency.valueOf(rs.getString("currency")),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             status = RoomStatus.valueOf(rs.getString("status")),
             latitude = rs.getObject("latitude", Double::class.javaObjectType),

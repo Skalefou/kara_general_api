@@ -55,6 +55,7 @@ class RoomController(
                 name = request.name,
                 address = request.toAddress(),
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
+                currency = request.currency,
             )
         return when (val result = createRoomUseCase.createRoom(command)) {
             is CreateRoomResult.Success ->
@@ -101,6 +102,7 @@ class RoomController(
                 postalCode = request.postalCode,
                 country = request.country,
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
+                currency = request.currency,
                 status = request.status,
             )
         return when (val result = updateRoomUseCase.updateRoom(command)) {

@@ -30,6 +30,8 @@ class RoomEntity(
     var country: String,
     @Column(name = "price_per_person_per_hour", nullable = false, columnDefinition = "numeric(10,2)")
     var pricePerPersonPerHour: BigDecimal,
+    @Column(nullable = false, columnDefinition = "varchar(10)")
+    var currency: String,
     @Column(columnDefinition = "double precision")
     var latitude: Double? = null,
     @Column(columnDefinition = "double precision")

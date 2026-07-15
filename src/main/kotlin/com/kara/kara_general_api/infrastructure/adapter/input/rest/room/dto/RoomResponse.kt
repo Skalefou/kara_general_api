@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomStatus
 import io.swagger.v3.oas.annotations.media.Schema
@@ -20,8 +21,10 @@ data class RoomResponse(
     val postalCode: String,
     @field:Schema(description = "Pays", example = "France")
     val country: String,
-    @field:Schema(description = "Prix par personne et par heure (€)", example = "12.50")
+    @field:Schema(description = "Prix par personne et par heure", example = "12.50")
     val pricePerPersonPerHour: BigDecimal,
+    @field:Schema(description = "Devise (code ISO 4217)", example = "EUR")
+    val currency: Currency,
     @field:Schema(description = "Latitude déduite de l'adresse", example = "48.8566")
     val latitude: Double?,
     @field:Schema(description = "Longitude déduite de l'adresse", example = "2.3522")
@@ -43,6 +46,7 @@ data class RoomResponse(
                 postalCode = room.address.postalCode,
                 country = room.address.country,
                 pricePerPersonPerHour = room.pricePerPersonPerHour,
+                currency = room.currency,
                 latitude = room.latitude,
                 longitude = room.longitude,
                 createdAt = room.createdAt,
