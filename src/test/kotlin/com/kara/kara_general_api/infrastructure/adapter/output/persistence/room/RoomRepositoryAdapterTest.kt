@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.ActiveProfiles
+import java.math.BigDecimal
 
 // Le schéma est généré par Hibernate depuis les @Entity (RoomEntity porte l'index idx_rooms_lat_lng) :
 // le profil test ne fixe pas ddl-auto, on l'impose ici pour matérialiser les tables dans le conteneur.
@@ -107,6 +108,7 @@ class RoomRepositoryAdapterTest {
             Room.create(
                 name = name,
                 address = Address(street = "1 rue Test", city = "Paris", postalCode = "75001", country = "France"),
+                pricePerPersonPerHour = BigDecimal("12.50"),
                 coordinates = Coordinates(latitude ?: 0.0, longitude ?: 0.0),
             )
         val room = base.copy(latitude = latitude, longitude = longitude)

@@ -15,6 +15,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -33,6 +34,7 @@ class AddRoomImageServiceTest {
             id = roomId,
             name = "Salle Étoile",
             address = Address("12 rue de la Paix", "Paris", "75002", "France"),
+            pricePerPersonPerHour = BigDecimal("12.50"),
             createdAt = Instant.now(),
         )
 

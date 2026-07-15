@@ -50,7 +50,12 @@ class RoomController(
 ) : RoomApi {
 
     override fun createRoom(request: CreateRoomRequest): ResponseEntity<Any> {
-        val command = CreateRoomCommand(name = request.name, address = request.toAddress())
+        val command =
+            CreateRoomCommand(
+                name = request.name,
+                address = request.toAddress(),
+                pricePerPersonPerHour = request.pricePerPersonPerHour,
+            )
         return when (val result = createRoomUseCase.createRoom(command)) {
             is CreateRoomResult.Success ->
                 ResponseEntity.status(HttpStatus.CREATED)
@@ -95,6 +100,7 @@ class RoomController(
                 city = request.city,
                 postalCode = request.postalCode,
                 country = request.country,
+                pricePerPersonPerHour = request.pricePerPersonPerHour,
                 status = request.status,
             )
         return when (val result = updateRoomUseCase.updateRoom(command)) {

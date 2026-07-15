@@ -12,6 +12,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -33,6 +34,7 @@ class ListRoomsServiceTest {
             id = RoomId(UUID.randomUUID()),
             name = "Salle Étoile",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
+            pricePerPersonPerHour = BigDecimal("12.50"),
             createdAt = Instant.now(),
         )
 

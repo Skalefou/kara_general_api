@@ -2,12 +2,14 @@ package com.kara.kara_general_api.domain.model.room
 
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.room.vo.Coordinates
+import java.math.BigDecimal
 import java.time.Instant
 
 data class Room(
     val id: RoomId,
     val name: String,
     val address: Address,
+    val pricePerPersonPerHour: BigDecimal,
     val createdAt: Instant,
     val status: RoomStatus = RoomStatus.OPEN,
     val images: List<RoomImage> = emptyList(),
@@ -16,23 +18,37 @@ data class Room(
 ) {
     init {
         require(name.isNotBlank()) { "Le nom de la salle est obligatoire" }
+        require(pricePerPersonPerHour >= BigDecimal.ZERO) { "Le prix par personne et par heure doit être positif" }
     }
 
-    fun update(name: String, address: Address, status: RoomStatus, coordinates: Coordinates?): Room =
+    fun update(
+        name: String,
+        address: Address,
+        pricePerPersonPerHour: BigDecimal,
+        status: RoomStatus,
+        coordinates: Coordinates?,
+    ): Room =
         copy(
             name = name,
             address = address,
+            pricePerPersonPerHour = pricePerPersonPerHour,
             status = status,
             latitude = coordinates?.latitude,
             longitude = coordinates?.longitude,
         )
 
     companion object {
-        fun create(name: String, address: Address, coordinates: Coordinates): Room =
+        fun create(
+            name: String,
+            address: Address,
+            pricePerPersonPerHour: BigDecimal,
+            coordinates: Coordinates,
+        ): Room =
             Room(
                 id = RoomId.generate(),
                 name = name,
                 address = address,
+                pricePerPersonPerHour = pricePerPersonPerHour,
                 createdAt = Instant.now(),
                 status = RoomStatus.OPEN,
                 latitude = coordinates.latitude,

@@ -12,6 +12,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
@@ -22,7 +23,8 @@ class CreateRoomServiceTest {
     private val sut = CreateRoomService(roomRepository, geocodingPort)
 
     private val address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France")
-    private val command = CreateRoomCommand(name = "Salle Étoile", address = address)
+    private val command =
+        CreateRoomCommand(name = "Salle Étoile", address = address, pricePerPersonPerHour = BigDecimal("12.50"))
 
     @Test
     fun `should geocode address then create and persist room with coordinates`() {

@@ -3,6 +3,7 @@ package com.kara.kara_general_api.domain.port.input.room
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomStatus
+import java.math.BigDecimal
 
 data class UpdateRoomCommand(
     val id: RoomId,
@@ -11,6 +12,7 @@ data class UpdateRoomCommand(
     val city: String?,
     val postalCode: String?,
     val country: String?,
+    val pricePerPersonPerHour: BigDecimal?,
     val status: RoomStatus?,
 )
 

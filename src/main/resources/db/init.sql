@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     city        VARCHAR(100) NOT NULL,
     postal_code VARCHAR(20)  NOT NULL,
     country     VARCHAR(100) NOT NULL,
+    price_per_person_per_hour NUMERIC(10,2) NOT NULL,
     latitude    DOUBLE PRECISION,
     longitude   DOUBLE PRECISION,
     status      VARCHAR(50)  NOT NULL DEFAULT 'OPEN',

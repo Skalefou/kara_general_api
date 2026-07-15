@@ -5,6 +5,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
@@ -27,6 +28,8 @@ class RoomEntity(
     var postalCode: String,
     @Column(nullable = false, columnDefinition = "varchar(100)")
     var country: String,
+    @Column(name = "price_per_person_per_hour", nullable = false, columnDefinition = "numeric(10,2)")
+    var pricePerPersonPerHour: BigDecimal,
     @Column(columnDefinition = "double precision")
     var latitude: Double? = null,
     @Column(columnDefinition = "double precision")

@@ -2,6 +2,9 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.PositiveOrZero
+import java.math.BigDecimal
 
 data class CreateRoomRequest(
     @field:NotBlank
@@ -19,4 +22,8 @@ data class CreateRoomRequest(
     @field:NotBlank
     @field:Schema(description = "Pays", example = "France")
     val country: String,
+    @field:NotNull
+    @field:PositiveOrZero
+    @field:Schema(description = "Prix par personne et par heure (€)", example = "12.50")
+    val pricePerPersonPerHour: BigDecimal,
 )

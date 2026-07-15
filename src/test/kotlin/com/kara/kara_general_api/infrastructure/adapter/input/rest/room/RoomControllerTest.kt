@@ -45,12 +45,14 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
 private const val ROOM_ID = "550e8400-e29b-41d4-a716-446655440000"
 private const val REQUEST_BODY =
-    """{"name": "Salle Étoile", "street": "12 rue de la Paix", "city": "Paris", "postalCode": "75002", "country": "France"}"""
+    """{"name": "Salle Étoile", "street": "12 rue de la Paix", "city": "Paris", "postalCode": "75002", """ +
+        """"country": "France", "pricePerPersonPerHour": 12.50}"""
 
 @WebMvcTest(RoomController::class)
 @Import(SecurityConfig::class)
@@ -88,6 +90,7 @@ class RoomControllerTest {
             id = RoomId(UUID.fromString(ROOM_ID)),
             name = "Salle Étoile",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
+            pricePerPersonPerHour = BigDecimal("12.50"),
             createdAt = Instant.now(),
         )
 

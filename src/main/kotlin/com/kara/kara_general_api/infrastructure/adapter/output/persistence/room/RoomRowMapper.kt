@@ -22,6 +22,7 @@ class RoomRowMapper : RowMapper<Room> {
                     postalCode = rs.getString("postal_code"),
                     country = rs.getString("country"),
                 ),
+            pricePerPersonPerHour = rs.getBigDecimal("price_per_person_per_hour"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             status = RoomStatus.valueOf(rs.getString("status")),
             latitude = rs.getObject("latitude", Double::class.javaObjectType),

@@ -42,3 +42,6 @@ out/
 # Fichier d'environnement
 .env
 private.pem
+
+# Documentation
+doc-api.json

@@ -14,6 +14,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -31,6 +32,7 @@ class UpdateRoomServiceTest {
             id = roomId,
             name = "Salle Étoile",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
+            pricePerPersonPerHour = BigDecimal("12.50"),
             createdAt = Instant.now(),
             latitude = 48.8566,
             longitude = 2.3522,
@@ -43,6 +45,7 @@ class UpdateRoomServiceTest {
             city = "Lyon",
             postalCode = "69000",
             country = "France",
+            pricePerPersonPerHour = null,
             status = null,
         )
 
@@ -81,6 +84,7 @@ class UpdateRoomServiceTest {
                 city = null,
                 postalCode = null,
                 country = null,
+                pricePerPersonPerHour = null,
                 status = null,
             )
 
@@ -109,6 +113,7 @@ class UpdateRoomServiceTest {
                 city = null,
                 postalCode = null,
                 country = null,
+                pricePerPersonPerHour = null,
                 status = RoomStatus.CLOSED,
             )
 

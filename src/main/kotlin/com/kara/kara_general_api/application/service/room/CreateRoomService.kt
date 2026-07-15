@@ -18,7 +18,13 @@ class CreateRoomService(
     // l'unique écriture est le save final, atomique par lui-même.
     override fun createRoom(command: CreateRoomCommand): CreateRoomResult {
         val coordinates = geocodingPort.geocode(command.address) ?: return CreateRoomResult.AddressNotFound
-        val room = Room.create(name = command.name, address = command.address, coordinates = coordinates)
+        val room =
+            Room.create(
+                name = command.name,
+                address = command.address,
+                pricePerPersonPerHour = command.pricePerPersonPerHour,
+                coordinates = coordinates,
+            )
         return CreateRoomResult.Success(roomRepository.save(room))
     }
 }
