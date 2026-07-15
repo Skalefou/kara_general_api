@@ -34,9 +34,13 @@ class AddRoomImageServiceTest {
         Room(
             id = roomId,
             name = "Salle Étoile",
+            description = "Grande salle lumineuse",
             address = Address("12 rue de la Paix", "Paris", "75002", "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
             currency = Currency.EUR,
+            isThereWifi = true,
+            isThereSonoPro = false,
+            isThereAirConditioning = true,
             createdAt = Instant.now(),
         )
 

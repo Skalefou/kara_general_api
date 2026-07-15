@@ -21,9 +21,13 @@ class CreateRoomService(
         val room =
             Room.create(
                 name = command.name,
+                description = command.description,
                 address = command.address,
                 pricePerPersonPerHour = command.pricePerPersonPerHour,
                 currency = command.currency,
+                isThereWifi = command.isThereWifi,
+                isThereSonoPro = command.isThereSonoPro,
+                isThereAirConditioning = command.isThereAirConditioning,
                 coordinates = coordinates,
             )
         return CreateRoomResult.Success(roomRepository.save(room))

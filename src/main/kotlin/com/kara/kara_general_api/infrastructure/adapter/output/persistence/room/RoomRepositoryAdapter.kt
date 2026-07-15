@@ -32,33 +32,43 @@ class RoomRepositoryAdapter(
     override fun save(room: Room): Room {
         val sql =
             """
-            INSERT INTO rooms (id, name, street, city, postal_code, country, price_per_person_per_hour, currency,
+            INSERT INTO rooms (id, name, description, street, city, postal_code, country, price_per_person_per_hour,
+                               currency, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                                latitude, longitude, status, created_at)
-            VALUES (:id, :name, :street, :city, :postalCode, :country, :pricePerPersonPerHour, :currency,
+            VALUES (:id, :name, :description, :street, :city, :postalCode, :country, :pricePerPersonPerHour,
+                    :currency, :isThereWifi, :isThereSonoPro, :isThereAirConditioning,
                     :latitude, :longitude, :status, :createdAt)
             ON CONFLICT (id) DO UPDATE SET
-                name                     = EXCLUDED.name,
-                street                   = EXCLUDED.street,
-                city                     = EXCLUDED.city,
-                postal_code              = EXCLUDED.postal_code,
-                country                  = EXCLUDED.country,
+                name                      = EXCLUDED.name,
+                description               = EXCLUDED.description,
+                street                    = EXCLUDED.street,
+                city                      = EXCLUDED.city,
+                postal_code               = EXCLUDED.postal_code,
+                country                   = EXCLUDED.country,
                 price_per_person_per_hour = EXCLUDED.price_per_person_per_hour,
-                currency                 = EXCLUDED.currency,
-                latitude                 = EXCLUDED.latitude,
-                longitude                = EXCLUDED.longitude,
-                status                   = EXCLUDED.status
+                currency                  = EXCLUDED.currency,
+                is_there_wifi             = EXCLUDED.is_there_wifi,
+                is_there_sono_pro         = EXCLUDED.is_there_sono_pro,
+                is_there_air_conditioning = EXCLUDED.is_there_air_conditioning,
+                latitude                  = EXCLUDED.latitude,
+                longitude                 = EXCLUDED.longitude,
+                status                    = EXCLUDED.status
             """.trimIndent()
         jdbc.update(
             sql,
             MapSqlParameterSource()
                 .addValue("id", room.id.value)
                 .addValue("name", room.name)
+                .addValue("description", room.description)
                 .addValue("street", room.address.street)
                 .addValue("city", room.address.city)
                 .addValue("postalCode", room.address.postalCode)
                 .addValue("country", room.address.country)
                 .addValue("pricePerPersonPerHour", room.pricePerPersonPerHour)
                 .addValue("currency", room.currency.name)
+                .addValue("isThereWifi", room.isThereWifi)
+                .addValue("isThereSonoPro", room.isThereSonoPro)
+                .addValue("isThereAirConditioning", room.isThereAirConditioning)
                 .addValue("latitude", room.latitude)
                 .addValue("longitude", room.longitude)
                 .addValue("status", room.status.name)
@@ -70,7 +80,8 @@ class RoomRepositoryAdapter(
     override fun findById(id: RoomId): Room? {
         val sql =
             """
-            SELECT id, name, street, city, postal_code, country, price_per_person_per_hour, currency,
+            SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
+                   is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                    latitude, longitude, status, created_at
             FROM rooms
             WHERE id = :id
@@ -82,7 +93,8 @@ class RoomRepositoryAdapter(
     override fun findAll(page: Int, size: Int): List<Room> {
         val sql =
             """
-            SELECT id, name, street, city, postal_code, country, price_per_person_per_hour, currency,
+            SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
+                   is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                    latitude, longitude, status, created_at
             FROM rooms
             ORDER BY created_at DESC
@@ -104,7 +116,8 @@ class RoomRepositoryAdapter(
     override fun findInBbox(bbox: BoundingBox, limit: Int): List<Room> {
         val sql =
             """
-            SELECT id, name, street, city, postal_code, country, price_per_person_per_hour, currency,
+            SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
+                   is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                    latitude, longitude, status, created_at
             FROM rooms
             WHERE latitude BETWEEN :minLat AND :maxLat

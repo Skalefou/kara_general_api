@@ -20,6 +20,8 @@ class RoomEntity(
     var id: UUID = UUID.randomUUID(),
     @Column(nullable = false, columnDefinition = "varchar(255)")
     var name: String,
+    @Column(nullable = false, columnDefinition = "text")
+    var description: String,
     @Column(nullable = false, columnDefinition = "varchar(255)")
     var street: String,
     @Column(nullable = false, columnDefinition = "varchar(100)")
@@ -32,6 +34,12 @@ class RoomEntity(
     var pricePerPersonPerHour: BigDecimal,
     @Column(nullable = false, columnDefinition = "varchar(10)")
     var currency: String,
+    @Column(name = "is_there_wifi", nullable = false)
+    var isThereWifi: Boolean,
+    @Column(name = "is_there_sono_pro", nullable = false)
+    var isThereSonoPro: Boolean,
+    @Column(name = "is_there_air_conditioning", nullable = false)
+    var isThereAirConditioning: Boolean,
     @Column(columnDefinition = "double precision")
     var latitude: Double? = null,
     @Column(columnDefinition = "double precision")

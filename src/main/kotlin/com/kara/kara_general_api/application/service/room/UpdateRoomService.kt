@@ -36,9 +36,13 @@ class UpdateRoomService(
         val updated =
             existing.update(
                 name = command.name ?: existing.name,
+                description = command.description ?: existing.description,
                 address = mergedAddress,
                 pricePerPersonPerHour = command.pricePerPersonPerHour ?: existing.pricePerPersonPerHour,
                 currency = command.currency ?: existing.currency,
+                isThereWifi = command.isThereWifi ?: existing.isThereWifi,
+                isThereSonoPro = command.isThereSonoPro ?: existing.isThereSonoPro,
+                isThereAirConditioning = command.isThereAirConditioning ?: existing.isThereAirConditioning,
                 status = command.status ?: existing.status,
                 coordinates = coordinates,
             )

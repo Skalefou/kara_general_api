@@ -32,9 +32,13 @@ class UpdateRoomServiceTest {
         Room(
             id = roomId,
             name = "Salle Étoile",
+            description = "Grande salle lumineuse",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
             currency = Currency.EUR,
+            isThereWifi = true,
+            isThereSonoPro = false,
+            isThereAirConditioning = true,
             createdAt = Instant.now(),
             latitude = 48.8566,
             longitude = 2.3522,
@@ -43,12 +47,16 @@ class UpdateRoomServiceTest {
         UpdateRoomCommand(
             id = roomId,
             name = "Salle Lune",
+            description = null,
             street = "5 avenue Foch",
             city = "Lyon",
             postalCode = "69000",
             country = "France",
             pricePerPersonPerHour = null,
             currency = null,
+            isThereWifi = null,
+            isThereSonoPro = null,
+            isThereAirConditioning = null,
             status = null,
         )
 
@@ -83,12 +91,16 @@ class UpdateRoomServiceTest {
             UpdateRoomCommand(
                 id = roomId,
                 name = "Salle Lune",
+                description = null,
                 street = null,
                 city = null,
                 postalCode = null,
                 country = null,
                 pricePerPersonPerHour = null,
                 currency = null,
+                isThereWifi = null,
+                isThereSonoPro = null,
+                isThereAirConditioning = null,
                 status = null,
             )
 
@@ -113,12 +125,16 @@ class UpdateRoomServiceTest {
             UpdateRoomCommand(
                 id = roomId,
                 name = null,
+                description = null,
                 street = null,
                 city = null,
                 postalCode = null,
                 country = null,
                 pricePerPersonPerHour = null,
                 currency = null,
+                isThereWifi = null,
+                isThereSonoPro = null,
+                isThereAirConditioning = null,
                 status = RoomStatus.CLOSED,
             )
 

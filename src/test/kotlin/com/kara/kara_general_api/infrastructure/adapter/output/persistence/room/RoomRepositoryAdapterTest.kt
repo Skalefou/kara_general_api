@@ -108,9 +108,13 @@ class RoomRepositoryAdapterTest {
         val base =
             Room.create(
                 name = name,
+                description = "Grande salle lumineuse",
                 address = Address(street = "1 rue Test", city = "Paris", postalCode = "75001", country = "France"),
                 pricePerPersonPerHour = BigDecimal("12.50"),
                 currency = Currency.EUR,
+                isThereWifi = true,
+                isThereSonoPro = false,
+                isThereAirConditioning = true,
                 coordinates = Coordinates(latitude ?: 0.0, longitude ?: 0.0),
             )
         val room = base.copy(latitude = latitude, longitude = longitude)

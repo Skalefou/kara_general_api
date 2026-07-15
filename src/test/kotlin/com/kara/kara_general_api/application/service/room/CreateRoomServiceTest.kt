@@ -27,9 +27,13 @@ class CreateRoomServiceTest {
     private val command =
         CreateRoomCommand(
             name = "Salle Étoile",
+            description = "Grande salle lumineuse",
             address = address,
             pricePerPersonPerHour = BigDecimal("12.50"),
             currency = Currency.EUR,
+            isThereWifi = true,
+            isThereSonoPro = false,
+            isThereAirConditioning = true,
         )
 
     @Test

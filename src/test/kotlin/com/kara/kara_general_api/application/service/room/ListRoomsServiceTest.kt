@@ -34,9 +34,13 @@ class ListRoomsServiceTest {
         Room(
             id = RoomId(UUID.randomUUID()),
             name = "Salle Étoile",
+            description = "Grande salle lumineuse",
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
             currency = Currency.EUR,
+            isThereWifi = true,
+            isThereSonoPro = false,
+            isThereAirConditioning = true,
             createdAt = Instant.now(),
         )
 

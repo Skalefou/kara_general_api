@@ -7,9 +7,13 @@ import java.math.BigDecimal
 
 data class CreateRoomCommand(
     val name: String,
+    val description: String,
     val address: Address,
     val pricePerPersonPerHour: BigDecimal,
     val currency: Currency,
+    val isThereWifi: Boolean,
+    val isThereSonoPro: Boolean,
+    val isThereAirConditioning: Boolean,
 )
 
 sealed interface CreateRoomResult {

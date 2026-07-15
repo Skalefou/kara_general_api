@@ -53,9 +53,13 @@ class RoomController(
         val command =
             CreateRoomCommand(
                 name = request.name,
+                description = request.description,
                 address = request.toAddress(),
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
                 currency = request.currency,
+                isThereWifi = request.isThereWifi,
+                isThereSonoPro = request.isThereSonoPro,
+                isThereAirConditioning = request.isThereAirConditioning,
             )
         return when (val result = createRoomUseCase.createRoom(command)) {
             is CreateRoomResult.Success ->
@@ -97,12 +101,16 @@ class RoomController(
             UpdateRoomCommand(
                 id = RoomId(id),
                 name = request.name,
+                description = request.description,
                 street = request.street,
                 city = request.city,
                 postalCode = request.postalCode,
                 country = request.country,
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
                 currency = request.currency,
+                isThereWifi = request.isThereWifi,
+                isThereSonoPro = request.isThereSonoPro,
+                isThereAirConditioning = request.isThereAirConditioning,
                 status = request.status,
             )
         return when (val result = updateRoomUseCase.updateRoom(command)) {

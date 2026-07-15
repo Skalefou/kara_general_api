@@ -13,6 +13,8 @@ data class RoomResponse(
     val id: UUID,
     @field:Schema(description = "Nom de la salle", example = "Salle Étoile")
     val name: String,
+    @field:Schema(description = "Description de la salle", example = "Grande salle lumineuse avec terrasse")
+    val description: String,
     @field:Schema(description = "Adresse de la salle", example = "12 rue de la Paix")
     val street: String,
     @field:Schema(description = "Ville", example = "Paris")
@@ -25,6 +27,12 @@ data class RoomResponse(
     val pricePerPersonPerHour: BigDecimal,
     @field:Schema(description = "Devise (code ISO 4217)", example = "EUR")
     val currency: Currency,
+    @field:Schema(description = "Présence du Wi-Fi", example = "true")
+    val isThereWifi: Boolean,
+    @field:Schema(description = "Présence d'une sono professionnelle", example = "true")
+    val isThereSonoPro: Boolean,
+    @field:Schema(description = "Présence de la climatisation", example = "false")
+    val isThereAirConditioning: Boolean,
     @field:Schema(description = "Latitude déduite de l'adresse", example = "48.8566")
     val latitude: Double?,
     @field:Schema(description = "Longitude déduite de l'adresse", example = "2.3522")
@@ -41,12 +49,16 @@ data class RoomResponse(
             RoomResponse(
                 id = room.id.value,
                 name = room.name,
+                description = room.description,
                 street = room.address.street,
                 city = room.address.city,
                 postalCode = room.address.postalCode,
                 country = room.address.country,
                 pricePerPersonPerHour = room.pricePerPersonPerHour,
                 currency = room.currency,
+                isThereWifi = room.isThereWifi,
+                isThereSonoPro = room.isThereSonoPro,
+                isThereAirConditioning = room.isThereAirConditioning,
                 latitude = room.latitude,
                 longitude = room.longitude,
                 createdAt = room.createdAt,
