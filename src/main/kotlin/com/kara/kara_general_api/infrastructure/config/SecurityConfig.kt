@@ -42,6 +42,11 @@ class SecurityConfig {
                 // Estimation tarifaire : lecture seule, aucune persistance ; accessible aux invités et clients
                 // (même logique que la consultation publique des salles).
                 authorize(HttpMethod.POST, "/api/v1/bookings/estimate", permitAll)
+                // Catalogue global des services : gestion réservée au back-office (ADMIN) pour toutes les
+                // opérations (création, listing de gestion, suppression).
+                authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.GET, "/api/v1/services", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.DELETE, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/me", authenticated)
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))

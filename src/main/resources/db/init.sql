@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS room_images (
 
 CREATE INDEX IF NOT EXISTS idx_room_images_room_id ON room_images (room_id);
 
--- Options tarifées d'une salle : forfaits fixes (indépendants du nombre de personnes et de la durée).
-CREATE TABLE IF NOT EXISTS room_options (
+-- Catalogue global des services réutilisables : forfaits fixes (indépendants du nombre de personnes
+-- et de la durée). Un service n'est plus rattaché en dur à une seule salle.
+CREATE TABLE IF NOT EXISTS services (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    room_id     UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     label       VARCHAR(255) NOT NULL,
     description TEXT,
     price       NUMERIC(10,2) NOT NULL,
@@ -61,4 +61,15 @@ CREATE TABLE IF NOT EXISTS room_options (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_room_options_room_id ON room_options (room_id);
+-- Liaison salle↔service : rattache un service du catalogue global à une salle. Le prix/label/description
+-- vivent sur `services`, jamais sur la liaison.
+CREATE TABLE IF NOT EXISTS room_services (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_room_services_room_service UNIQUE (room_id, service_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_services_room_id ON room_services (room_id);
+CREATE INDEX IF NOT EXISTS idx_room_services_service_id ON room_services (service_id);

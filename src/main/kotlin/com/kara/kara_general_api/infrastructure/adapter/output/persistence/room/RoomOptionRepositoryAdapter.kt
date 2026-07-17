@@ -13,12 +13,17 @@ class RoomOptionRepositoryAdapter(
 ) : RoomOptionRepository {
 
     override fun findByRoomId(roomId: RoomId): List<RoomOption> {
+        // Catalogue global : les services attachés à la salle via la liaison room_services.
+        // On projette chaque service en RoomOption (id = id du service) afin de conserver la forme
+        // du contrat RoomResponse.options[] inchangée pour les fronts.
         val sql =
             """
-            SELECT id, room_id, label, description, price, currency
-            FROM room_options
-            WHERE room_id = :roomId
-            ORDER BY label ASC
+            SELECT s.id AS id, rs.room_id AS room_id, s.label AS label,
+                   s.description AS description, s.price AS price, s.currency AS currency
+            FROM room_services rs
+            JOIN services s ON s.id = rs.service_id
+            WHERE rs.room_id = :roomId
+            ORDER BY s.label ASC
             """.trimIndent()
         return jdbc.query(sql, mapOf("roomId" to roomId.value), rowMapper)
     }

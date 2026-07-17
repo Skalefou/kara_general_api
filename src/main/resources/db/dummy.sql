@@ -66,11 +66,20 @@ INSERT INTO rooms (
              NOW()
          );
 
--- Options tarifées (forfaits fixes) de la salle de démonstration ; même devise (EUR) que la salle --
-INSERT INTO room_options (id, room_id, label, description, price, currency, created_at) VALUES
-    ('22222222-2222-2222-2222-222222222221', '11111111-1111-1111-1111-111111111111',
+-- Catalogue global de services (forfaits fixes) ; UUID fixes pour les référencer dans la liaison --
+INSERT INTO services (id, label, description, price, currency, created_at) VALUES
+    ('22222222-2222-2222-2222-222222222221',
      'Ménage fin de soirée', 'Nettoyage complet après l''événement', 60.00, 'EUR', NOW()),
-    ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111',
+    ('22222222-2222-2222-2222-222222222222',
      'DJ Set (4h)', 'Prestation d''un DJ professionnel pendant 4 heures', 300.00, 'EUR', NOW()),
-    ('22222222-2222-2222-2222-222222222223', '11111111-1111-1111-1111-111111111111',
+    ('22222222-2222-2222-2222-222222222223',
      'Agent de sécurité', 'Agent de sécurité présent sur l''événement', 25.00, 'EUR', NOW());
+
+-- Rattachement des services à la salle de démonstration (comportement front-client inchangé) --
+INSERT INTO room_services (id, room_id, service_id, created_at) VALUES
+    ('33333333-3333-3333-3333-333333333331', '11111111-1111-1111-1111-111111111111',
+     '22222222-2222-2222-2222-222222222221', NOW()),
+    ('33333333-3333-3333-3333-333333333332', '11111111-1111-1111-1111-111111111111',
+     '22222222-2222-2222-2222-222222222222', NOW()),
+    ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111',
+     '22222222-2222-2222-2222-222222222223', NOW());
