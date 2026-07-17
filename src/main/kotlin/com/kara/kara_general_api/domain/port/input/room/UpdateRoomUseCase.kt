@@ -16,6 +16,7 @@ data class UpdateRoomCommand(
     val country: String?,
     val pricePerPersonPerHour: BigDecimal?,
     val currency: Currency?,
+    val maxCapacity: Int?,
     val isThereWifi: Boolean?,
     val isThereSonoPro: Boolean?,
     val isThereAirConditioning: Boolean?,

@@ -12,6 +12,7 @@ data class Room(
     val address: Address,
     val pricePerPersonPerHour: BigDecimal,
     val currency: Currency,
+    val maxCapacity: Int,
     val isThereWifi: Boolean,
     val isThereSonoPro: Boolean,
     val isThereAirConditioning: Boolean,
@@ -24,6 +25,7 @@ data class Room(
     init {
         require(name.isNotBlank()) { "Le nom de la salle est obligatoire" }
         require(pricePerPersonPerHour >= BigDecimal.ZERO) { "Le prix par personne et par heure doit être positif" }
+        require(maxCapacity >= MIN_CAPACITY) { "La capacité maximale doit être d'au moins $MIN_CAPACITY personnes" }
     }
 
     fun update(
@@ -32,6 +34,7 @@ data class Room(
         address: Address,
         pricePerPersonPerHour: BigDecimal,
         currency: Currency,
+        maxCapacity: Int,
         isThereWifi: Boolean,
         isThereSonoPro: Boolean,
         isThereAirConditioning: Boolean,
@@ -44,6 +47,7 @@ data class Room(
             address = address,
             pricePerPersonPerHour = pricePerPersonPerHour,
             currency = currency,
+            maxCapacity = maxCapacity,
             isThereWifi = isThereWifi,
             isThereSonoPro = isThereSonoPro,
             isThereAirConditioning = isThereAirConditioning,
@@ -53,12 +57,15 @@ data class Room(
         )
 
     companion object {
+        const val MIN_CAPACITY = 2
+
         fun create(
             name: String,
             description: String,
             address: Address,
             pricePerPersonPerHour: BigDecimal,
             currency: Currency,
+            maxCapacity: Int,
             isThereWifi: Boolean,
             isThereSonoPro: Boolean,
             isThereAirConditioning: Boolean,
@@ -71,6 +78,7 @@ data class Room(
                 address = address,
                 pricePerPersonPerHour = pricePerPersonPerHour,
                 currency = currency,
+                maxCapacity = maxCapacity,
                 isThereWifi = isThereWifi,
                 isThereSonoPro = isThereSonoPro,
                 isThereAirConditioning = isThereAirConditioning,

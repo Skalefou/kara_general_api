@@ -2,6 +2,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
+import com.kara.kara_general_api.domain.model.room.RoomOption
 import com.kara.kara_general_api.domain.model.room.RoomStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
@@ -27,6 +28,8 @@ data class RoomResponse(
     val pricePerPersonPerHour: BigDecimal,
     @field:Schema(description = "Devise (code ISO 4217)", example = "EUR")
     val currency: Currency,
+    @field:Schema(description = "Capacité maximale (nombre de personnes)", example = "50")
+    val maxCapacity: Int,
     @field:Schema(description = "Présence du Wi-Fi", example = "true")
     val isThereWifi: Boolean,
     @field:Schema(description = "Présence d'une sono professionnelle", example = "true")
@@ -43,9 +46,15 @@ data class RoomResponse(
     val status: RoomStatus,
     @field:Schema(description = "Images publiques de la salle")
     val images: List<RoomImageResponse>,
+    @field:Schema(description = "Options tarifées (forfaits fixes) proposées pour la salle")
+    val options: List<RoomOptionResponse>,
 ) {
     companion object {
-        fun from(room: Room, publicUrl: (String) -> String): RoomResponse =
+        fun from(
+            room: Room,
+            publicUrl: (String) -> String,
+            options: List<RoomOption> = emptyList(),
+        ): RoomResponse =
             RoomResponse(
                 id = room.id.value,
                 name = room.name,
@@ -56,6 +65,7 @@ data class RoomResponse(
                 country = room.address.country,
                 pricePerPersonPerHour = room.pricePerPersonPerHour,
                 currency = room.currency,
+                maxCapacity = room.maxCapacity,
                 isThereWifi = room.isThereWifi,
                 isThereSonoPro = room.isThereSonoPro,
                 isThereAirConditioning = room.isThereAirConditioning,
@@ -64,6 +74,7 @@ data class RoomResponse(
                 createdAt = room.createdAt,
                 status = room.status,
                 images = room.images.map { RoomImageResponse.from(it, publicUrl) },
+                options = options.map { RoomOptionResponse.from(it) },
             )
     }
 }

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     country     VARCHAR(100) NOT NULL,
     price_per_person_per_hour NUMERIC(10,2) NOT NULL,
     currency    VARCHAR(10)  NOT NULL,
+    max_capacity              INT NOT NULL,
     is_there_wifi             BOOLEAN NOT NULL,
     is_there_sono_pro         BOOLEAN NOT NULL,
     is_there_air_conditioning BOOLEAN NOT NULL,
@@ -48,3 +49,16 @@ CREATE TABLE IF NOT EXISTS room_images (
 );
 
 CREATE INDEX IF NOT EXISTS idx_room_images_room_id ON room_images (room_id);
+
+-- Options tarifées d'une salle : forfaits fixes (indépendants du nombre de personnes et de la durée).
+CREATE TABLE IF NOT EXISTS room_options (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id     UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    label       VARCHAR(255) NOT NULL,
+    description TEXT,
+    price       NUMERIC(10,2) NOT NULL,
+    currency    VARCHAR(10)  NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_options_room_id ON room_options (room_id);

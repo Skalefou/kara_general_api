@@ -26,6 +26,7 @@ class RoomRowMapper : RowMapper<Room> {
                 ),
             pricePerPersonPerHour = rs.getBigDecimal("price_per_person_per_hour"),
             currency = Currency.valueOf(rs.getString("currency")),
+            maxCapacity = rs.getInt("max_capacity"),
             isThereWifi = rs.getBoolean("is_there_wifi"),
             isThereSonoPro = rs.getBoolean("is_there_sono_pro"),
             isThereAirConditioning = rs.getBoolean("is_there_air_conditioning"),

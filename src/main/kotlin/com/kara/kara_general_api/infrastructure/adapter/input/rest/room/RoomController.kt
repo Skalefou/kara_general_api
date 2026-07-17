@@ -57,6 +57,7 @@ class RoomController(
                 address = request.toAddress(),
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
                 currency = request.currency,
+                maxCapacity = request.maxCapacity,
                 isThereWifi = request.isThereWifi,
                 isThereSonoPro = request.isThereSonoPro,
                 isThereAirConditioning = request.isThereAirConditioning,
@@ -92,7 +93,8 @@ class RoomController(
 
     override fun getRoom(id: UUID): ResponseEntity<Any> =
         when (val result = getRoomUseCase.getRoom(RoomId(id))) {
-            is GetRoomResult.Success -> ResponseEntity.ok(RoomResponse.from(result.room, imageStorage::publicUrl))
+            is GetRoomResult.Success ->
+                ResponseEntity.ok(RoomResponse.from(result.room, imageStorage::publicUrl, result.options))
             GetRoomResult.NotFound -> roomNotFound()
         }
 
@@ -108,6 +110,7 @@ class RoomController(
                 country = request.country,
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
                 currency = request.currency,
+                maxCapacity = request.maxCapacity,
                 isThereWifi = request.isThereWifi,
                 isThereSonoPro = request.isThereSonoPro,
                 isThereAirConditioning = request.isThereAirConditioning,

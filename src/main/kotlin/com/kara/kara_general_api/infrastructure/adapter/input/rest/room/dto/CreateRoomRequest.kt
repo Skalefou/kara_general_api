@@ -2,6 +2,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 
 import com.kara.kara_general_api.domain.model.room.Currency
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PositiveOrZero
@@ -33,6 +34,10 @@ data class CreateRoomRequest(
     @field:NotNull
     @field:Schema(description = "Devise (code ISO 4217)", example = "EUR")
     val currency: Currency,
+    @field:NotNull
+    @field:Min(2)
+    @field:Schema(description = "Capacité maximale (nombre de personnes, minimum 2)", example = "50")
+    val maxCapacity: Int,
     @field:NotNull
     @field:Schema(description = "Présence du Wi-Fi", example = "true")
     val isThereWifi: Boolean,

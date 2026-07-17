@@ -40,6 +40,7 @@ class UpdateRoomService(
                 address = mergedAddress,
                 pricePerPersonPerHour = command.pricePerPersonPerHour ?: existing.pricePerPersonPerHour,
                 currency = command.currency ?: existing.currency,
+                maxCapacity = command.maxCapacity ?: existing.maxCapacity,
                 isThereWifi = command.isThereWifi ?: existing.isThereWifi,
                 isThereSonoPro = command.isThereSonoPro ?: existing.isThereSonoPro,
                 isThereAirConditioning = command.isThereAirConditioning ?: existing.isThereAirConditioning,

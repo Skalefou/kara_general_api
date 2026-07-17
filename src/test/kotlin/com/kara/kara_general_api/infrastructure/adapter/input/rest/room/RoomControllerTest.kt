@@ -54,7 +54,8 @@ private const val ROOM_ID = "550e8400-e29b-41d4-a716-446655440000"
 private const val REQUEST_BODY =
     """{"name": "Salle Étoile", "description": "Grande salle lumineuse", "street": "12 rue de la Paix", """ +
         """"city": "Paris", "postalCode": "75002", "country": "France", "pricePerPersonPerHour": 12.50, """ +
-        """"currency": "EUR", "isThereWifi": true, "isThereSonoPro": false, "isThereAirConditioning": true}"""
+        """"currency": "EUR", "maxCapacity": 50, "isThereWifi": true, "isThereSonoPro": false, """ +
+        """"isThereAirConditioning": true}"""
 
 @WebMvcTest(RoomController::class)
 @Import(SecurityConfig::class)
@@ -95,6 +96,7 @@ class RoomControllerTest {
             address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
             currency = Currency.EUR,
+            maxCapacity = 50,
             isThereWifi = true,
             isThereSonoPro = false,
             isThereAirConditioning = true,

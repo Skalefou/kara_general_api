@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomStatus
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.PositiveOrZero
 import java.math.BigDecimal
 
@@ -24,6 +25,9 @@ data class UpdateRoomRequest(
     val pricePerPersonPerHour: BigDecimal? = null,
     @field:Schema(description = "Devise (code ISO 4217)", example = "EUR")
     val currency: Currency? = null,
+    @field:Min(2)
+    @field:Schema(description = "Capacité maximale (nombre de personnes, minimum 2)", example = "50")
+    val maxCapacity: Int? = null,
     @field:Schema(description = "Présence du Wi-Fi", example = "true")
     val isThereWifi: Boolean? = null,
     @field:Schema(description = "Présence d'une sono professionnelle", example = "true")

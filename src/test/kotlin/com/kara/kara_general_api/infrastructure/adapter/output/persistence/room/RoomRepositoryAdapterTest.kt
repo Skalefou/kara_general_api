@@ -104,6 +104,15 @@ class RoomRepositoryAdapterTest {
         )
     }
 
+    @Test
+    fun `findById returns the room with its max capacity`() {
+        val saved = saveRoom("Salle Capacité", latitude = 48.85, longitude = 2.30)
+
+        val found = adapter.findById(saved.id)
+
+        assertEquals(50, found?.maxCapacity)
+    }
+
     private fun saveRoom(name: String, latitude: Double?, longitude: Double?): Room {
         val base =
             Room.create(
@@ -112,6 +121,7 @@ class RoomRepositoryAdapterTest {
                 address = Address(street = "1 rue Test", city = "Paris", postalCode = "75001", country = "France"),
                 pricePerPersonPerHour = BigDecimal("12.50"),
                 currency = Currency.EUR,
+                maxCapacity = 50,
                 isThereWifi = true,
                 isThereSonoPro = false,
                 isThereAirConditioning = true,

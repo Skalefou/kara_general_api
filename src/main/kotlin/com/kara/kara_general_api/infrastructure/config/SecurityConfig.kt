@@ -39,6 +39,9 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
+                // Estimation tarifaire : lecture seule, aucune persistance ; accessible aux invités et clients
+                // (même logique que la consultation publique des salles).
+                authorize(HttpMethod.POST, "/api/v1/bookings/estimate", permitAll)
                 authorize("/api/v1/users/me", authenticated)
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))

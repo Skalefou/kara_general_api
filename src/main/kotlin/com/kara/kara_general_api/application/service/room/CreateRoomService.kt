@@ -25,6 +25,7 @@ class CreateRoomService(
                 address = command.address,
                 pricePerPersonPerHour = command.pricePerPersonPerHour,
                 currency = command.currency,
+                maxCapacity = command.maxCapacity,
                 isThereWifi = command.isThereWifi,
                 isThereSonoPro = command.isThereSonoPro,
                 isThereAirConditioning = command.isThereAirConditioning,

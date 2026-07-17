@@ -20,7 +20,7 @@ class RoomEntity(
     var id: UUID = UUID.randomUUID(),
     @Column(nullable = false, columnDefinition = "varchar(255)")
     var name: String,
-    @Column(nullable = false, columnDefinition = "text")
+    @Column(nullable = false, columnDefinition = "text default ''")
     var description: String,
     @Column(nullable = false, columnDefinition = "varchar(255)")
     var street: String,
@@ -30,15 +30,17 @@ class RoomEntity(
     var postalCode: String,
     @Column(nullable = false, columnDefinition = "varchar(100)")
     var country: String,
-    @Column(name = "price_per_person_per_hour", nullable = false, columnDefinition = "numeric(10,2)")
+    @Column(name = "price_per_person_per_hour", nullable = false, columnDefinition = "numeric(10,2) default 0")
     var pricePerPersonPerHour: BigDecimal,
-    @Column(nullable = false, columnDefinition = "varchar(10)")
+    @Column(nullable = false, columnDefinition = "varchar(10) default 'EUR'")
     var currency: String,
-    @Column(name = "is_there_wifi", nullable = false)
+    @Column(name = "max_capacity", nullable = false, columnDefinition = "int default 0")
+    var maxCapacity: Int,
+    @Column(name = "is_there_wifi", nullable = false, columnDefinition = "boolean default false")
     var isThereWifi: Boolean,
-    @Column(name = "is_there_sono_pro", nullable = false)
+    @Column(name = "is_there_sono_pro", nullable = false, columnDefinition = "boolean default false")
     var isThereSonoPro: Boolean,
-    @Column(name = "is_there_air_conditioning", nullable = false)
+    @Column(name = "is_there_air_conditioning", nullable = false, columnDefinition = "boolean default false")
     var isThereAirConditioning: Boolean,
     @Column(columnDefinition = "double precision")
     var latitude: Double? = null,

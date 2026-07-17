@@ -11,6 +11,7 @@ data class CreateRoomCommand(
     val address: Address,
     val pricePerPersonPerHour: BigDecimal,
     val currency: Currency,
+    val maxCapacity: Int,
     val isThereWifi: Boolean,
     val isThereSonoPro: Boolean,
     val isThereAirConditioning: Boolean,

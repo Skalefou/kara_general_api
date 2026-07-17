@@ -33,10 +33,10 @@ class RoomRepositoryAdapter(
         val sql =
             """
             INSERT INTO rooms (id, name, description, street, city, postal_code, country, price_per_person_per_hour,
-                               currency, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
+                               currency, max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                                latitude, longitude, status, created_at)
             VALUES (:id, :name, :description, :street, :city, :postalCode, :country, :pricePerPersonPerHour,
-                    :currency, :isThereWifi, :isThereSonoPro, :isThereAirConditioning,
+                    :currency, :maxCapacity, :isThereWifi, :isThereSonoPro, :isThereAirConditioning,
                     :latitude, :longitude, :status, :createdAt)
             ON CONFLICT (id) DO UPDATE SET
                 name                      = EXCLUDED.name,
@@ -47,6 +47,7 @@ class RoomRepositoryAdapter(
                 country                   = EXCLUDED.country,
                 price_per_person_per_hour = EXCLUDED.price_per_person_per_hour,
                 currency                  = EXCLUDED.currency,
+                max_capacity              = EXCLUDED.max_capacity,
                 is_there_wifi             = EXCLUDED.is_there_wifi,
                 is_there_sono_pro         = EXCLUDED.is_there_sono_pro,
                 is_there_air_conditioning = EXCLUDED.is_there_air_conditioning,
@@ -66,6 +67,7 @@ class RoomRepositoryAdapter(
                 .addValue("country", room.address.country)
                 .addValue("pricePerPersonPerHour", room.pricePerPersonPerHour)
                 .addValue("currency", room.currency.name)
+                .addValue("maxCapacity", room.maxCapacity)
                 .addValue("isThereWifi", room.isThereWifi)
                 .addValue("isThereSonoPro", room.isThereSonoPro)
                 .addValue("isThereAirConditioning", room.isThereAirConditioning)
@@ -81,7 +83,7 @@ class RoomRepositoryAdapter(
         val sql =
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
-                   is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
+                   max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                    latitude, longitude, status, created_at
             FROM rooms
             WHERE id = :id
@@ -94,7 +96,7 @@ class RoomRepositoryAdapter(
         val sql =
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
-                   is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
+                   max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                    latitude, longitude, status, created_at
             FROM rooms
             ORDER BY created_at DESC
@@ -117,7 +119,7 @@ class RoomRepositoryAdapter(
         val sql =
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
-                   is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
+                   max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
                    latitude, longitude, status, created_at
             FROM rooms
             WHERE latitude BETWEEN :minLat AND :maxLat

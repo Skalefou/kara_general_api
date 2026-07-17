@@ -38,6 +38,7 @@ class AddRoomImageServiceTest {
             address = Address("12 rue de la Paix", "Paris", "75002", "France"),
             pricePerPersonPerHour = BigDecimal("12.50"),
             currency = Currency.EUR,
+            maxCapacity = 50,
             isThereWifi = true,
             isThereSonoPro = false,
             isThereAirConditioning = true,
