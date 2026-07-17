@@ -46,6 +46,7 @@ class SecurityConfig {
                 // opérations (création, listing de gestion, suppression).
                 authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/services", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.PATCH, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/me", authenticated)
                 authorize("/api/v1/users/me/**", authenticated)

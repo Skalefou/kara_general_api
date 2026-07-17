@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomStatus
+import com.kara.kara_general_api.domain.model.service.ServiceId
 import java.math.BigDecimal
 
 data class UpdateRoomCommand(
@@ -21,6 +22,8 @@ data class UpdateRoomCommand(
     val isThereSonoPro: Boolean?,
     val isThereAirConditioning: Boolean?,
     val status: RoomStatus?,
+    // null = liaisons inchangées ; une liste (même vide) remplace l'ensemble des liaisons.
+    val serviceIds: List<ServiceId>? = null,
 )
 
 sealed interface UpdateRoomResult {
@@ -29,6 +32,9 @@ sealed interface UpdateRoomResult {
     data object NotFound : UpdateRoomResult
 
     data object AddressNotFound : UpdateRoomResult
+
+    /** Un des services référencés n'existe pas dans le catalogue global. */
+    data class UnknownService(val serviceId: ServiceId) : UpdateRoomResult
 }
 
 interface UpdateRoomUseCase {

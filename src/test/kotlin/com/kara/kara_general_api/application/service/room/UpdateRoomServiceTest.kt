@@ -6,12 +6,17 @@ import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomStatus
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.room.vo.Coordinates
+import com.kara.kara_general_api.domain.model.service.ServiceId
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomCommand
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomResult
 import com.kara.kara_general_api.domain.port.output.GeocodingPort
 import com.kara.kara_general_api.domain.port.output.RoomRepository
+import com.kara.kara_general_api.domain.port.output.RoomServiceRepository
+import com.kara.kara_general_api.domain.port.output.ServiceRepository
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
@@ -25,7 +30,9 @@ class UpdateRoomServiceTest {
 
     private val roomRepository = mockk<RoomRepository>()
     private val geocodingPort = mockk<GeocodingPort>()
-    private val sut = UpdateRoomService(roomRepository, geocodingPort)
+    private val serviceRepository = mockk<ServiceRepository>()
+    private val roomServiceRepository = mockk<RoomServiceRepository>(relaxed = true)
+    private val sut = UpdateRoomService(roomRepository, geocodingPort, serviceRepository, roomServiceRepository)
 
     private val roomId = RoomId(UUID.randomUUID())
     private val existingRoom =
@@ -169,5 +176,57 @@ class UpdateRoomServiceTest {
         val result = sut.updateRoom(command)
 
         assertEquals(UpdateRoomResult.NotFound, result)
+    }
+
+    @Test
+    fun `should replace service links when serviceIds is provided`() {
+        val serviceId = ServiceId(UUID.randomUUID())
+        every { roomRepository.findById(roomId) } returns existingRoom
+        val savedRoom = slot<Room>()
+        every { roomRepository.save(capture(savedRoom)) } answers { savedRoom.captured }
+        every { serviceRepository.existsById(serviceId) } returns true
+        every { roomServiceRepository.replaceLinks(any(), any()) } just runs
+
+        val result = sut.updateRoom(command.copy(street = null, city = null, postalCode = null, country = null, serviceIds = listOf(serviceId)))
+
+        val success = assertIs<UpdateRoomResult.Success>(result)
+        verify { roomServiceRepository.replaceLinks(success.room.id, listOf(serviceId)) }
+    }
+
+    @Test
+    fun `should detach all services when serviceIds is an empty list`() {
+        every { roomRepository.findById(roomId) } returns existingRoom
+        val savedRoom = slot<Room>()
+        every { roomRepository.save(capture(savedRoom)) } answers { savedRoom.captured }
+        every { roomServiceRepository.replaceLinks(any(), any()) } just runs
+
+        val result = sut.updateRoom(command.copy(street = null, city = null, postalCode = null, country = null, serviceIds = emptyList()))
+
+        assertIs<UpdateRoomResult.Success>(result)
+        verify { roomServiceRepository.replaceLinks(roomId, emptyList()) }
+    }
+
+    @Test
+    fun `should not touch service links when serviceIds is null`() {
+        every { roomRepository.findById(roomId) } returns existingRoom
+        val savedRoom = slot<Room>()
+        every { roomRepository.save(capture(savedRoom)) } answers { savedRoom.captured }
+
+        sut.updateRoom(command.copy(street = null, city = null, postalCode = null, country = null, serviceIds = null))
+
+        verify(exactly = 0) { roomServiceRepository.replaceLinks(any(), any()) }
+    }
+
+    @Test
+    fun `should return UnknownService and persist nothing when a service does not exist`() {
+        val serviceId = ServiceId(UUID.randomUUID())
+        every { roomRepository.findById(roomId) } returns existingRoom
+        every { serviceRepository.existsById(serviceId) } returns false
+
+        val result = sut.updateRoom(command.copy(serviceIds = listOf(serviceId)))
+
+        assertEquals(UpdateRoomResult.UnknownService(serviceId), result)
+        verify(exactly = 0) { roomRepository.save(any()) }
+        verify(exactly = 0) { roomServiceRepository.replaceLinks(any(), any()) }
     }
 }

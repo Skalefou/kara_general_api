@@ -45,7 +45,8 @@ interface RoomApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Requête invalide ou adresse non localisable (ADDRESS_NOT_GEOCODABLE)",
+                description = "Requête invalide, adresse non localisable (ADDRESS_NOT_GEOCODABLE) " +
+                    "ou service inconnu (UNKNOWN_SERVICE)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(
@@ -128,7 +129,7 @@ interface RoomApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Adresse non localisable (ADDRESS_NOT_GEOCODABLE)",
+                description = "Adresse non localisable (ADDRESS_NOT_GEOCODABLE) ou service inconnu (UNKNOWN_SERVICE)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(

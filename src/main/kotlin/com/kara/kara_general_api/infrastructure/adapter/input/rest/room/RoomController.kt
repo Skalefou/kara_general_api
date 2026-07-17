@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
+import com.kara.kara_general_api.domain.model.service.ServiceId
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageCommand
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
@@ -58,15 +59,17 @@ class RoomController(
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
                 currency = request.currency,
                 maxCapacity = request.maxCapacity,
-                isThereWifi = request.isThereWifi,
-                isThereSonoPro = request.isThereSonoPro,
-                isThereAirConditioning = request.isThereAirConditioning,
+                isThereWifi = request.thereWifi,
+                isThereSonoPro = request.thereSonoPro,
+                isThereAirConditioning = request.thereAirConditioning,
+                serviceIds = request.serviceIds.map { ServiceId(it) },
             )
         return when (val result = createRoomUseCase.createRoom(command)) {
             is CreateRoomResult.Success ->
                 ResponseEntity.status(HttpStatus.CREATED)
                     .body(RoomResponse.from(result.room, imageStorage::publicUrl))
             CreateRoomResult.AddressNotFound -> addressNotGeocodable()
+            is CreateRoomResult.UnknownService -> unknownService(result.serviceId)
         }
     }
 
@@ -111,15 +114,17 @@ class RoomController(
                 pricePerPersonPerHour = request.pricePerPersonPerHour,
                 currency = request.currency,
                 maxCapacity = request.maxCapacity,
-                isThereWifi = request.isThereWifi,
-                isThereSonoPro = request.isThereSonoPro,
-                isThereAirConditioning = request.isThereAirConditioning,
+                isThereWifi = request.thereWifi,
+                isThereSonoPro = request.thereSonoPro,
+                isThereAirConditioning = request.thereAirConditioning,
                 status = request.status,
+                serviceIds = request.serviceIds?.map { ServiceId(it) },
             )
         return when (val result = updateRoomUseCase.updateRoom(command)) {
             is UpdateRoomResult.Success -> ResponseEntity.ok(RoomResponse.from(result.room, imageStorage::publicUrl))
             UpdateRoomResult.NotFound -> roomNotFound()
             UpdateRoomResult.AddressNotFound -> addressNotGeocodable()
+            is UpdateRoomResult.UnknownService -> unknownService(result.serviceId)
         }
     }
 
@@ -198,6 +203,17 @@ class RoomController(
             ).apply {
                 title = "Fenêtre géographique invalide"
                 setProperty("code", "BBOX_INVALID")
+            },
+        )
+
+    private fun unknownService(serviceId: ServiceId): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "Le service ${serviceId.value} n'existe pas dans le catalogue global.",
+            ).apply {
+                title = "Service inconnu"
+                setProperty("code", "UNKNOWN_SERVICE")
             },
         )
 

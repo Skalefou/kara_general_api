@@ -6,8 +6,12 @@ import com.kara.kara_general_api.domain.port.input.service.CreateServiceUseCase
 import com.kara.kara_general_api.domain.port.input.service.DeleteServiceResult
 import com.kara.kara_general_api.domain.port.input.service.DeleteServiceUseCase
 import com.kara.kara_general_api.domain.port.input.service.ListServicesUseCase
+import com.kara.kara_general_api.domain.port.input.service.UpdateServiceCommand
+import com.kara.kara_general_api.domain.port.input.service.UpdateServiceResult
+import com.kara.kara_general_api.domain.port.input.service.UpdateServiceUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.service.dto.CreateServiceRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.service.dto.ServiceResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.service.dto.UpdateServiceRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -20,6 +24,7 @@ import java.util.UUID
 class ServiceController(
     private val createServiceUseCase: CreateServiceUseCase,
     private val listServicesUseCase: ListServicesUseCase,
+    private val updateServiceUseCase: UpdateServiceUseCase,
     private val deleteServiceUseCase: DeleteServiceUseCase,
 ) : ServiceApi {
 
@@ -38,6 +43,21 @@ class ServiceController(
 
     override fun listServices(): ResponseEntity<Any> =
         ResponseEntity.ok(listServicesUseCase.listServices().map { ServiceResponse.from(it) })
+
+    override fun updateService(id: UUID, request: UpdateServiceRequest): ResponseEntity<Any> {
+        val command =
+            UpdateServiceCommand(
+                id = ServiceId(id),
+                label = request.label,
+                description = request.description,
+                price = request.price,
+                currency = request.currency,
+            )
+        return when (val result = updateServiceUseCase.updateService(command)) {
+            is UpdateServiceResult.Success -> ResponseEntity.ok(ServiceResponse.from(result.service))
+            UpdateServiceResult.NotFound -> serviceNotFound()
+        }
+    }
 
     override fun deleteService(id: UUID): ResponseEntity<Any> =
         when (deleteServiceUseCase.deleteService(ServiceId(id))) {

@@ -31,11 +31,11 @@ data class RoomResponse(
     @field:Schema(description = "Capacité maximale (nombre de personnes)", example = "50")
     val maxCapacity: Int,
     @field:Schema(description = "Présence du Wi-Fi", example = "true")
-    val isThereWifi: Boolean,
+    val thereWifi: Boolean,
     @field:Schema(description = "Présence d'une sono professionnelle", example = "true")
-    val isThereSonoPro: Boolean,
+    val thereSonoPro: Boolean,
     @field:Schema(description = "Présence de la climatisation", example = "false")
-    val isThereAirConditioning: Boolean,
+    val thereAirConditioning: Boolean,
     @field:Schema(description = "Latitude déduite de l'adresse", example = "48.8566")
     val latitude: Double?,
     @field:Schema(description = "Longitude déduite de l'adresse", example = "2.3522")
@@ -66,9 +66,9 @@ data class RoomResponse(
                 pricePerPersonPerHour = room.pricePerPersonPerHour,
                 currency = room.currency,
                 maxCapacity = room.maxCapacity,
-                isThereWifi = room.isThereWifi,
-                isThereSonoPro = room.isThereSonoPro,
-                isThereAirConditioning = room.isThereAirConditioning,
+                thereWifi = room.isThereWifi,
+                thereSonoPro = room.isThereSonoPro,
+                thereAirConditioning = room.isThereAirConditioning,
                 latitude = room.latitude,
                 longitude = room.longitude,
                 createdAt = room.createdAt,

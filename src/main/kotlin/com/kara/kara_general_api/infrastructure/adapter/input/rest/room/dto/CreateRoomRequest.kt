@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.PositiveOrZero
 import java.math.BigDecimal
+import java.util.UUID
 
 data class CreateRoomRequest(
     @field:NotBlank
@@ -40,11 +41,16 @@ data class CreateRoomRequest(
     val maxCapacity: Int,
     @field:NotNull
     @field:Schema(description = "Présence du Wi-Fi", example = "true")
-    val isThereWifi: Boolean,
+    val thereWifi: Boolean,
     @field:NotNull
     @field:Schema(description = "Présence d'une sono professionnelle", example = "true")
-    val isThereSonoPro: Boolean,
+    val thereSonoPro: Boolean,
     @field:NotNull
     @field:Schema(description = "Présence de la climatisation", example = "false")
-    val isThereAirConditioning: Boolean,
+    val thereAirConditioning: Boolean,
+    @field:Schema(
+        description = "Identifiants des services du catalogue global à attacher à la salle. " +
+            "Optionnel : par défaut aucune liaison n'est créée.",
+    )
+    val serviceIds: List<UUID> = emptyList(),
 )

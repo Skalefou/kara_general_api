@@ -9,6 +9,7 @@ import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
+import com.kara.kara_general_api.domain.port.input.room.CreateRoomCommand
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.CreateRoomUseCase
 import com.kara.kara_general_api.domain.port.input.room.DeleteRoomResult
@@ -29,8 +30,10 @@ import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -54,8 +57,8 @@ private const val ROOM_ID = "550e8400-e29b-41d4-a716-446655440000"
 private const val REQUEST_BODY =
     """{"name": "Salle Étoile", "description": "Grande salle lumineuse", "street": "12 rue de la Paix", """ +
         """"city": "Paris", "postalCode": "75002", "country": "France", "pricePerPersonPerHour": 12.50, """ +
-        """"currency": "EUR", "maxCapacity": 50, "isThereWifi": true, "isThereSonoPro": false, """ +
-        """"isThereAirConditioning": true}"""
+        """"currency": "EUR", "maxCapacity": 50, "thereWifi": true, "thereSonoPro": false, """ +
+        """"thereAirConditioning": true}"""
 
 @WebMvcTest(RoomController::class)
 @Import(SecurityConfig::class)
@@ -260,6 +263,61 @@ class RoomControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(REQUEST_BODY),
         ).andExpect(status().isCreated)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should deserialize equipment flags from thereWifi keys into the create command`() {
+        val commandSlot = slot<CreateRoomCommand>()
+        every { createRoomUseCase.createRoom(capture(commandSlot)) } returns CreateRoomResult.Success(room)
+
+        mockMvc.perform(
+            post("/api/v1/rooms")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST_BODY),
+        ).andExpect(status().isCreated)
+
+        // Le body porte "thereWifi"/"thereSonoPro"/"thereAirConditioning" : la désérialisation doit
+        // les mapper sur les champs d'équipement du domaine.
+        assertTrue(commandSlot.captured.isThereWifi)
+        assertFalse(commandSlot.captured.isThereSonoPro)
+        assertTrue(commandSlot.captured.isThereAirConditioning)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should serialize equipment flags under thereWifi keys and never isThereWifi`() {
+        every { createRoomUseCase.createRoom(any()) } returns CreateRoomResult.Success(room)
+        every { imageStorage.publicUrl(any()) } answers { firstArg() }
+
+        mockMvc.perform(
+            post("/api/v1/rooms")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST_BODY),
+        ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.thereWifi").value(true))
+            .andExpect(jsonPath("$.thereSonoPro").value(false))
+            .andExpect(jsonPath("$.thereAirConditioning").value(true))
+            .andExpect(jsonPath("$.isThereWifi").doesNotExist())
+            .andExpect(jsonPath("$.isThereSonoPro").doesNotExist())
+            .andExpect(jsonPath("$.isThereAirConditioning").doesNotExist())
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `should return 400 when creating a room with an unknown service`() {
+        val serviceId = UUID.randomUUID()
+        every { createRoomUseCase.createRoom(any()) } returns
+            CreateRoomResult.UnknownService(com.kara.kara_general_api.domain.model.service.ServiceId(serviceId))
+
+        mockMvc.perform(
+            post("/api/v1/rooms")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name":"S","description":"d","street":"r","city":"c","postalCode":"p","country":"F",""" +
+                    """"pricePerPersonPerHour":10.0,"currency":"EUR","maxCapacity":2,"thereWifi":true,""" +
+                    """"thereSonoPro":false,"thereAirConditioning":false,"serviceIds":["$serviceId"]}"""),
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("UNKNOWN_SERVICE"))
     }
 
     @Test
