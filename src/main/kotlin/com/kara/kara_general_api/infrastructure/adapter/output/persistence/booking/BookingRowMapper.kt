@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.book
 import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
+import com.kara.kara_general_api.domain.model.booking.PaymentMode
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.UserId
@@ -31,5 +32,6 @@ class BookingRowMapper : RowMapper<Booking> {
             status = BookingStatus.valueOf(rs.getString("status")),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             expiresAt = rs.getTimestamp("expires_at").toInstant(),
+            paymentMode = PaymentMode.valueOf(rs.getString("payment_mode")),
         )
 }

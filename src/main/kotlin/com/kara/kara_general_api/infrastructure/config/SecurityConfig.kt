@@ -57,6 +57,10 @@ class SecurityConfig {
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/**", hasRole(UserRole.ADMIN.name))
+                // Récapitulatifs publics de cagnotte (lecture sans authentification). Le paiement d'une part
+                // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
+                authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)
+                authorize(HttpMethod.GET, "/api/v1/pools/share/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

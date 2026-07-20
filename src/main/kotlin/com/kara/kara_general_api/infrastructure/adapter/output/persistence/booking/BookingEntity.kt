@@ -38,6 +38,8 @@ class BookingEntity(
     var currency: String,
     @Column(nullable = false, columnDefinition = "varchar(50) default 'PENDING'")
     var status: String = "PENDING",
+    @Column(name = "payment_mode", nullable = false, columnDefinition = "varchar(20) default 'PAY_ALL'")
+    var paymentMode: String = "PAY_ALL",
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
     var createdAt: Instant = Instant.now(),
     @Column(name = "expires_at", nullable = false, columnDefinition = "timestamptz")

@@ -40,6 +40,7 @@ class BookingController(
                 endAt = request.endAt,
                 numberOfPeople = request.numberOfPeople,
                 selectedOptionIds = request.optionIds.map { RoomOptionId(it) },
+                paymentMode = request.paymentMode,
             )
         return when (val result = createBookingUseCase.createBooking(command)) {
             is CreateBookingResult.Created ->

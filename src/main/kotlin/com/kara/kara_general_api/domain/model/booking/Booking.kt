@@ -27,14 +27,22 @@ data class Booking(
     val status: BookingStatus,
     val createdAt: Instant,
     val expiresAt: Instant,
+    val paymentMode: PaymentMode = PaymentMode.PAY_ALL,
 ) {
     fun confirm(): Booking = copy(status = BookingStatus.CONFIRMED)
 
     fun cancel(): Booking = copy(status = BookingStatus.CANCELLED)
 
     companion object {
-        /** Durée de la fenêtre de paiement d'une réservation PENDING. */
+        /** Durée de la fenêtre de paiement d'une réservation PENDING en mode PAY_ALL. */
         val PAYMENT_WINDOW: Duration = Duration.ofMinutes(15)
+
+        /**
+         * Borne haute d'ouverture d'une réservation en mode SHARED_POT : le créneau reste bloqué pendant la
+         * durée maximale de la cagnotte. L'annulation effective est pilotée par le délai de la cagnotte, pas
+         * par la fenêtre de 15 min.
+         */
+        val SHARED_POT_WINDOW: Duration = Duration.ofHours(24)
 
         /** Crée une réservation en attente de paiement (PENDING) avec le prix figé fourni par l'estimateur. */
         fun create(
@@ -46,8 +54,10 @@ data class Booking(
             selectedOptionIds: List<RoomOptionId>,
             totalPrice: BigDecimal,
             currency: Currency,
+            paymentMode: PaymentMode = PaymentMode.PAY_ALL,
         ): Booking {
             val createdAt = Instant.now()
+            val window = if (paymentMode == PaymentMode.SHARED_POT) SHARED_POT_WINDOW else PAYMENT_WINDOW
             return Booking(
                 id = BookingId.generate(),
                 roomId = roomId,
@@ -60,7 +70,8 @@ data class Booking(
                 currency = currency,
                 status = BookingStatus.PENDING,
                 createdAt = createdAt,
-                expiresAt = createdAt.plus(PAYMENT_WINDOW),
+                expiresAt = createdAt.plus(window),
+                paymentMode = paymentMode,
             )
         }
     }

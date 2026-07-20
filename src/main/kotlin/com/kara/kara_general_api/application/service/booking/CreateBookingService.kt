@@ -63,6 +63,7 @@ class CreateBookingService(
                 selectedOptionIds = command.selectedOptionIds,
                 totalPrice = estimate.totalPrice,
                 currency = estimate.currency,
+                paymentMode = command.paymentMode,
             )
 
         return CreateBookingResult.Created(bookingRepository.save(booking))

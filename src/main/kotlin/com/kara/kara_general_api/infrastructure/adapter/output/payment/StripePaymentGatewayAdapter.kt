@@ -57,18 +57,48 @@ class StripePaymentGatewayAdapter(
     }
 
     override fun createPaymentIntent(amount: BigDecimal, currency: Currency, customerId: String): PaymentIntentResult {
-        val amountMinorUnits = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
         val params =
-            PaymentIntentCreateParams.builder()
-                .setAmount(amountMinorUnits)
-                .setCurrency(currency.name.lowercase())
-                .setCustomer(customerId)
-                .setAutomaticPaymentMethods(
-                    PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build(),
-                )
+            basePaymentIntentParams(amount, currency, customerId).build()
+        val intent = PaymentIntent.create(params)
+        return PaymentIntentResult(clientSecret = intent.clientSecret, paymentIntentId = intent.id)
+    }
+
+    override fun createManualCapturePaymentIntent(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentResult {
+        // Capture manuelle : les fonds sont seulement AUTORISÉS (bloqués), jamais prélevés ici. La capture
+        // n'a lieu que lorsque toute la cagnotte est complète (cf. PoolSettlementService).
+        val params =
+            basePaymentIntentParams(amount, currency, customerId)
+                .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL)
                 .build()
         val intent = PaymentIntent.create(params)
         return PaymentIntentResult(clientSecret = intent.clientSecret, paymentIntentId = intent.id)
+    }
+
+    override fun capturePaymentIntent(paymentIntentId: String) {
+        PaymentIntent.retrieve(paymentIntentId).capture()
+    }
+
+    override fun cancelPaymentIntent(paymentIntentId: String) {
+        PaymentIntent.retrieve(paymentIntentId).cancel()
+    }
+
+    private fun basePaymentIntentParams(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentCreateParams.Builder {
+        val amountMinorUnits = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
+        return PaymentIntentCreateParams.builder()
+            .setAmount(amountMinorUnits)
+            .setCurrency(currency.name.lowercase())
+            .setCustomer(customerId)
+            .setAutomaticPaymentMethods(
+                PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build(),
+            )
     }
 
     override fun verifyAndParseWebhook(payload: String, signature: String): StripeWebhookEvent? =

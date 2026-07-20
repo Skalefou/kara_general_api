@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto
 
+import com.kara.kara_general_api.domain.model.booking.PaymentMode
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
@@ -22,4 +23,10 @@ data class CreateBookingRequest(
     val numberOfPeople: Int,
     @field:Schema(description = "Identifiants des options tarifées retenues", example = "[]")
     val optionIds: List<UUID> = emptyList(),
+    @field:Schema(
+        description = "Mode de règlement : PAY_ALL (paiement unique, fenêtre 15 min) ou SHARED_POT (cagnotte " +
+            "partagée, délai gouverné par la cagnotte). Par défaut PAY_ALL.",
+        example = "PAY_ALL",
+    )
+    val paymentMode: PaymentMode = PaymentMode.PAY_ALL,
 )

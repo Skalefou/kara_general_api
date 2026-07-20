@@ -24,6 +24,7 @@ data class User(
     val tempPasswordExpiresAt: Instant? = null,
     val photoKey: String? = null,
     val stripeCustomerId: String? = null,
+    val fcmToken: String? = null,
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
 
