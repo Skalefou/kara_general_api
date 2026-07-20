@@ -75,6 +75,7 @@ class BookingRepositoryAdapterTest {
         endAt: Instant = end,
         status: BookingStatus = BookingStatus.PENDING,
         optionIds: List<RoomOptionId> = emptyList(),
+        expiresAt: Instant = Instant.now().plusSeconds(900),
     ) = Booking(
         id = id,
         roomId = roomId,
@@ -87,6 +88,7 @@ class BookingRepositoryAdapterTest {
         currency = Currency.EUR,
         status = status,
         createdAt = Instant.now(),
+        expiresAt = expiresAt,
     )
 
     @Test
@@ -141,6 +143,50 @@ class BookingRepositoryAdapterTest {
         val overlaps = adapter.existsOverlapping(roomId, start, end)
 
         assertFalse(overlaps)
+    }
+
+    @Test
+    fun `existsOverlapping ignores an expired pending booking`() {
+        adapter.save(booking(status = BookingStatus.PENDING, expiresAt = Instant.now().minusSeconds(60)))
+
+        val overlaps = adapter.existsOverlapping(roomId, start, end)
+
+        assertFalse(overlaps)
+    }
+
+    @Test
+    fun `cancelExpiredPending cancels only expired pending bookings`() {
+        val expired =
+            booking(
+                startAt = Instant.parse("2026-08-02T18:00:00Z"),
+                endAt = Instant.parse("2026-08-02T21:00:00Z"),
+                status = BookingStatus.PENDING,
+                expiresAt = Instant.now().minusSeconds(60),
+            )
+        val stillPending =
+            booking(
+                startAt = Instant.parse("2026-08-03T18:00:00Z"),
+                endAt = Instant.parse("2026-08-03T21:00:00Z"),
+                status = BookingStatus.PENDING,
+                expiresAt = Instant.now().plusSeconds(900),
+            )
+        val confirmed =
+            booking(
+                startAt = Instant.parse("2026-08-04T18:00:00Z"),
+                endAt = Instant.parse("2026-08-04T21:00:00Z"),
+                status = BookingStatus.CONFIRMED,
+                expiresAt = Instant.now().minusSeconds(60),
+            )
+        adapter.save(expired)
+        adapter.save(stillPending)
+        adapter.save(confirmed)
+
+        val cancelledCount = adapter.cancelExpiredPending(Instant.now())
+
+        assertEquals(1, cancelledCount)
+        assertEquals(BookingStatus.CANCELLED, adapter.findById(expired.id)!!.status)
+        assertEquals(BookingStatus.PENDING, adapter.findById(stillPending.id)!!.status)
+        assertEquals(BookingStatus.CONFIRMED, adapter.findById(confirmed.id)!!.status)
     }
 
     @Test

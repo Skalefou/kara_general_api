@@ -40,4 +40,6 @@ class BookingEntity(
     var status: String = "PENDING",
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
     var createdAt: Instant = Instant.now(),
+    @Column(name = "expires_at", nullable = false, columnDefinition = "timestamptz")
+    var expiresAt: Instant = Instant.now(),
 )

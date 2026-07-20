@@ -149,9 +149,9 @@ class PaymentRepositoryAdapterTest {
         val sql =
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
-                                  total_price, currency, status, created_at)
+                                  total_price, currency, status, created_at, expires_at)
             VALUES (:id, :roomId, :userId, '2026-08-01T18:00:00Z', '2026-08-01T21:00:00Z', 8,
-                    435.00, 'EUR', 'PENDING', NOW())
+                    435.00, 'EUR', 'PENDING', NOW(), NOW() + INTERVAL '15 minutes')
             """.trimIndent()
         jdbc.update(
             sql,

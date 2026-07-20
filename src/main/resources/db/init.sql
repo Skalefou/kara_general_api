@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     total_price      NUMERIC(10,2) NOT NULL,
     currency         VARCHAR(10)  NOT NULL,
     status           VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    expires_at       TIMESTAMPTZ  NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_bookings_room_id ON bookings (room_id);

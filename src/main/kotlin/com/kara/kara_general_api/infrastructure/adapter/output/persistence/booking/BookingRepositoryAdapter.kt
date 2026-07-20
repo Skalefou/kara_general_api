@@ -14,7 +14,7 @@ import java.time.Instant
 import java.util.UUID
 
 private const val BOOKING_COLUMNS =
-    "id, room_id, user_id, start_at, end_at, number_of_people, total_price, currency, status, created_at"
+    "id, room_id, user_id, start_at, end_at, number_of_people, total_price, currency, status, created_at, expires_at"
 
 @Component
 class BookingRepositoryAdapter(
@@ -26,9 +26,9 @@ class BookingRepositoryAdapter(
         val sql =
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
-                                  total_price, currency, status, created_at)
+                                  total_price, currency, status, created_at, expires_at)
             VALUES (:id, :roomId, :userId, :startAt, :endAt, :numberOfPeople,
-                    :totalPrice, :currency, :status, :createdAt)
+                    :totalPrice, :currency, :status, :createdAt, :expiresAt)
             ON CONFLICT (id) DO UPDATE SET
                 start_at         = EXCLUDED.start_at,
                 end_at           = EXCLUDED.end_at,
@@ -49,7 +49,8 @@ class BookingRepositoryAdapter(
                 .addValue("totalPrice", booking.totalPrice)
                 .addValue("currency", booking.currency.name)
                 .addValue("status", booking.status.name)
-                .addValue("createdAt", Timestamp.from(booking.createdAt)),
+                .addValue("createdAt", Timestamp.from(booking.createdAt))
+                .addValue("expiresAt", Timestamp.from(booking.expiresAt)),
         )
         saveOptions(booking.id, booking.selectedOptionIds)
         return booking
@@ -100,13 +101,14 @@ class BookingRepositoryAdapter(
 
     override fun existsOverlapping(roomId: RoomId, startAt: Instant, endAt: Instant): Boolean {
         // Chevauchement de créneaux : deux intervalles [a,b) et [c,d) se chevauchent ssi a < d ET b > c.
-        // Seules les réservations actives (PENDING, CONFIRMED) bloquent le créneau.
+        // Bloquent le créneau : les réservations CONFIRMED et les PENDING non expirées (fenêtre de
+        // paiement encore ouverte). Une PENDING expirée libère immédiatement le créneau.
         val sql =
             """
             SELECT COUNT(*)
             FROM bookings
             WHERE room_id = :roomId
-              AND status IN ('PENDING', 'CONFIRMED')
+              AND (status = 'CONFIRMED' OR (status = 'PENDING' AND expires_at > :now))
               AND start_at < :endAt
               AND end_at > :startAt
             """.trimIndent()
@@ -116,7 +118,8 @@ class BookingRepositoryAdapter(
                 MapSqlParameterSource()
                     .addValue("roomId", roomId.value)
                     .addValue("startAt", Timestamp.from(startAt))
-                    .addValue("endAt", Timestamp.from(endAt)),
+                    .addValue("endAt", Timestamp.from(endAt))
+                    .addValue("now", Timestamp.from(Instant.now())),
                 Int::class.java,
             ) ?: 0
         return count > 0
@@ -125,5 +128,17 @@ class BookingRepositoryAdapter(
     override fun updateStatus(id: BookingId, status: BookingStatus) {
         val sql = "UPDATE bookings SET status = :status WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
+    }
+
+    override fun cancelExpiredPending(now: Instant): Int {
+        // Annule toutes les réservations PENDING dont la fenêtre de paiement est échue.
+        val sql =
+            """
+            UPDATE bookings
+            SET status = 'CANCELLED'
+            WHERE status = 'PENDING'
+              AND expires_at <= :now
+            """.trimIndent()
+        return jdbc.update(sql, MapSqlParameterSource().addValue("now", Timestamp.from(now)))
     }
 }

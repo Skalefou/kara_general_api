@@ -11,6 +11,7 @@ import com.kara.kara_general_api.domain.port.output.PaymentRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 /**
  * Initie un paiement « payer tout » sur une réservation PENDING appartenant au client. Crée
@@ -32,6 +33,7 @@ class InitiateBookingPaymentService(
             bookingRepository.findById(command.bookingId) ?: return InitiateBookingPaymentResult.BookingNotFound
         if (booking.userId != command.userId) return InitiateBookingPaymentResult.NotOwner
         if (booking.status != BookingStatus.PENDING) return InitiateBookingPaymentResult.AlreadyPaid
+        if (!booking.expiresAt.isAfter(Instant.now())) return InitiateBookingPaymentResult.BookingExpired
 
         val user =
             userRepository.findById(command.userId) ?: return InitiateBookingPaymentResult.BookingNotFound

@@ -61,6 +61,7 @@ class BookingControllerTest {
             currency = Currency.EUR,
             status = BookingStatus.PENDING,
             createdAt = Instant.parse("2026-07-20T10:00:00Z"),
+            expiresAt = Instant.parse("2026-07-20T10:15:00Z"),
         )
 
     private fun performCreate() =
@@ -89,6 +90,7 @@ class BookingControllerTest {
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.totalPrice").value(435.00))
             .andExpect(jsonPath("$.currency").value("EUR"))
+            .andExpect(jsonPath("$.expiresAt").value("2026-07-20T10:15:00Z"))
     }
 
     @Test

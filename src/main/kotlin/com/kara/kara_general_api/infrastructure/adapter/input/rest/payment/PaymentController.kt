@@ -34,6 +34,7 @@ class PaymentController(
             InitiateBookingPaymentResult.BookingNotFound -> bookingNotFound()
             InitiateBookingPaymentResult.NotOwner -> notOwner()
             InitiateBookingPaymentResult.AlreadyPaid -> alreadyPaid()
+            InitiateBookingPaymentResult.BookingExpired -> bookingExpired()
         }
     }
 
@@ -82,6 +83,17 @@ class PaymentController(
             ).apply {
                 title = "Paiement déjà effectué"
                 setProperty("code", "PAYMENT_ALREADY_PAID")
+            },
+        )
+
+    private fun bookingExpired(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "Le délai de paiement de 15 minutes de cette réservation est écoulé.",
+            ).apply {
+                title = "Réservation expirée"
+                setProperty("code", "BOOKING_EXPIRED")
             },
         )
 }

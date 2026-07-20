@@ -25,6 +25,9 @@ sealed interface InitiateBookingPaymentResult {
 
     /** La réservation n'est plus en attente de paiement (déjà confirmée ou annulée). */
     data object AlreadyPaid : InitiateBookingPaymentResult
+
+    /** La fenêtre de paiement (15 min) de la réservation PENDING est échue. */
+    data object BookingExpired : InitiateBookingPaymentResult
 }
 
 interface InitiateBookingPaymentUseCase {

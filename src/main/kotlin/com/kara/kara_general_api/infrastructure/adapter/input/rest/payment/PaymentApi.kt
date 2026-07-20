@@ -46,7 +46,8 @@ interface PaymentApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "La réservation n'est plus en attente de paiement (PAYMENT_ALREADY_PAID)",
+                description = "La réservation n'est plus en attente de paiement (PAYMENT_ALREADY_PAID) " +
+                    "ou son délai de paiement de 15 min est écoulé (BOOKING_EXPIRED)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],

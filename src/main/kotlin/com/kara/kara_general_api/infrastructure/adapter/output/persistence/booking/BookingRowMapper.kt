@@ -30,5 +30,6 @@ class BookingRowMapper : RowMapper<Booking> {
             currency = Currency.valueOf(rs.getString("currency")),
             status = BookingStatus.valueOf(rs.getString("status")),
             createdAt = rs.getTimestamp("created_at").toInstant(),
+            expiresAt = rs.getTimestamp("expires_at").toInstant(),
         )
 }

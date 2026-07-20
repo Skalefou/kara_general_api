@@ -41,7 +41,11 @@ class InitiateBookingPaymentServiceTest {
     private val bookingId = BookingId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
 
-    private fun booking(status: BookingStatus = BookingStatus.PENDING, owner: UserId = userId) =
+    private fun booking(
+        status: BookingStatus = BookingStatus.PENDING,
+        owner: UserId = userId,
+        expiresAt: Instant = Instant.now().plusSeconds(900),
+    ) =
         Booking(
             id = bookingId,
             roomId = RoomId(UUID.randomUUID()),
@@ -54,6 +58,7 @@ class InitiateBookingPaymentServiceTest {
             currency = Currency.EUR,
             status = status,
             createdAt = Instant.now(),
+            expiresAt = expiresAt,
         )
 
     private fun user(stripeCustomerId: String? = null) =
@@ -92,6 +97,14 @@ class InitiateBookingPaymentServiceTest {
         every { bookingRepository.findById(bookingId) } returns booking(status = BookingStatus.CONFIRMED)
 
         assertEquals(InitiateBookingPaymentResult.AlreadyPaid, sut.initiate(command()))
+    }
+
+    @Test
+    fun `should return BookingExpired when the payment window is over`() {
+        every { bookingRepository.findById(bookingId) } returns
+            booking(status = BookingStatus.PENDING, expiresAt = Instant.now().minusSeconds(60))
+
+        assertEquals(InitiateBookingPaymentResult.BookingExpired, sut.initiate(command()))
     }
 
     @Test

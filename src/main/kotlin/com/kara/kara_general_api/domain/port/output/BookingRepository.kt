@@ -19,4 +19,10 @@ interface BookingRepository {
     fun existsOverlapping(roomId: RoomId, startAt: Instant, endAt: Instant): Boolean
 
     fun updateStatus(id: BookingId, status: BookingStatus)
+
+    /**
+     * Annule (PENDING → CANCELLED) toutes les réservations dont la fenêtre de paiement est échue
+     * ([expiresAt] <= [now]) et retourne le nombre de réservations affectées.
+     */
+    fun cancelExpiredPending(now: Instant): Int
 }
