@@ -1,5 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.booking
 
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.CreateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -7,10 +9,12 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 
@@ -46,4 +50,43 @@ interface BookingApi {
     )
     @PostMapping("/estimate")
     fun estimate(@Valid @RequestBody request: EstimateBookingRequest): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Créer une réservation",
+        description = "Crée une réservation persistée en statut PENDING pour le client authentifié. " +
+            "Le prix total est figé par le même calcul que l'estimation. Le créneau est rejeté (409) " +
+            "s'il chevauche une réservation existante (PENDING ou CONFIRMED) sur la même salle.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "201",
+                description = "Réservation créée (PENDING)",
+                content = [Content(schema = Schema(implementation = BookingResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
+                    "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
+                    "(UNKNOWN_ROOM_OPTION)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Salle introuvable (ROOM_NOT_FOUND)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "Créneau déjà réservé (BOOKING_SLOT_UNAVAILABLE)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping
+    fun createBooking(
+        @Valid @RequestBody request: CreateBookingRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
 }

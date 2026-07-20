@@ -23,8 +23,12 @@ data class User(
     val mustChangePassword: Boolean = false,
     val tempPasswordExpiresAt: Instant? = null,
     val photoKey: String? = null,
+    val stripeCustomerId: String? = null,
 ) {
     fun verifyEmail(): User = copy(emailVerified = true)
+
+    /** Associe l'identifiant client Stripe créé paresseusement au premier paiement. */
+    fun withStripeCustomerId(stripeCustomerId: String): User = copy(stripeCustomerId = stripeCustomerId)
 
     /** Associe (ou retire, si null) la clé de l'objet photo de profil stocké dans le CDN privé. */
     fun withPhotoKey(photoKey: String?): User = copy(photoKey = photoKey)

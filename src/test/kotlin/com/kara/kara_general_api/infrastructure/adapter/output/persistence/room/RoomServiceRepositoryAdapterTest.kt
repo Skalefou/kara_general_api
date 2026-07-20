@@ -6,6 +6,7 @@ import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.service.ServiceId
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.NotificationService
+import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -36,6 +37,9 @@ class RoomServiceRepositoryAdapterTest {
 
     @MockkBean
     lateinit var imageStoragePort: ImageStoragePort
+
+    @MockkBean
+    lateinit var paymentGateway: PaymentGateway
 
     @Autowired
     private lateinit var adapter: RoomServiceRepositoryAdapter

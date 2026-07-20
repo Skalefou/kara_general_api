@@ -1,7 +1,14 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.booking
 
+import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingEstimate
+import com.kara.kara_general_api.domain.model.booking.BookingId
+import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.user.UserId
+import com.kara.kara_general_api.domain.port.input.booking.CreateBookingResult
+import com.kara.kara_general_api.domain.port.input.booking.CreateBookingUseCase
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingUseCase
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
@@ -13,14 +20,17 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.UUID
 
 private const val ROOM_ID = "550e8400-e29b-41d4-a716-446655440000"
+private const val USER_ID = "11111111-2222-3333-4444-555555555555"
 private const val REQUEST_BODY =
     """{"roomId": "$ROOM_ID", "startAt": "2026-08-01T18:00:00Z", "endAt": "2026-08-01T21:30:00Z", """ +
         """"numberOfPeople": 8, "optionIds": []}"""
@@ -34,6 +44,72 @@ class BookingControllerTest {
 
     @MockkBean
     private lateinit var estimateBookingUseCase: EstimateBookingUseCase
+
+    @MockkBean
+    private lateinit var createBookingUseCase: CreateBookingUseCase
+
+    private fun sampleBooking() =
+        Booking(
+            id = BookingId(UUID.randomUUID()),
+            roomId = RoomId(UUID.fromString(ROOM_ID)),
+            userId = UserId(UUID.fromString(USER_ID)),
+            startAt = Instant.parse("2026-08-01T18:00:00Z"),
+            endAt = Instant.parse("2026-08-01T21:30:00Z"),
+            numberOfPeople = 8,
+            selectedOptionIds = emptyList(),
+            totalPrice = BigDecimal("435.00"),
+            currency = Currency.EUR,
+            status = BookingStatus.PENDING,
+            createdAt = Instant.parse("2026-07-20T10:00:00Z"),
+        )
+
+    private fun performCreate() =
+        mockMvc.perform(
+            post("/api/v1/bookings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(REQUEST_BODY),
+        )
+
+    @Test
+    fun `should return 401 when creating a booking without authentication`() {
+        performCreate().andExpect(status().isUnauthorized)
+
+        verify(exactly = 0) { createBookingUseCase.createBooking(any()) }
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 201 with the created booking`() {
+        every { createBookingUseCase.createBooking(any()) } returns CreateBookingResult.Created(sampleBooking())
+
+        performCreate()
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.roomId").value(ROOM_ID))
+            .andExpect(jsonPath("$.userId").value(USER_ID))
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.totalPrice").value(435.00))
+            .andExpect(jsonPath("$.currency").value("EUR"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 when the slot is unavailable`() {
+        every { createBookingUseCase.createBooking(any()) } returns CreateBookingResult.SlotUnavailable
+
+        performCreate()
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("BOOKING_SLOT_UNAVAILABLE"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 404 when creating a booking on an unknown room`() {
+        every { createBookingUseCase.createBooking(any()) } returns CreateBookingResult.RoomNotFound
+
+        performCreate()
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("ROOM_NOT_FOUND"))
+    }
 
     private fun perform() =
         mockMvc.perform(

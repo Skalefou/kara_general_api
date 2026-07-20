@@ -36,4 +36,7 @@ interface UserRepository {
 
     /** Renouvelle l'invitation : nouveau mot de passe temporaire, changement forcé, nouvelle expiration. */
     fun applyReinvitation(id: UserId, hashedPassword: HashedPassword, tempPasswordExpiresAt: Instant)
+
+    /** Enregistre l'identifiant client Stripe (créé paresseusement au premier paiement). Jamais logué. */
+    fun updateStripeCustomerId(id: UserId, stripeCustomerId: String)
 }

@@ -42,6 +42,11 @@ class SecurityConfig {
                 // Estimation tarifaire : lecture seule, aucune persistance ; accessible aux invités et clients
                 // (même logique que la consultation publique des salles).
                 authorize(HttpMethod.POST, "/api/v1/bookings/estimate", permitAll)
+                // Webhook Stripe : signé et vérifié applicativement (STRIPE_WEBHOOK_SECRET), donc ouvert.
+                authorize(HttpMethod.POST, "/api/v1/stripe/webhook", permitAll)
+                // Création de réservation et initiation de paiement : réservées au client authentifié.
+                authorize(HttpMethod.POST, "/api/v1/bookings", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/bookings/*/payments", authenticated)
                 // Catalogue global des services : gestion réservée au back-office (ADMIN) pour toutes les
                 // opérations (création, listing de gestion, suppression).
                 authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))

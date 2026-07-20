@@ -9,6 +9,7 @@ import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.model.room.vo.Coordinates
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.NotificationService
+import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -37,6 +38,9 @@ class RoomRepositoryAdapterTest {
 
     @MockkBean
     lateinit var imageStoragePort: ImageStoragePort
+
+    @MockkBean
+    lateinit var paymentGateway: PaymentGateway
 
     @Autowired
     private lateinit var adapter: RoomRepositoryAdapter

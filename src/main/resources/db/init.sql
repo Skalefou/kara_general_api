@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS users (
     deactivated_at           TIMESTAMPTZ,
     must_change_password     BOOLEAN      NOT NULL DEFAULT FALSE,
     temp_password_expires_at TIMESTAMPTZ,
-    photo_object_key         VARCHAR(512)
+    photo_object_key         VARCHAR(512),
+    -- Identifiant client Stripe (créé paresseusement au 1er paiement). Jamais logué.
+    stripe_customer_id       VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS rooms (
@@ -73,3 +75,48 @@ CREATE TABLE IF NOT EXISTS room_services (
 
 CREATE INDEX IF NOT EXISTS idx_room_services_room_id ON room_services (room_id);
 CREATE INDEX IF NOT EXISTS idx_room_services_service_id ON room_services (service_id);
+
+-- Réservations : un créneau réservé sur une salle par un client. Le prix total est figé à la création.
+-- Le chevauchement de créneaux est contrôlé applicativement (statuts PENDING/CONFIRMED).
+CREATE TABLE IF NOT EXISTS bookings (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id          UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    start_at         TIMESTAMPTZ  NOT NULL,
+    end_at           TIMESTAMPTZ  NOT NULL,
+    number_of_people INT          NOT NULL,
+    total_price      NUMERIC(10,2) NOT NULL,
+    currency         VARCHAR(10)  NOT NULL,
+    status           VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_room_id ON bookings (room_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings (user_id);
+
+-- Options retenues au moment de la réservation (fige les identifiants d'options). Modelée sur room_services.
+CREATE TABLE IF NOT EXISTS booking_options (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    option_id  UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_booking_options_booking_option UNIQUE (booking_id, option_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_options_booking_id ON booking_options (booking_id);
+CREATE INDEX IF NOT EXISTS idx_booking_options_option_id ON booking_options (option_id);
+
+-- Paiements « payer tout » (Stripe). Le webhook Stripe fait foi : payment_intent.succeeded → PAID + booking CONFIRMED.
+CREATE TABLE IF NOT EXISTS payments (
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id               UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    user_id                  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount                   NUMERIC(10,2) NOT NULL,
+    currency                 VARCHAR(10)  NOT NULL,
+    status                   VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
+    stripe_payment_intent_id VARCHAR(255) NOT NULL UNIQUE,
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments (booking_id);
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments (user_id);

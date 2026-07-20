@@ -16,7 +16,7 @@ import java.time.Instant
 private const val USER_COLUMNS =
     "id, email, password_hash, first_name, last_name, phone_number, birth_date, role, " +
         "firebase_uid, created_at, email_verified, deleted_at, deactivated_at, " +
-        "must_change_password, temp_password_expires_at, photo_object_key"
+        "must_change_password, temp_password_expires_at, photo_object_key, stripe_customer_id"
 
 @Component
 class UserRepositoryAdapter(
@@ -192,6 +192,17 @@ class UserRepositoryAdapter(
         )
     }
 
+    override fun updateStripeCustomerId(id: UserId, stripeCustomerId: String) {
+        // Donnée sensible : jamais loguée (cf. règles SQL du CLAUDE.md).
+        val sql = "UPDATE users SET stripe_customer_id = :stripeCustomerId WHERE id = :id AND deleted_at IS NULL"
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("stripeCustomerId", stripeCustomerId),
+        )
+    }
+
     override fun anonymize(id: UserId) {
         val sql =
             """
@@ -205,7 +216,8 @@ class UserRepositoryAdapter(
                 firebase_uid     = :anonymizedFirebaseUid,
                 deleted_at       = NOW(),
                 email_verified   = false,
-                photo_object_key = NULL
+                photo_object_key = NULL,
+                stripe_customer_id = NULL
             WHERE id = :id
             """.trimIndent()
         jdbc.update(

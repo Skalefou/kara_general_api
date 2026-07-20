@@ -31,5 +31,6 @@ class UserRowMapper : RowMapper<User> {
             mustChangePassword = rs.getBoolean("must_change_password"),
             tempPasswordExpiresAt = rs.getTimestamp("temp_password_expires_at")?.toInstant(),
             photoKey = rs.getString("photo_object_key"),
+            stripeCustomerId = rs.getString("stripe_customer_id"),
         )
 }

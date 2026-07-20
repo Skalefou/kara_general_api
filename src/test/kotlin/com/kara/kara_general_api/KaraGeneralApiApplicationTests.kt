@@ -3,6 +3,7 @@ package com.kara.kara_general_api
 import com.google.firebase.auth.FirebaseAuth
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.NotificationService
+import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
@@ -22,6 +23,9 @@ class KaraGeneralApiApplicationTests {
 
     @MockkBean
     lateinit var imageStoragePort: ImageStoragePort
+
+    @MockkBean
+    lateinit var paymentGateway: PaymentGateway
 
     @Test
     fun contextLoads() {

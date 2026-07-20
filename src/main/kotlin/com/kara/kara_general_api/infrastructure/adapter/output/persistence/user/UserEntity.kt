@@ -44,4 +44,6 @@ class UserEntity(
     var tempPasswordExpiresAt: Instant? = null,
     @Column(name = "photo_object_key", columnDefinition = "varchar(512)")
     var photoObjectKey: String? = null,
+    @Column(name = "stripe_customer_id", columnDefinition = "varchar(255)")
+    var stripeCustomerId: String? = null,
 )

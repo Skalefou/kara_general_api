@@ -1,0 +1,129 @@
+package com.kara.kara_general_api.infrastructure.adapter.output.persistence.booking
+
+import com.kara.kara_general_api.domain.model.booking.Booking
+import com.kara.kara_general_api.domain.model.booking.BookingId
+import com.kara.kara_general_api.domain.model.booking.BookingStatus
+import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.room.RoomOptionId
+import com.kara.kara_general_api.domain.port.output.BookingRepository
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
+import org.springframework.stereotype.Component
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
+
+private const val BOOKING_COLUMNS =
+    "id, room_id, user_id, start_at, end_at, number_of_people, total_price, currency, status, created_at"
+
+@Component
+class BookingRepositoryAdapter(
+    private val jdbc: NamedParameterJdbcTemplate,
+    private val rowMapper: BookingRowMapper,
+) : BookingRepository {
+
+    override fun save(booking: Booking): Booking {
+        val sql =
+            """
+            INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
+                                  total_price, currency, status, created_at)
+            VALUES (:id, :roomId, :userId, :startAt, :endAt, :numberOfPeople,
+                    :totalPrice, :currency, :status, :createdAt)
+            ON CONFLICT (id) DO UPDATE SET
+                start_at         = EXCLUDED.start_at,
+                end_at           = EXCLUDED.end_at,
+                number_of_people = EXCLUDED.number_of_people,
+                total_price      = EXCLUDED.total_price,
+                currency         = EXCLUDED.currency,
+                status           = EXCLUDED.status
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", booking.id.value)
+                .addValue("roomId", booking.roomId.value)
+                .addValue("userId", booking.userId.value)
+                .addValue("startAt", Timestamp.from(booking.startAt))
+                .addValue("endAt", Timestamp.from(booking.endAt))
+                .addValue("numberOfPeople", booking.numberOfPeople)
+                .addValue("totalPrice", booking.totalPrice)
+                .addValue("currency", booking.currency.name)
+                .addValue("status", booking.status.name)
+                .addValue("createdAt", Timestamp.from(booking.createdAt)),
+        )
+        saveOptions(booking.id, booking.selectedOptionIds)
+        return booking
+    }
+
+    private fun saveOptions(bookingId: BookingId, optionIds: List<RoomOptionId>) {
+        if (optionIds.isEmpty()) return
+        // ON CONFLICT sur UNIQUE(booking_id, option_id) : ré-enregistrer une option déjà figée est idempotent.
+        val sql =
+            """
+            INSERT INTO booking_options (id, booking_id, option_id, created_at)
+            VALUES (:id, :bookingId, :optionId, NOW())
+            ON CONFLICT ON CONSTRAINT uq_booking_options_booking_option DO NOTHING
+            """.trimIndent()
+        val batch =
+            optionIds.distinct().map { optionId ->
+                MapSqlParameterSource()
+                    .addValue("id", UUID.randomUUID())
+                    .addValue("bookingId", bookingId.value)
+                    .addValue("optionId", optionId.value)
+            }.toTypedArray()
+        jdbc.batchUpdate(sql, batch)
+    }
+
+    override fun findById(id: BookingId): Booking? {
+        val sql =
+            """
+            SELECT $BOOKING_COLUMNS
+            FROM bookings
+            WHERE id = :id
+            """.trimIndent()
+        val booking = jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull() ?: return null
+        return booking.copy(selectedOptionIds = findOptionIds(id))
+    }
+
+    private fun findOptionIds(bookingId: BookingId): List<RoomOptionId> {
+        val sql =
+            """
+            SELECT option_id
+            FROM booking_options
+            WHERE booking_id = :bookingId
+            ORDER BY created_at ASC
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("bookingId" to bookingId.value)) { rs, _ ->
+            RoomOptionId(rs.getObject("option_id", UUID::class.java))
+        }
+    }
+
+    override fun existsOverlapping(roomId: RoomId, startAt: Instant, endAt: Instant): Boolean {
+        // Chevauchement de créneaux : deux intervalles [a,b) et [c,d) se chevauchent ssi a < d ET b > c.
+        // Seules les réservations actives (PENDING, CONFIRMED) bloquent le créneau.
+        val sql =
+            """
+            SELECT COUNT(*)
+            FROM bookings
+            WHERE room_id = :roomId
+              AND status IN ('PENDING', 'CONFIRMED')
+              AND start_at < :endAt
+              AND end_at > :startAt
+            """.trimIndent()
+        val count =
+            jdbc.queryForObject(
+                sql,
+                MapSqlParameterSource()
+                    .addValue("roomId", roomId.value)
+                    .addValue("startAt", Timestamp.from(startAt))
+                    .addValue("endAt", Timestamp.from(endAt)),
+                Int::class.java,
+            ) ?: 0
+        return count > 0
+    }
+
+    override fun updateStatus(id: BookingId, status: BookingStatus) {
+        val sql = "UPDATE bookings SET status = :status WHERE id = :id"
+        jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
+    }
+}
