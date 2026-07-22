@@ -33,6 +33,27 @@ interface PaymentGateway {
     /** Crée un PaymentIntent rattaché au client Stripe et retourne son client secret + identifiant. */
     fun createPaymentIntent(amount: BigDecimal, currency: Currency, customerId: String): PaymentIntentResult
 
+    /**
+     * Crée un PaymentIntent en **capture manuelle** (autorisation seule, aucun prélèvement) pour une part de
+     * cagnotte. Les fonds sont bloqués à la confirmation côté front (événement `amount_capturable_updated`)
+     * puis capturés seulement quand toute la cagnotte est complète.
+     */
+    fun createManualCapturePaymentIntent(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentResult
+
+    /** Capture une autorisation existante (prélèvement effectif). Idempotent côté Stripe si déjà capturée. */
+    fun capturePaymentIntent(paymentIntentId: String)
+
+    /** Annule une autorisation existante (libère le blocage, zéro prélèvement). */
+    fun cancelPaymentIntent(paymentIntentId: String)
+
+    /** Rembourse intégralement un paiement déjà capturé (PaymentIntent). Utilisé à l'annulation d'une
+     *  réservation confirmée (payer tout ou cagnotte réglée). */
+    fun refundPaymentIntent(paymentIntentId: String)
+
     /** Vérifie la signature du webhook et décode l'événement. Retourne null si la signature est invalide. */
     fun verifyAndParseWebhook(payload: String, signature: String): StripeWebhookEvent?
 

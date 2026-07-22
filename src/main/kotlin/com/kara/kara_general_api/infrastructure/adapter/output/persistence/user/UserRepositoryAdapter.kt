@@ -16,7 +16,7 @@ import java.time.Instant
 private const val USER_COLUMNS =
     "id, email, password_hash, first_name, last_name, phone_number, birth_date, role, " +
         "firebase_uid, created_at, email_verified, deleted_at, deactivated_at, " +
-        "must_change_password, temp_password_expires_at, photo_object_key, stripe_customer_id"
+        "must_change_password, temp_password_expires_at, photo_object_key, stripe_customer_id, fcm_token"
 
 @Component
 class UserRepositoryAdapter(

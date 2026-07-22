@@ -46,4 +46,6 @@ class UserEntity(
     var photoObjectKey: String? = null,
     @Column(name = "stripe_customer_id", columnDefinition = "varchar(255)")
     var stripeCustomerId: String? = null,
+    @Column(name = "fcm_token", columnDefinition = "varchar(512)")
+    var fcmToken: String? = null,
 )

@@ -12,6 +12,7 @@ import com.kara.kara_general_api.domain.port.input.payment.StripeWebhookResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PaymentRepository
+import com.kara.kara_general_api.application.service.pool.PoolSettlementService
 import com.kara.kara_general_api.domain.port.output.StripeWebhookEvent
 import io.mockk.every
 import io.mockk.mockk
@@ -27,7 +28,8 @@ class StripeWebhookServiceTest {
     private val paymentGateway = mockk<PaymentGateway>()
     private val paymentRepository = mockk<PaymentRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
-    private val sut = StripeWebhookService(paymentGateway, paymentRepository, bookingRepository)
+    private val poolSettlementService = mockk<PoolSettlementService>(relaxed = true)
+    private val sut = StripeWebhookService(paymentGateway, paymentRepository, bookingRepository, poolSettlementService)
 
     private val bookingId = BookingId(UUID.randomUUID())
 
@@ -93,6 +95,31 @@ class StripeWebhookServiceTest {
         assertEquals(StripeWebhookResult.Handled, result)
         verify { paymentRepository.save(match { it.status == PaymentStatus.PAID }) }
         verify { bookingRepository.updateStatus(bookingId, BookingStatus.CONFIRMED) }
+    }
+
+    @Test
+    fun `should delegate amount_capturable_updated to the pool settlement service`() {
+        every { paymentGateway.verifyAndParseWebhook("{}", "sig") } returns
+            StripeWebhookEvent(type = "payment_intent.amount_capturable_updated", paymentIntentId = "pi_pool")
+        every { poolSettlementService.onShareAuthorized("pi_pool") } returns StripeWebhookResult.Handled
+
+        val result = sut.handle(StripeWebhookCommand(payload = "{}", signature = "sig"))
+
+        assertEquals(StripeWebhookResult.Handled, result)
+        verify(exactly = 1) { poolSettlementService.onShareAuthorized("pi_pool") }
+        verify(exactly = 0) { paymentRepository.findByStripePaymentIntentId(any()) }
+    }
+
+    @Test
+    fun `should delegate payment_intent canceled to the pool settlement service`() {
+        every { paymentGateway.verifyAndParseWebhook("{}", "sig") } returns
+            StripeWebhookEvent(type = "payment_intent.canceled", paymentIntentId = "pi_pool")
+        every { poolSettlementService.onShareCanceled("pi_pool") } returns StripeWebhookResult.Handled
+
+        val result = sut.handle(StripeWebhookCommand(payload = "{}", signature = "sig"))
+
+        assertEquals(StripeWebhookResult.Handled, result)
+        verify(exactly = 1) { poolSettlementService.onShareCanceled("pi_pool") }
     }
 
     @Test

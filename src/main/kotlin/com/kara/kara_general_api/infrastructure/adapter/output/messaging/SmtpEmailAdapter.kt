@@ -71,6 +71,83 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
+    override fun sendPoolInvitation(
+        email: Email,
+        participantName: String,
+        roomName: String,
+        shareLinkToken: String,
+        deadline: Instant,
+    ) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Participez à la cagnotte Kara pour $roomName")
+        helper.setText(
+            "<p>Bonjour $participantName,</p>" +
+                "<p>Vous êtes invité·e à régler votre part de la cagnotte pour la réservation de " +
+                "<strong>$roomName</strong>.</p>" +
+                "<p>Votre carte n'est débitée que lorsque <strong>toutes les parts ont été payées</strong>. " +
+                "Sinon, la cagnotte est annulée et personne n'est prélevé.</p>" +
+                "<p>Lien de paiement de votre part : <strong>$shareLinkToken</strong></p>" +
+                "<p>À régler avant le ${INVITATION_DATE_FORMATTER.format(deadline)}.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
+
+    override fun sendPoolConfirmation(email: Email, roomName: String, startAt: Instant) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Votre cagnotte Kara est complète — réservation confirmée")
+        helper.setText(
+            "<p>Bonne nouvelle : toutes les parts de la cagnotte ont été payées.</p>" +
+                "<p>Votre réservation de <strong>$roomName</strong> est confirmée pour le " +
+                "${INVITATION_DATE_FORMATTER.format(startAt)}.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
+
+    override fun sendPoolCancelled(email: Email, participantName: String, roomName: String) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Cagnotte Kara annulée pour $roomName")
+        helper.setText(
+            "<p>Bonjour $participantName,</p>" +
+                "<p>Le délai de la cagnotte pour <strong>$roomName</strong> est écoulé sans que toutes les " +
+                "parts aient été réglées.</p>" +
+                "<p>La cagnotte est annulée et <strong>aucun montant n'a été prélevé</strong>.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
+
+    override fun sendBookingCancelled(email: Email, roomName: String, startAt: Instant, refunded: Boolean) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Réservation Kara annulée — $roomName")
+        val refundLine =
+            if (refunded) {
+                "<p>Le montant réglé vous a été <strong>intégralement remboursé</strong>.</p>"
+            } else {
+                "<p><strong>Aucun montant n'a été prélevé</strong>.</p>"
+            }
+        helper.setText(
+            "<p>Votre réservation de <strong>$roomName</strong> du " +
+                "${INVITATION_DATE_FORMATTER.format(startAt)} a bien été annulée.</p>" +
+                refundLine,
+            true,
+        )
+        mailSender.send(message)
+    }
+
     private companion object {
         val INVITATION_DATE_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH'h'mm", Locale.FRANCE)

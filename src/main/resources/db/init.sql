@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS users (
     temp_password_expires_at TIMESTAMPTZ,
     photo_object_key         VARCHAR(512),
     -- Identifiant client Stripe (créé paresseusement au 1er paiement). Jamais logué.
-    stripe_customer_id       VARCHAR(255)
+    stripe_customer_id       VARCHAR(255),
+    -- Token d'appareil FCM (notifications push). Nullable tant qu'aucun appareil n'est enregistré.
+    fcm_token                VARCHAR(512)
 );
 
 CREATE TABLE IF NOT EXISTS rooms (
@@ -136,6 +138,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     total_price      NUMERIC(10,2) NOT NULL,
     currency         VARCHAR(10)  NOT NULL,
     status           VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
+    -- Mode de règlement : PAY_ALL (fenêtre 15 min) ou SHARED_POT (délai gouverné par la cagnotte).
+    payment_mode     VARCHAR(20)  NOT NULL DEFAULT 'PAY_ALL',
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     expires_at       TIMESTAMPTZ  NOT NULL
 );
@@ -169,3 +173,38 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments (booking_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments (user_id);
+
+-- Cagnottes (règlement Stripe en autorisation à capture manuelle). Le montant cible est figé (= prix total
+-- de la réservation). Rien n'est prélevé tant que toutes les parts ne sont pas autorisées ; à complétude,
+-- toutes les autorisations sont capturées et la réservation passe CONFIRMED. Le délai (< 7 jours, validité
+-- des autorisations Stripe) déclenche sinon l'annulation de toutes les autorisations (zéro prélèvement).
+CREATE TABLE IF NOT EXISTS pools (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id        UUID NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
+    target_amount     NUMERIC(10,2) NOT NULL,
+    currency          VARCHAR(10)  NOT NULL,
+    status            VARCHAR(50)  NOT NULL DEFAULT 'OPEN',
+    deadline          TIMESTAMPTZ  NOT NULL,
+    global_link_token VARCHAR(255) NOT NULL UNIQUE,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pools_status_deadline ON pools (status, deadline);
+
+-- Parts d'une cagnotte : le montant de chaque part est réglé par un PaymentIntent Stripe à capture manuelle.
+-- La somme des parts égale le montant cible de la cagnotte (invariant maintenu applicativement).
+CREATE TABLE IF NOT EXISTS pool_shares (
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pool_id                  UUID NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+    participant_name         VARCHAR(255) NOT NULL,
+    email                    VARCHAR(255),
+    amount                   NUMERIC(10,2) NOT NULL,
+    status                   VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
+    stripe_payment_intent_id VARCHAR(255) UNIQUE,
+    unique_link_token        VARCHAR(255) UNIQUE,
+    payer_user_id            UUID REFERENCES users(id) ON DELETE SET NULL,
+    is_creator_share         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pool_shares_pool_id ON pool_shares (pool_id);
