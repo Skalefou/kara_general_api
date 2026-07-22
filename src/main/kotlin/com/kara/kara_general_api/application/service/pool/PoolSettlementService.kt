@@ -10,6 +10,7 @@ import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -33,6 +34,8 @@ class PoolSettlementService(
     private val poolNotifier: PoolNotifier,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     fun onShareAuthorized(intentId: String): StripeWebhookResult {
         val share = poolShareRepository.findByStripePaymentIntentId(intentId) ?: return StripeWebhookResult.Ignored
@@ -48,6 +51,38 @@ class PoolSettlementService(
 
         settle(pool, shares)
         return StripeWebhookResult.Handled
+    }
+
+    /**
+     * Annule les autorisations Stripe encore actives d'un lot de parts (AUTHORIZED ou PENDING avec intent)
+     * et passe ces parts CANCELLED. Aucun prélèvement. Idempotent et best-effort (une erreur Stripe
+     * n'interrompt pas le traitement des autres parts). Exécuté dans la transaction de l'appelant.
+     */
+    fun cancelShareHolds(shares: List<PoolShare>) {
+        shares.forEach { share ->
+            val intentId = share.stripePaymentIntentId
+            val hasHold = share.status == PoolShareStatus.AUTHORIZED || share.status == PoolShareStatus.PENDING
+            if (intentId != null && hasHold) {
+                runCatching { paymentGateway.cancelPaymentIntent(intentId) }
+                    .onFailure { logger.warn("Failed to cancel Stripe authorization for a pool share") }
+                poolShareRepository.save(share.markCancelled())
+            }
+        }
+    }
+
+    /**
+     * Rembourse intégralement les parts déjà capturées d'un lot et les passe REFUNDED (annulation d'une
+     * réservation confirmée / cagnotte réglée). Best-effort. Exécuté dans la transaction de l'appelant.
+     */
+    fun refundCapturedShares(shares: List<PoolShare>) {
+        shares.forEach { share ->
+            val intentId = share.stripePaymentIntentId
+            if (share.status == PoolShareStatus.CAPTURED && intentId != null) {
+                runCatching { paymentGateway.refundPaymentIntent(intentId) }
+                    .onFailure { logger.warn("Failed to refund a captured pool share") }
+                poolShareRepository.save(share.markRefunded())
+            }
+        }
     }
 
     @Transactional

@@ -111,4 +111,32 @@ class PoolSettlementServiceTest {
         assertEquals(StripeWebhookResult.Handled, sut.onShareCanceled("pi_b"))
         verify { poolShareRepository.save(match { it.status == PoolShareStatus.CANCELLED }) }
     }
+
+    @Test
+    fun `cancelShareHolds releases only shares with an active hold`() {
+        val authorized = share("pi_a", PoolShareStatus.AUTHORIZED)
+        val pendingWithIntent = share("pi_b", PoolShareStatus.PENDING)
+        val pendingNoIntent =
+            PoolShare(PoolShareId(UUID.randomUUID()), poolId, "P", null, BigDecimal("50.00"), PoolShareStatus.PENDING, null, null, null, false)
+        val captured = share("pi_c", PoolShareStatus.CAPTURED)
+
+        sut.cancelShareHolds(listOf(authorized, pendingWithIntent, pendingNoIntent, captured))
+
+        verify(exactly = 1) { paymentGateway.cancelPaymentIntent("pi_a") }
+        verify(exactly = 1) { paymentGateway.cancelPaymentIntent("pi_b") }
+        verify(exactly = 0) { paymentGateway.cancelPaymentIntent("pi_c") }
+        verify(exactly = 2) { poolShareRepository.save(match { it.status == PoolShareStatus.CANCELLED }) }
+    }
+
+    @Test
+    fun `refundCapturedShares refunds only captured shares`() {
+        val captured = share("pi_a", PoolShareStatus.CAPTURED)
+        val authorized = share("pi_b", PoolShareStatus.AUTHORIZED)
+
+        sut.refundCapturedShares(listOf(captured, authorized))
+
+        verify(exactly = 1) { paymentGateway.refundPaymentIntent("pi_a") }
+        verify(exactly = 0) { paymentGateway.refundPaymentIntent("pi_b") }
+        verify(exactly = 1) { poolShareRepository.save(match { it.status == PoolShareStatus.REFUNDED }) }
+    }
 }

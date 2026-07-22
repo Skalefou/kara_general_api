@@ -10,4 +10,7 @@ enum class PoolShareStatus {
     AUTHORIZED,
     CAPTURED,
     CANCELLED,
+
+    /** Part remboursée : le prélèvement capturé a été restitué (annulation d'une réservation confirmée). */
+    REFUNDED,
 }

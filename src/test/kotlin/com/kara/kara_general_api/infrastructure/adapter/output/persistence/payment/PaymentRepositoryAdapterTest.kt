@@ -115,6 +115,22 @@ class PaymentRepositoryAdapterTest {
         assertEquals(PaymentStatus.PAID, adapter.findById(saved.id)!!.status)
     }
 
+    @Test
+    fun `findByBookingId returns every payment of the booking`() {
+        adapter.save(payment(intentId = "pi_one"))
+        adapter.save(payment(intentId = "pi_two", status = PaymentStatus.PAID))
+
+        val found = adapter.findByBookingId(bookingId)
+
+        assertEquals(2, found.size)
+        assertEquals(setOf("pi_one", "pi_two"), found.map { it.stripePaymentIntentId }.toSet())
+    }
+
+    @Test
+    fun `findByBookingId returns empty when the booking has no payment`() {
+        assertEquals(emptyList<Payment>(), adapter.findByBookingId(BookingId(UUID.randomUUID())))
+    }
+
     private fun insertUser(id: UserId) {
         val sql =
             """

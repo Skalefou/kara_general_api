@@ -10,10 +10,12 @@ import com.stripe.model.Customer
 import com.stripe.model.EphemeralKey
 import com.stripe.model.Event
 import com.stripe.model.PaymentIntent
+import com.stripe.model.Refund
 import com.stripe.net.Webhook
 import com.stripe.param.CustomerCreateParams
 import com.stripe.param.EphemeralKeyCreateParams
 import com.stripe.param.PaymentIntentCreateParams
+import com.stripe.param.RefundCreateParams
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
@@ -84,6 +86,11 @@ class StripePaymentGatewayAdapter(
 
     override fun cancelPaymentIntent(paymentIntentId: String) {
         PaymentIntent.retrieve(paymentIntentId).cancel()
+    }
+
+    override fun refundPaymentIntent(paymentIntentId: String) {
+        // Remboursement intégral d'un paiement capturé (annulation d'une réservation confirmée).
+        Refund.create(RefundCreateParams.builder().setPaymentIntent(paymentIntentId).build())
     }
 
     private fun basePaymentIntentParams(

@@ -50,6 +50,10 @@ interface PaymentGateway {
     /** Annule une autorisation existante (libère le blocage, zéro prélèvement). */
     fun cancelPaymentIntent(paymentIntentId: String)
 
+    /** Rembourse intégralement un paiement déjà capturé (PaymentIntent). Utilisé à l'annulation d'une
+     *  réservation confirmée (payer tout ou cagnotte réglée). */
+    fun refundPaymentIntent(paymentIntentId: String)
+
     /** Vérifie la signature du webhook et décode l'événement. Retourne null si la signature est invalide. */
     fun verifyAndParseWebhook(payload: String, signature: String): StripeWebhookEvent?
 

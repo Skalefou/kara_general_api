@@ -1,6 +1,8 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.booking
 
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingDetailResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.CancelBookingResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.CreateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingResponse
@@ -15,6 +17,8 @@ import jakarta.validation.Valid
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 
@@ -87,6 +91,77 @@ interface BookingApi {
     @PostMapping
     fun createBooking(
         @Valid @RequestBody request: CreateBookingRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Détail d'une réservation (+ billet)",
+        description = "Détail complet d'une réservation pour son propriétaire, incluant le code de billet " +
+            "(ticketCode) rendu en QR par le front. ticketCode est non-null uniquement lorsque la réservation " +
+            "est CONFIRMED.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Détail de la réservation",
+                content = [Content(schema = Schema(implementation = BookingDetailResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "La réservation n'appartient pas à l'utilisateur (BOOKING_NOT_OWNER)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Réservation introuvable (BOOKING_NOT_FOUND)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @GetMapping("/{bookingId}")
+    fun getBooking(
+        @PathVariable bookingId: java.util.UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Annuler une réservation",
+        description = "Annule une réservation appartenant au client. Selon l'état : PENDING payer-tout → aucune " +
+            "capture à libérer ; cagnotte ouverte → levée de toutes les autorisations Stripe (zéro prélèvement) ; " +
+            "CONFIRMED → remboursement Stripe intégral. Réponse : résumé avec le statut CANCELLED et l'indicateur " +
+            "refunded.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Réservation annulée",
+                content = [Content(schema = Schema(implementation = CancelBookingResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "La réservation n'appartient pas à l'utilisateur (BOOKING_NOT_OWNER)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Réservation introuvable (BOOKING_NOT_FOUND)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "409",
+                description = "Réservation déjà annulée (BOOKING_ALREADY_CANCELLED) ou déjà commencée " +
+                    "(BOOKING_ALREADY_STARTED)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/{bookingId}/cancel")
+    fun cancelBooking(
+        @PathVariable bookingId: java.util.UUID,
         authentication: Authentication,
     ): ResponseEntity<Any>
 }

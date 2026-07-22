@@ -127,6 +127,27 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
+    override fun sendBookingCancelled(email: Email, roomName: String, startAt: Instant, refunded: Boolean) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Réservation Kara annulée — $roomName")
+        val refundLine =
+            if (refunded) {
+                "<p>Le montant réglé vous a été <strong>intégralement remboursé</strong>.</p>"
+            } else {
+                "<p><strong>Aucun montant n'a été prélevé</strong>.</p>"
+            }
+        helper.setText(
+            "<p>Votre réservation de <strong>$roomName</strong> du " +
+                "${INVITATION_DATE_FORMATTER.format(startAt)} a bien été annulée.</p>" +
+                refundLine,
+            true,
+        )
+        mailSender.send(message)
+    }
+
     private companion object {
         val INVITATION_DATE_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH'h'mm", Locale.FRANCE)

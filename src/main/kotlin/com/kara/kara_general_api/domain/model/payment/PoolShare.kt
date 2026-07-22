@@ -34,6 +34,8 @@ data class PoolShare(
 
     fun markCancelled(): PoolShare = copy(status = PoolShareStatus.CANCELLED)
 
+    fun markRefunded(): PoolShare = copy(status = PoolShareStatus.REFUNDED)
+
     fun updateAmount(newAmount: BigDecimal): PoolShare {
         require(newAmount > BigDecimal.ZERO) { "Le montant d'une part doit être strictement positif" }
         return copy(amount = newAmount)

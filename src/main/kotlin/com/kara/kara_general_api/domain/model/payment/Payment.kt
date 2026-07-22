@@ -24,6 +24,8 @@ data class Payment(
 
     fun markFailed(): Payment = copy(status = PaymentStatus.FAILED)
 
+    fun markRefunded(): Payment = copy(status = PaymentStatus.REFUNDED)
+
     companion object {
         /** Paiement initié : PENDING, rattaché au PaymentIntent Stripe déjà créé. */
         fun pending(

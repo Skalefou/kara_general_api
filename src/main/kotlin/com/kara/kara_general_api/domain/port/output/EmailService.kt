@@ -29,4 +29,10 @@ interface EmailService {
 
     /** Informe un participant que la cagnotte a été annulée (délai échu) : aucun prélèvement effectué. */
     fun sendPoolCancelled(email: Email, participantName: String, roomName: String)
+
+    /**
+     * Confirme au client l'annulation de sa réservation (mode « payer tout »). [refunded] indique si un
+     * remboursement a été émis (réservation qui était confirmée) ou non (réservation encore en attente).
+     */
+    fun sendBookingCancelled(email: Email, roomName: String, startAt: Instant, refunded: Boolean)
 }
