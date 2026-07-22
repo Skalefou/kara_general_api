@@ -26,23 +26,18 @@ RUN ./gradlew --no-daemon clean bootJar
 ##############################
 # Stage 2 — slim runtime image
 ##############################
-# Temurin publishes no "-jre-slim" tag; 25-jre (Ubuntu-based) is the slim JRE.
-# For an even smaller image swap for eclipse-temurin:25-jre-alpine (musl libc).
-FROM eclipse-temurin:25-jre AS runtime
+# Alpine (musl libc) JRE — smallest published Temurin 25 runtime.
+FROM eclipse-temurin:25-jre-alpine AS runtime
 
-# curl is used only by the container HEALTHCHECK below (not shipped by the JRE image).
-RUN apt-get update \
- && apt-get install -y --no-install-recommends curl \
- && rm -rf /var/lib/apt/lists/*
-
-# Run as a non-root system user.
-RUN groupadd --system app \
- && useradd --system --gid app --home-dir /app --shell /usr/sbin/nologin app
+# Run as a non-root system user (Alpine BusyBox tools: addgroup/adduser).
+RUN addgroup -S app \
+ && adduser -S -G app -h /app -s /sbin/nologin app
 WORKDIR /app
 
-# Copy the Spring Boot fat jar (the plain jar is *-SNAPSHOT-plain.jar and is not matched).
-COPY --from=build /workspace/build/libs/*-SNAPSHOT.jar app.jar
-RUN chown -R app:app /app
+# Copy the Spring Boot fat jar owned by the runtime user in a single layer
+# (--chown avoids a second full-size layer from a separate chown of the 150+MB jar).
+# The plain jar is *-SNAPSHOT-plain.jar and is not matched by this glob.
+COPY --from=build --chown=app:app /workspace/build/libs/*-SNAPSHOT.jar app.jar
 USER app
 
 # prod profile by default (schema is NOT created by the app — see application-prod.yml).
@@ -55,8 +50,9 @@ EXPOSE 8080
 
 # /actuator/health is exposed by Spring Boot by default and permitted anonymously
 # in SecurityConfig.kt, so this probe reflects real application readiness.
+# Uses BusyBox wget (already present on Alpine) instead of pulling in curl.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD curl -fsS http://localhost:8080/actuator/health || exit 1
+  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
 
 # exec form + `exec` so the JVM becomes PID 1 and receives SIGTERM for graceful shutdown.
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

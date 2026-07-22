@@ -15,11 +15,13 @@ services:
     volumes:
       - postgres_preprod_data:/var/lib/postgresql
       # Prod schema is loaded by Postgres itself (app has ddl-auto=none / sql.init=never).
-      # Scripts in /docker-entrypoint-initdb.d run ONLY on first init of an empty data dir.
-      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Scripts in /docker-entrypoint-initdb.d run ONLY on first init of an empty data dir,
+      # in alphabetical order — numeric prefixes force schema (01) before seed data (02).
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/dummy.sql:/docker-entrypoint-initdb.d/02-dummy.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
+      interval: 10
       timeout: 5s
       retries: 5
       start_period: 10s
@@ -38,7 +40,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kara_general_api:preprod
+    image: europe-west9-docker.pkg.dev/karapi-ee1cd/kara-images/kara_general_api
     container_name: kara-api-preprod
     restart: unless-stopped
     depends_on:
