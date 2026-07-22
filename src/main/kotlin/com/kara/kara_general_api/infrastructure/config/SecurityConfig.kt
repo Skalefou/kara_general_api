@@ -63,9 +63,18 @@ class SecurityConfig {
                 // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
                 authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)
                 authorize(HttpMethod.GET, "/api/v1/pools/share/**", permitAll)
-                // Sonde de santé (liveness/readiness du conteneur Docker) : lecture publique
-                // du seul endpoint /actuator/health, sans exposer les autres endpoints actuator.
+                // Observabilité (double barrière — cf. Caddyfile qui renvoie 404 sur /actuator* côté public,
+                // et le pare-feu hôte qui n'expose jamais le port 8080 sur Internet).
+                // Seuls ces trois endpoints actuator sont ouverts, et uniquement joignables via le réseau
+                // Docker interne (sonde de santé du conteneur + scrape Prometheus) :
+                //   - /actuator/health : liveness/readiness du conteneur ;
+                //   - /actuator/prometheus : métriques Micrometer, scrapées par Prometheus (api:8080) ;
+                //   - /actuator/info : métadonnées applicatives, sans secret.
+                // Aucun autre endpoint actuator n'est exposé (management.endpoints.web.exposure.include).
                 authorize(HttpMethod.GET, "/actuator/health", permitAll)
+                authorize(HttpMethod.GET, "/actuator/health/**", permitAll)
+                authorize(HttpMethod.GET, "/actuator/prometheus", permitAll)
+                authorize(HttpMethod.GET, "/actuator/info", permitAll)
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

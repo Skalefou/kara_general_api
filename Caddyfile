@@ -1,0 +1,27 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# First barrier: no actuator endpoint (health, prometheus, info, ...) ever leaks through the
+	# public domain. Metrics are scraped by Prometheus over the internal Docker network only.
+	# Returns 404 so the surface is not even advertised as "forbidden".
+	@actuator path /actuator /actuator/*
+	respond @actuator 404
+
+	reverse_proxy api:8080
+
+	log {
+		output stdout
+		format console
+	}
+}

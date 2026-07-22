@@ -7,6 +7,14 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
+-- Observabilité : pg_stat_statements agrège les statistiques d'exécution des requêtes
+-- (temps total, appels, lignes) pour détecter les requêtes lentes. La bibliothèque doit
+-- être préchargée via shared_preload_libraries (cf. `command:` du service postgres).
+-- Idempotent : ne recrée pas l'extension si elle existe déjà.
+-- ---------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- ---------------------------------------------------------------------------
 -- Comptes utilisateurs (tous rôles : GUEST/CLIENT/SERVER/ADMIN).
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (

@@ -1,0 +1,123 @@
+# Priority alert rules for the Kara pre-prod stack.
+# Thresholds are deliberately conservative for a pre-prod environment — tune for production load.
+groups:
+  # ---- Application (Spring Boot / Micrometer) -----------------------------
+  - name: kara-api
+    rules:
+      # HikariCP connection pool saturated: threads are waiting for a DB connection.
+      - alert: HikariPoolConnectionsPending
+        expr: hikaricp_connections_pending > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HikariCP pool saturé (connexions en attente)"
+          description: "{{ $value }} requête(s) attendent une connexion DB depuis plus de 2 min sur {{ $labels.application }}."
+
+      # High p95 HTTP latency across all endpoints.
+      - alert: ApiHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_server_requests_seconds_bucket[5m])) by (le)
+          ) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence HTTP p95 élevée (> 1.5s)"
+          description: "La latence p95 des requêtes HTTP dépasse 1.5s depuis 5 min (valeur: {{ $value | humanize }}s)."
+
+      # Rising 5xx error rate.
+      - alert: ApiHigh5xxRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+          sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taux d'erreurs 5xx élevé (> 5%)"
+          description: "Plus de 5% des réponses HTTP sont des 5xx depuis 5 min ({{ $value | humanizePercentage }})."
+
+      # The API scrape target is down.
+      - alert: ApiDown
+        expr: up{job="kara-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API injoignable par Prometheus"
+          description: "Le scrape de /actuator/prometheus (api:8080) échoue depuis 2 min."
+
+  # ---- PostgreSQL ---------------------------------------------------------
+  - name: postgres
+    rules:
+      # Connection count approaching max_connections.
+      - alert: PostgresConnectionsHigh
+        expr: |
+          sum(pg_stat_database_numbackends)
+            /
+          on() pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Connexions PostgreSQL > 80% du maximum"
+          description: "Le nombre de connexions dépasse 80% de max_connections depuis 5 min ({{ $value | humanizePercentage }})."
+
+      - alert: PostgresExporterDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "postgres_exporter injoignable"
+          description: "Les métriques PostgreSQL ne sont plus collectées depuis 2 min."
+
+  # ---- Host (node_exporter) ----------------------------------------------
+  - name: host
+    rules:
+      # Root filesystem below 15% free.
+      - alert: HostDiskSpaceLow
+        expr: |
+          (
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+              /
+            node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+          ) < 0.15
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Espace disque hôte < 15%"
+          description: "Le point de montage {{ $labels.mountpoint }} n'a plus que {{ $value | humanizePercentage }} d'espace libre."
+
+      - alert: HostHighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mémoire hôte > 90%"
+          description: "L'utilisation mémoire de l'hôte dépasse 90% depuis 10 min."
+
+  # ---- Redis --------------------------------------------------------------
+  # NOTE: Redis memory alerting requires a Redis exporter (e.g. oliver006/redis_exporter),
+  # which is NOT part of this stack yet. To enable it:
+  #   1. Add a `redis_exporter` service (target redis:6379) to compose.monitoring.yaml.
+  #   2. Add a scrape job `redis` in prometheus.yml.
+  #   3. Uncomment the rule below.
+  # - name: redis
+  #   rules:
+  #     - alert: RedisMemoryNearMax
+  #       expr: |
+  #         redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+  #       for: 5m
+  #       labels:
+  #         severity: warning
+  #       annotations:
+  #         summary: "Mémoire Redis proche du maximum (> 85%)"
+  #         description: "Redis utilise plus de 85% de sa mémoire maximale (maxmemory) depuis 5 min."
