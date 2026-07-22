@@ -1,0 +1,62 @@
+# Pre-prod stack: Postgres (loads init.sql on first init) + Redis + the API image.
+# Run with:
+#   docker compose --env-file .env.preprod -f compose.preprod.yaml up --build
+#
+# --env-file .env.preprod feeds ${...} interpolation below AND the same file is
+# injected into the containers via `env_file:` — single source of truth.
+# The dev stack in compose.yaml is left untouched.
+
+services:
+  postgres:
+    image: 'postgres:18.2'                 # matches the dev stack (compose.yaml)
+    container_name: kara-db-preprod
+    restart: unless-stopped
+    env_file: .env.preprod                 # provides POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
+    volumes:
+      - postgres_preprod_data:/var/lib/postgresql
+      # Prod schema is loaded by Postgres itself (app has ddl-auto=none / sql.init=never).
+      # Scripts in /docker-entrypoint-initdb.d run ONLY on first init of an empty data dir.
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: 'redis:8.2.7'                    # matches the dev stack (compose.yaml)
+    container_name: kara-redis-preprod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kara_general_api:preprod
+    container_name: kara-api-preprod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy          # waits until Postgres is ready AND initialised
+      redis:
+        condition: service_healthy
+    # Secrets (JWT_*, MAIL_*, STRIPE_*, FIREBASE_*, GCS_*, INVOICE_*, ...) come from the env file.
+    env_file: .env.preprod
+    # Explicit overrides win over env_file: pin the profile and the in-network service hosts.
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: '5432'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+    ports:
+      - '${API_PORT:-8080}:8080'            # host API_PORT -> container 8080
+
+volumes:
+  postgres_preprod_data:
