@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
+/**
+ * Adaptateur GCS unique du magasin d'objets ([ImageStoragePort]) : images publiques (CDN) comme documents
+ * privés (PDF de reçus servis par URL signée). Un seul client Storage, un bucket par visibilité.
+ */
 @Component
 @Profile("!test")
 class GcsImageStorageAdapter(
@@ -27,6 +31,9 @@ class GcsImageStorageAdapter(
                 .build()
         storage.create(blobInfo, bytes)
     }
+
+    override fun exists(visibility: ImageVisibility, key: String): Boolean =
+        storage.get(BlobId.of(bucketFor(visibility), key)) != null
 
     override fun delete(visibility: ImageVisibility, key: String) {
         storage.delete(BlobId.of(bucketFor(visibility), key))
