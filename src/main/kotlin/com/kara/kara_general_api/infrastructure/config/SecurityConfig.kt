@@ -30,6 +30,8 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/auth/change-password", authenticated)
                 authorize("/api/v1/auth/**", permitAll)
                 authorize("/api/v1/test/**", permitAll)
+                // Handshake WebSocket : non authentifié ; l'authentification se fait sur la frame STOMP CONNECT.
+                authorize("/ws/**", permitAll)
                 authorize("/error", permitAll)
                 authorize("/swagger-ui/**", permitAll)
                 authorize("/swagger-ui.html", permitAll)

@@ -76,6 +76,54 @@ CREATE TABLE IF NOT EXISTS room_services (
 CREATE INDEX IF NOT EXISTS idx_room_services_room_id ON room_services (room_id);
 CREATE INDEX IF NOT EXISTS idx_room_services_service_id ON room_services (service_id);
 
+-- ============================================================================
+-- Chat (messagerie temps réel) — MVP texte
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Participation d'un utilisateur à une conversation + état de lecture (last_read_at pilote les non-lus).
+CREATE TABLE IF NOT EXISTS conversation_participants (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    last_read_at    TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_conversation_participants_conversation_user UNIQUE (conversation_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversation_participants_user_id ON conversation_participants (user_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_participants_conversation_id ON conversation_participants (conversation_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    sender_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type            VARCHAR(20) NOT NULL DEFAULT 'text',
+    text            TEXT,
+    reply_to_id     UUID REFERENCES messages(id) ON DELETE SET NULL,
+    is_forwarded    BOOLEAN NOT NULL DEFAULT FALSE,
+    is_pinned       BOOLEAN NOT NULL DEFAULT FALSE,
+    sent_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_sent_at ON messages (conversation_id, sent_at);
+
+-- Réaction (emoji) posée par un utilisateur sur un message. L'unicité (message, utilisateur, emoji)
+-- garantit l'idempotence de la bascule.
+CREATE TABLE IF NOT EXISTS message_reactions (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    emoji      VARCHAR(32) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_message_reactions_message_user_emoji UNIQUE (message_id, user_id, emoji)
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_reactions_message_id ON message_reactions (message_id);
 -- Réservations : un créneau réservé sur une salle par un client. Le prix total est figé à la création.
 -- Le chevauchement de créneaux est contrôlé applicativement (statuts PENDING/CONFIRMED).
 CREATE TABLE IF NOT EXISTS bookings (

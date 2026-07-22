@@ -1,7 +1,5 @@
 package com.kara.kara_general_api.infrastructure.config
 
-import io.jsonwebtoken.JwtException
-import io.jsonwebtoken.Jwts
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -9,10 +7,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
-import java.security.interfaces.RSAPublicKey
 
 class JwtAuthenticationFilter(
-    private val jwtPublicKey: RSAPublicKey,
+    private val tokenParser: JwtAccessTokenParser,
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -23,24 +20,16 @@ class JwtAuthenticationFilter(
         val header = request.getHeader("Authorization")
         if (header != null && header.startsWith("Bearer ")) {
             val token = header.removePrefix("Bearer ")
-            try {
-                val claims =
-                    Jwts.parser()
-                        .verifyWith(jwtPublicKey)
-                        .build()
-                        .parseSignedClaims(token)
-                        .payload
-
-                val userId = claims.subject
-                val role = claims["role"] as? String ?: ""
+            val user = tokenParser.parse(token)
+            if (user != null) {
                 val auth =
                     UsernamePasswordAuthenticationToken(
-                        userId,
+                        user.userId,
                         null,
-                        listOf(SimpleGrantedAuthority("ROLE_$role")),
+                        listOf(SimpleGrantedAuthority("ROLE_${user.role}")),
                     )
                 SecurityContextHolder.getContext().authentication = auth
-            } catch (_: JwtException) {
+            } else {
                 SecurityContextHolder.clearContext()
             }
         }

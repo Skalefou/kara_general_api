@@ -30,6 +30,6 @@ class JwtKeyConfig {
     }
 
     @Bean
-    fun jwtAuthenticationFilter(jwtPublicKey: RSAPublicKey): JwtAuthenticationFilter =
-        JwtAuthenticationFilter(jwtPublicKey)
+    fun jwtAuthenticationFilter(tokenParser: JwtAccessTokenParser): JwtAuthenticationFilter =
+        JwtAuthenticationFilter(tokenParser)
 }
