@@ -51,6 +51,17 @@ data class AddPoolShareRequest(
     val amount: BigDecimal,
 )
 
+/**
+ * Corps d'auto-inscription à une cagnotte via le lien global. Le nom et l'email de la part sont dérivés du
+ * compte authentifié (non transmis) ; seul le montant est fourni, plafonné par le reliquat du créateur.
+ */
+data class SelfJoinPoolShareRequest(
+    @field:NotNull
+    @field:Positive
+    @field:Schema(description = "Montant de la part que l'utilisateur souhaite payer (≤ reliquat du créateur)", example = "30.00")
+    val amount: BigDecimal,
+)
+
 /** Corps de modification du montant d'une part non encore payée. */
 data class UpdatePoolShareRequest(
     @field:NotNull

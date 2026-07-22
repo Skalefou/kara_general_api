@@ -25,6 +25,9 @@ import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkUseCas
 import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareCommand
 import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareUseCase
+import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareCommand
+import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareResult
+import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareCommand
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareUseCase
@@ -35,6 +38,7 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.Pool
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.PoolResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.PoolSummaryResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.RegeneratePoolLinkResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.SelfJoinPoolShareRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.UpdatePoolShareRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -56,6 +60,7 @@ class PoolController(
     private val regeneratePoolLinkUseCase: RegeneratePoolLinkUseCase,
     private val remindPoolShareUseCase: RemindPoolShareUseCase,
     private val listUserPoolsUseCase: ListUserPoolsUseCase,
+    private val selfJoinPoolShareUseCase: SelfJoinPoolShareUseCase,
 ) : PoolApi {
 
     override fun listPools(authentication: Authentication): ResponseEntity<Any> =
@@ -151,6 +156,47 @@ class PoolController(
                 problem(HttpStatus.CONFLICT, "Le délai de la cagnotte est écoulé.", "POOL_EXPIRED")
             AuthorizePoolShareResult.ShareAlreadyProcessed ->
                 problem(HttpStatus.CONFLICT, "Cette part n'est plus à payer.", "POOL_SHARE_ALREADY_PROCESSED")
+        }
+    }
+
+    override fun selfJoinShare(
+        globalToken: String,
+        request: SelfJoinPoolShareRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val command =
+            SelfJoinPoolShareCommand(
+                globalToken = globalToken,
+                callerId = callerId(authentication),
+                amount = request.amount,
+            )
+        return when (val result = selfJoinPoolShareUseCase.selfJoin(command)) {
+            is SelfJoinPoolShareResult.Ready ->
+                ResponseEntity.ok(
+                    AuthorizePoolShareResponse(
+                        shareId = result.shareId,
+                        clientSecret = result.clientSecret,
+                        ephemeralKeySecret = result.ephemeralKeySecret,
+                        customerId = result.customerId,
+                        publishableKey = result.publishableKey,
+                    ),
+                )
+            SelfJoinPoolShareResult.PoolNotFound -> poolNotFound()
+            SelfJoinPoolShareResult.PayerNotFound ->
+                problem(HttpStatus.NOT_FOUND, "Payeur introuvable.", "POOL_PAYER_NOT_FOUND")
+            SelfJoinPoolShareResult.PoolClosed -> poolClosed()
+            SelfJoinPoolShareResult.PoolExpired ->
+                problem(HttpStatus.CONFLICT, "Le délai de la cagnotte est écoulé.", "POOL_EXPIRED")
+            SelfJoinPoolShareResult.AlreadyJoined ->
+                problem(HttpStatus.CONFLICT, "Vous détenez déjà une part dans cette cagnotte.", "POOL_ALREADY_JOINED")
+            SelfJoinPoolShareResult.RemainderLocked ->
+                problem(HttpStatus.CONFLICT, "Le reliquat du créateur est déjà réglé : auto-inscription impossible.", "POOL_REMAINDER_LOCKED")
+            SelfJoinPoolShareResult.NoCreatorRemainder ->
+                problem(HttpStatus.CONFLICT, "Aucun reliquat créateur disponible pour financer cette part.", "POOL_NO_CREATOR_REMAINDER")
+            SelfJoinPoolShareResult.InsufficientRemainder ->
+                problem(HttpStatus.CONFLICT, "Le reliquat du créateur est insuffisant.", "POOL_INSUFFICIENT_REMAINDER")
+            SelfJoinPoolShareResult.InvalidAmount ->
+                problem(HttpStatus.BAD_REQUEST, "Montant de part invalide.", "POOL_INVALID_AMOUNT")
         }
     }
 

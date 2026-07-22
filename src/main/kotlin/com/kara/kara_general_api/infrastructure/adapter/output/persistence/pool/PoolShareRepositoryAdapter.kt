@@ -45,6 +45,18 @@ class PoolShareRepositoryAdapter(
         return jdbc.query(sql, mapOf("poolId" to poolId.value), rowMapper)
     }
 
+    override fun findCreatorShareForUpdate(poolId: PoolId): PoolShare? {
+        // Verrou pessimiste sur la ligne du reliquat créateur : sérialise les auto-inscriptions concurrentes.
+        val sql =
+            """
+            SELECT $POOL_SHARE_COLUMNS
+            FROM pool_shares
+            WHERE pool_id = :poolId AND is_creator_share = TRUE
+            FOR UPDATE
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("poolId" to poolId.value), rowMapper).firstOrNull()
+    }
+
     override fun findByUniqueLinkToken(token: String): PoolShare? {
         val sql = "SELECT $POOL_SHARE_COLUMNS FROM pool_shares WHERE unique_link_token = :token"
         return jdbc.query(sql, mapOf("token" to token), rowMapper).firstOrNull()

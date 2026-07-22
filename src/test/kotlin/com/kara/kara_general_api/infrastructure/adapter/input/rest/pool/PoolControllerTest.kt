@@ -17,6 +17,8 @@ import com.kara.kara_general_api.domain.port.input.pool.PoolSummaryView
 import com.kara.kara_general_api.domain.port.input.pool.PoolView
 import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkUseCase
 import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareUseCase
+import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareResult
+import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareUseCase
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
@@ -75,6 +77,9 @@ class PoolControllerTest {
 
     @MockkBean
     private lateinit var listUserPoolsUseCase: ListUserPoolsUseCase
+
+    @MockkBean
+    private lateinit var selfJoinPoolShareUseCase: SelfJoinPoolShareUseCase
 
     private fun poolView() =
         PoolView(
@@ -228,5 +233,112 @@ class PoolControllerTest {
         mockMvc.perform(get("/api/v1/pools/share/nope"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("POOL_NOT_FOUND"))
+    }
+
+    private val selfJoinBody = """{"amount":30.00}"""
+
+    private fun performSelfJoin() =
+        mockMvc.perform(
+            post("/api/v1/pools/join/global-token/shares")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(selfJoinBody),
+        )
+
+    @Test
+    fun `should return 401 when self-joining a pool without authentication`() {
+        performSelfJoin().andExpect(status().isUnauthorized)
+
+        verify(exactly = 0) { selfJoinPoolShareUseCase.selfJoin(any()) }
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 200 with the PaymentSheet secrets when self-joining`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns
+            SelfJoinPoolShareResult.Ready(
+                clientSecret = "cs",
+                ephemeralKeySecret = "ek",
+                customerId = "cus_1",
+                publishableKey = "pk",
+                shareId = UUID.fromString(SHARE_ID),
+            )
+
+        performSelfJoin()
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.clientSecret").value("cs"))
+            .andExpect(jsonPath("$.ephemeralKeySecret").value("ek"))
+            .andExpect(jsonPath("$.shareId").value(SHARE_ID))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 400 POOL_INVALID_AMOUNT when the amount is invalid`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.InvalidAmount
+
+        performSelfJoin().andExpect(status().isBadRequest).andExpect(jsonPath("$.code").value("POOL_INVALID_AMOUNT"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 404 POOL_NOT_FOUND for an unknown global token`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.PoolNotFound
+
+        performSelfJoin().andExpect(status().isNotFound).andExpect(jsonPath("$.code").value("POOL_NOT_FOUND"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 404 POOL_PAYER_NOT_FOUND when the payer is unknown`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.PayerNotFound
+
+        performSelfJoin().andExpect(status().isNotFound).andExpect(jsonPath("$.code").value("POOL_PAYER_NOT_FOUND"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 POOL_CLOSED when the pool is closed`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.PoolClosed
+
+        performSelfJoin().andExpect(status().isConflict).andExpect(jsonPath("$.code").value("POOL_CLOSED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 POOL_EXPIRED when the pool deadline passed`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.PoolExpired
+
+        performSelfJoin().andExpect(status().isConflict).andExpect(jsonPath("$.code").value("POOL_EXPIRED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 POOL_ALREADY_JOINED when the caller already has a share`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.AlreadyJoined
+
+        performSelfJoin().andExpect(status().isConflict).andExpect(jsonPath("$.code").value("POOL_ALREADY_JOINED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 POOL_REMAINDER_LOCKED when the creator remainder is locked`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.RemainderLocked
+
+        performSelfJoin().andExpect(status().isConflict).andExpect(jsonPath("$.code").value("POOL_REMAINDER_LOCKED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 POOL_NO_CREATOR_REMAINDER when no creator remainder exists`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.NoCreatorRemainder
+
+        performSelfJoin().andExpect(status().isConflict).andExpect(jsonPath("$.code").value("POOL_NO_CREATOR_REMAINDER"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 409 POOL_INSUFFICIENT_REMAINDER when the remainder is insufficient`() {
+        every { selfJoinPoolShareUseCase.selfJoin(any()) } returns SelfJoinPoolShareResult.InsufficientRemainder
+
+        performSelfJoin().andExpect(status().isConflict).andExpect(jsonPath("$.code").value("POOL_INSUFFICIENT_REMAINDER"))
     }
 }

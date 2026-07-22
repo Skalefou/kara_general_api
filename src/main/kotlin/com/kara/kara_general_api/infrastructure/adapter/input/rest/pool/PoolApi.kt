@@ -7,6 +7,7 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.Pool
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.PoolResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.PoolSummaryResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.RegeneratePoolLinkResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.SelfJoinPoolShareRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto.UpdatePoolShareRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.ArraySchema
@@ -181,6 +182,38 @@ interface PoolApi {
     fun authorizeShare(
         @PathVariable poolId: UUID,
         @PathVariable shareId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Rejoindre une cagnotte (auto-inscription via le lien global)",
+        description = "Un utilisateur authentifié crée sa propre part via le lien global : le montant (plafonné " +
+            "par le reliquat du créateur) est prélevé sur ce reliquat, puis un PaymentIntent Stripe en capture " +
+            "manuelle est créé. Nom et email de la part sont dérivés du compte. Retourne les secrets du " +
+            "PaymentSheet. Une seule part par personne.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                content = [Content(schema = Schema(implementation = AuthorizePoolShareResponse::class))],
+            ),
+            ApiResponse(responseCode = "400", description = "Montant invalide (POOL_INVALID_AMOUNT)"),
+            ApiResponse(responseCode = "401", description = "Requête non authentifiée"),
+            ApiResponse(responseCode = "404", description = "Cagnotte introuvable (POOL_NOT_FOUND) ou payeur introuvable (POOL_PAYER_NOT_FOUND)"),
+            ApiResponse(
+                responseCode = "409",
+                description = "Cagnotte fermée (POOL_CLOSED), expirée (POOL_EXPIRED), déjà rejointe " +
+                    "(POOL_ALREADY_JOINED), reliquat verrouillé (POOL_REMAINDER_LOCKED), absent " +
+                    "(POOL_NO_CREATOR_REMAINDER) ou insuffisant (POOL_INSUFFICIENT_REMAINDER)",
+            ),
+        ],
+    )
+    @PostMapping("/join/{globalToken}/shares")
+    fun selfJoinShare(
+        @PathVariable globalToken: String,
+        @Valid @RequestBody request: SelfJoinPoolShareRequest,
         authentication: Authentication,
     ): ResponseEntity<Any>
 
