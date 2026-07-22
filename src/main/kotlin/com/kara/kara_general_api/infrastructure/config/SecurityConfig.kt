@@ -63,6 +63,9 @@ class SecurityConfig {
                 // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
                 authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)
                 authorize(HttpMethod.GET, "/api/v1/pools/share/**", permitAll)
+                // Sonde de santé (liveness/readiness du conteneur Docker) : lecture publique
+                // du seul endpoint /actuator/health, sans exposer les autres endpoints actuator.
+                authorize(HttpMethod.GET, "/actuator/health", permitAll)
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {
