@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.booking
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomOptionId
 import com.kara.kara_general_api.domain.model.user.UserId
@@ -9,10 +10,21 @@ import com.kara.kara_general_api.domain.port.input.booking.CreateBookingUseCase
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingCommand
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListServerBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyCommand
+import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyResult
+import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyUseCase
+import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationCommand
+import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationResult
+import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationUseCase
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.AdminBookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingConversationResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.CreateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.ServerBookingResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -26,7 +38,71 @@ import java.util.UUID
 class BookingController(
     private val estimateBookingUseCase: EstimateBookingUseCase,
     private val createBookingUseCase: CreateBookingUseCase,
+    private val listServerBookingsUseCase: ListServerBookingsUseCase,
+    private val listAllBookingsUseCase: ListAllBookingsUseCase,
+    private val openBookingConversationUseCase: OpenBookingConversationUseCase,
+    private val triggerEmergencyUseCase: TriggerEmergencyUseCase,
 ) : BookingApi {
+
+    override fun triggerEmergency(id: UUID, authentication: Authentication): ResponseEntity<Any> {
+        val command =
+            TriggerEmergencyCommand(
+                bookingId = BookingId(id),
+                currentUserId = UserId(UUID.fromString(authentication.name)),
+                isAdmin = authentication.authorities.any { it.authority == "ROLE_ADMIN" },
+            )
+        return when (triggerEmergencyUseCase.triggerEmergency(command)) {
+            is TriggerEmergencyResult.Success -> ResponseEntity.noContent().build()
+            TriggerEmergencyResult.BookingNotFound -> bookingNotFound()
+            TriggerEmergencyResult.NotAuthorized -> notAuthorized()
+        }
+    }
+
+    override fun listMyAssignedBookings(authentication: Authentication): ResponseEntity<Any> {
+        val serverId = UserId(UUID.fromString(authentication.name))
+        val bookings = listServerBookingsUseCase.listServerBookings(serverId)
+        return ResponseEntity.ok(bookings.map { ServerBookingResponse.from(it) })
+    }
+
+    override fun listAllBookings(): ResponseEntity<Any> =
+        ResponseEntity.ok(listAllBookingsUseCase.listAllBookings().map { AdminBookingResponse.from(it) })
+
+    override fun openBookingConversation(id: UUID, authentication: Authentication): ResponseEntity<Any> {
+        val command =
+            OpenBookingConversationCommand(
+                bookingId = BookingId(id),
+                currentUserId = UserId(UUID.fromString(authentication.name)),
+                isAdmin = authentication.authorities.any { it.authority == "ROLE_ADMIN" },
+            )
+        return when (val result = openBookingConversationUseCase.openBookingConversation(command)) {
+            is OpenBookingConversationResult.Success ->
+                ResponseEntity.ok(BookingConversationResponse.from(result))
+            OpenBookingConversationResult.BookingNotFound -> bookingNotFound()
+            OpenBookingConversationResult.NotAuthorized -> notAuthorized()
+        }
+    }
+
+    private fun bookingNotFound(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND,
+                "Aucune réservation ne correspond à cet identifiant.",
+            ).apply {
+                title = "Réservation introuvable"
+                setProperty("code", "BOOKING_NOT_FOUND")
+            },
+        )
+
+    private fun notAuthorized(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN,
+                "Vous n'êtes pas autorisé à accéder au chat de cette réservation.",
+            ).apply {
+                title = "Accès refusé"
+                setProperty("code", "NOT_AUTHORIZED")
+            },
+        )
 
     override fun createBooking(
         request: CreateBookingRequest,

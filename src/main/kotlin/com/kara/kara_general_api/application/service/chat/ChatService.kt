@@ -24,6 +24,7 @@ import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesQuery
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesResult
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesUseCase
+import com.kara.kara_general_api.domain.port.input.chat.ListAllConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ListConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadCommand
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadResult
@@ -37,24 +38,31 @@ import com.kara.kara_general_api.domain.port.input.chat.SendMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionCommand
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionResult
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionUseCase
+import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.ChatEventPublisher
 import com.kara.kara_general_api.domain.port.output.ChatRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
 import java.time.Instant
 
 private const val PREVIEW_MAX_LENGTH = 80
 
 private val STAFF_ROLES = setOf(UserRole.SERVER, UserRole.ADMIN)
 
+/** Une conversation de réservation se ferme (envoi interdit) 30 min après la fin du créneau. */
+private val BOOKING_CHAT_WINDOW_AFTER_END: Duration = Duration.ofMinutes(30)
+
 @Service
 class ChatService(
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
+    private val bookingRepository: BookingRepository,
     private val eventPublisher: ChatEventPublisher,
 ) : CreateConversationUseCase,
     ListConversationsUseCase,
+    ListAllConversationsUseCase,
     GetMessagesUseCase,
     SendMessageUseCase,
     ToggleReactionUseCase,
@@ -90,9 +98,18 @@ class ChatService(
     }
 
     @Transactional(readOnly = true)
+    override fun listAllConversations(viewerId: UserId): List<ConversationView> {
+        val users = resolver()
+        return chatRepository.findAllConversations().map { conversation ->
+            val participants = chatRepository.findParticipantIds(conversation.id)
+            buildConversationView(conversation.id, participants, viewerId, users)
+        }
+    }
+
+    @Transactional(readOnly = true)
     override fun getMessages(query: GetMessagesQuery): GetMessagesResult {
         chatRepository.findConversationById(query.conversationId) ?: return GetMessagesResult.ConversationNotFound
-        if (!chatRepository.isParticipant(query.conversationId, query.currentUserId)) {
+        if (!query.isAdmin && !chatRepository.isParticipant(query.conversationId, query.currentUserId)) {
             return GetMessagesResult.NotParticipant
         }
         val participants = chatRepository.findParticipantIds(query.conversationId)
@@ -105,10 +122,13 @@ class ChatService(
     @Transactional
     override fun sendMessage(command: SendMessageCommand): SendMessageResult {
         if (command.text.isBlank()) return SendMessageResult.EmptyText
-        chatRepository.findConversationById(command.conversationId) ?: return SendMessageResult.ConversationNotFound
+        val conversation =
+            chatRepository.findConversationById(command.conversationId)
+                ?: return SendMessageResult.ConversationNotFound
         if (!chatRepository.isParticipant(command.conversationId, command.currentUserId)) {
             return SendMessageResult.NotParticipant
         }
+        if (isBookingChatClosed(conversation)) return SendMessageResult.ChatClosed
         val message =
             chatRepository.saveMessage(
                 Message.create(
@@ -279,4 +299,11 @@ class ChatService(
 
     private fun User?.displayName(): String =
         this?.let { "${it.firstName} ${it.lastName}".trim() } ?: ""
+
+    /** Vrai si la conversation est rattachée à une réservation dont la fenêtre de chat (fin + 30 min) est échue. */
+    private fun isBookingChatClosed(conversation: Conversation): Boolean {
+        val bookingId = conversation.bookingId ?: return false
+        val booking = bookingRepository.findById(bookingId) ?: return false
+        return Instant.now().isAfter(booking.endAt.plus(BOOKING_CHAT_WINDOW_AFTER_END))
+    }
 }

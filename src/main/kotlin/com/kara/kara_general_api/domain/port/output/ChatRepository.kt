@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.port.output
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.chat.Conversation
 import com.kara.kara_general_api.domain.model.chat.ConversationId
 import com.kara.kara_general_api.domain.model.chat.Message
@@ -16,10 +17,19 @@ interface ChatRepository {
 
     fun createConversation(conversation: Conversation, participantIds: Set<UserId>)
 
+    /** Conversation rattachée à une réservation, si elle existe déjà. */
+    fun findConversationByBookingId(bookingId: BookingId): Conversation?
+
+    /** Ajoute des participants à une conversation existante (idempotent : ignore ceux déjà présents). */
+    fun addParticipants(conversationId: ConversationId, participantIds: Set<UserId>)
+
     fun findConversationById(id: ConversationId): Conversation?
 
     /** Conversations où [userId] est participant, triées par activité récente décroissante. */
     fun findConversationsForUser(userId: UserId): List<Conversation>
+
+    /** Toutes les conversations (supervision admin), triées par activité récente décroissante. */
+    fun findAllConversations(): List<Conversation>
 
     /** Renvoie la conversation dont l'ensemble des participants est exactement [participantIds], si elle existe. */
     fun findConversationByExactParticipants(participantIds: Set<UserId>): Conversation?

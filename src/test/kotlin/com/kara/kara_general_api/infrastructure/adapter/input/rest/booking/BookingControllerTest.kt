@@ -9,6 +9,10 @@ import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListServerBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyUseCase
+import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationUseCase
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingUseCase
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
@@ -47,6 +51,18 @@ class BookingControllerTest {
 
     @MockkBean
     private lateinit var createBookingUseCase: CreateBookingUseCase
+
+    @MockkBean
+    private lateinit var listServerBookingsUseCase: ListServerBookingsUseCase
+
+    @MockkBean
+    private lateinit var openBookingConversationUseCase: OpenBookingConversationUseCase
+
+    @MockkBean
+    private lateinit var listAllBookingsUseCase: ListAllBookingsUseCase
+
+    @MockkBean
+    private lateinit var triggerEmergencyUseCase: TriggerEmergencyUseCase
 
     private fun sampleBooking() =
         Booking(

@@ -4,6 +4,7 @@ import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.user.UserId
 import java.time.Instant
 
 interface BookingRepository {
@@ -11,6 +12,15 @@ interface BookingRepository {
     fun save(booking: Booking): Booking
 
     fun findById(id: BookingId): Booking?
+
+    /**
+     * Réservations (hors CANCELLED) dont la salle et le créneau chevauchent au moins un créneau d'agenda
+     * du serveur [serverId]. Ordonnées par date de début croissante. Les options ne sont pas chargées.
+     */
+    fun findAssignedToServer(serverId: UserId): List<Booking>
+
+    /** Toutes les réservations (supervision admin), ordonnées par date de début décroissante. */
+    fun findAllBookings(): List<Booking>
 
     /**
      * Vrai s'il existe déjà une réservation active (PENDING ou CONFIRMED) sur la salle dont le
