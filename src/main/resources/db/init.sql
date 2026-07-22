@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_conversations_booking_id ON conversations (booking_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_booking_id ON conversations (booking_id) WHERE booking_id IS NOT NULL;
 
 -- Participation d'un utilisateur à une conversation + état de lecture (last_read_at pilote les non-lus).
 CREATE TABLE IF NOT EXISTS conversation_participants (
