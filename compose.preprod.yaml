@@ -1,10 +1,15 @@
-# Pre-prod stack: Postgres (loads init.sql on first init) + Redis + the API image.
+# Pre-prod stack: Postgres (loads init.sql on first init) + Redis + RabbitMQ +
+# the API image + the async image worker + Caddy.
 # Run with:
 #   docker compose --env-file .env.preprod -f compose.preprod.yaml up --build
 #
 # --env-file .env.preprod feeds ${...} interpolation below AND the same file is
 # injected into the containers via `env_file:` — single source of truth.
 # The dev stack in compose.yaml is left untouched.
+#
+# Extra .env.preprod keys required by the image pipeline:
+#   RABBITMQ_USER / RABBITMQ_PASSWORD  (broker creds; default kara/kara if unset)
+#   S3_ACCESS_KEY / S3_SECRET_KEY      (GCS HMAC keys the worker uses over the S3 API)
 
 services:
   postgres:
@@ -65,6 +70,8 @@ services:
         condition: service_healthy          # waits until Postgres is ready AND initialised
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     # Secrets (JWT_*, MAIL_*, STRIPE_*, FIREBASE_*, GCS_*, INVOICE_*, ...) come from the env file.
     env_file: .env.preprod
     # Explicit overrides win over env_file: pin the profile and the in-network service hosts.
@@ -74,10 +81,61 @@ services:
       POSTGRES_PORT: '5432'
       REDIS_HOST: redis
       REDIS_PORT: '6379'
+      # In prod the RabbitConfig (@Profile("!test")) requires a reachable broker.
+      RABBITMQ_URL: 'amqp://${RABBITMQ_USER:-kara}:${RABBITMQ_PASSWORD:-kara}@rabbitmq:5672/%2f'
     ports:
       # Kept for the local health check; the firewall blocks 8080 externally.
       # External traffic now reaches the API through Caddy (TLS) on 443.
       - '${API_PORT:-8080}:8080'            # host API_PORT -> container 8080
+
+  rabbitmq:
+    image: 'rabbitmq:4-management'           # matches the dev stack (compose.yaml)
+    container_name: kara-rabbitmq-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    # Dedicated creds (a non-guest user can authenticate from other containers,
+    # unlike the loopback-only default `guest`). Defaults keep it runnable as-is.
+    environment:
+      RABBITMQ_DEFAULT_USER: '${RABBITMQ_USER:-kara}'
+      RABBITMQ_DEFAULT_PASS: '${RABBITMQ_PASSWORD:-kara}'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - '127.0.0.1:15672:15672'             # management UI, localhost-only; AMQP 5672 stays internal
+
+  image-worker:
+    # Registry image (built + pushed like the API); `build` lets `up --build`
+    # produce it locally until CI publishes the tag.
+    image: europe-west9-docker.pkg.dev/karapi-ee1cd/kara-images/kara-image-worker:0.0.1
+    build:
+      context: ../kara-image-worker
+    container_name: kara-image-worker-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    # S3 HMAC secrets (S3_ACCESS_KEY / S3_SECRET_KEY) come from the env file.
+    env_file: .env.preprod
+    # Stable worker config + in-network broker host (secrets stay in the env file).
+    environment:
+      RABBITMQ_URL: 'amqp://${RABBITMQ_USER:-kara}:${RABBITMQ_PASSWORD:-kara}@rabbitmq:5672/%2f'
+      QUEUE_JOBS: image-jobs
+      QUEUE_RESULTS: image-results
+      PREFETCH_COUNT: '8'
+      MAX_CONCURRENCY: '8'
+      S3_ENDPOINT: 'https://storage.googleapis.com'
+      S3_REGION: auto
+      MAX_IMAGE_BYTES: '5242880'
+      MAX_DIMENSION: '8000'
+      RETRY_MAX_ATTEMPTS: '5'
+      RETRY_BASE_MS: '200'
+      METRICS_PORT: '9100'                   # scraped in-network on kara_net; no host port
+      RUST_LOG: info
 
   caddy:
     image: 'caddy:2'

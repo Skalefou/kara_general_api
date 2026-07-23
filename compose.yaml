@@ -29,6 +29,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  image-worker:
+    build:
+      context: ../kara-image-worker
+    container_name: kara-image-worker
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    # Secrets S3 (clés HMAC GCS) + limites/retry viennent du .env du worker.
+    env_file:
+      - ../kara-image-worker/.env
+    # À l'intérieur du réseau compose, le broker est joignable par son nom de
+    # service `rabbitmq` (le localhost du .env ne vaut que hors conteneur).
+    environment:
+      RABBITMQ_URL: 'amqp://guest:guest@rabbitmq:5672/%2f'
+    ports:
+      - '9100:9100'
 
 volumes:
   postgres_data:
