@@ -31,6 +31,7 @@ import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoUploadResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
@@ -102,8 +103,8 @@ class UserController(
             )
 
         return when (val result = updateProfilePhotoUseCase.updatePhoto(command)) {
-            is UpdateProfilePhotoResult.Success ->
-                ResponseEntity.ok(ProfilePhotoResponse(result.photoUrl))
+            is UpdateProfilePhotoResult.Accepted ->
+                ResponseEntity.status(HttpStatus.ACCEPTED).body(ProfilePhotoUploadResponse(imageId = result.imageId))
 
             UpdateProfilePhotoResult.UserNotFound ->
                 userNotFound()
@@ -119,7 +120,17 @@ class UserController(
     override fun getProfilePhoto(authentication: Authentication): ResponseEntity<Any> =
         when (val result = getProfilePhotoUseCase.getPhotoUrl(UserId(UUID.fromString(authentication.name)))) {
             is GetProfilePhotoResult.Success ->
-                ResponseEntity.ok(ProfilePhotoResponse(result.photoUrl))
+                ResponseEntity.ok(
+                    ProfilePhotoResponse(
+                        status = result.status.name,
+                        variants =
+                            if (result.thumbnailUrl != null && result.fullUrl != null) {
+                                mapOf("thumbnail" to result.thumbnailUrl, "full" to result.fullUrl)
+                            } else {
+                                null
+                            },
+                    ),
+                )
 
             GetProfilePhotoResult.UserNotFound ->
                 userNotFound()

@@ -16,8 +16,17 @@ class RoomImageEntity(
     var id: UUID = UUID.randomUUID(),
     @Column(name = "room_id", nullable = false, columnDefinition = "uuid")
     var roomId: UUID,
+    // Identité de l'image partagée avec le worker (préfixe de clé des variantes) et cible de la FK des variantes.
+    @Column(name = "image_id", nullable = false, unique = true, columnDefinition = "uuid")
+    var imageId: UUID = UUID.randomUUID(),
+    // Clé de l'ORIGINAL privé (`rooms/{roomId}/originals/{imageId}.{ext}`).
     @Column(name = "object_key", nullable = false, columnDefinition = "varchar(512)")
     var objectKey: String,
+    // PROCESSING | READY | FAILED
+    @Column(nullable = false, columnDefinition = "varchar(20) default 'PROCESSING'")
+    var status: String = "PROCESSING",
+    @Column(name = "error_code", columnDefinition = "varchar(50)")
+    var errorCode: String? = null,
     @Column(nullable = false, columnDefinition = "int")
     var position: Int = 0,
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")

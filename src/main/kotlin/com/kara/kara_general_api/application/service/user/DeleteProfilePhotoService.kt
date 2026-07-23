@@ -18,9 +18,11 @@ class DeleteProfilePhotoService(
     @Transactional
     override fun deletePhoto(userId: UserId): DeleteProfilePhotoResult {
         val user = userRepository.findById(userId) ?: return DeleteProfilePhotoResult.UserNotFound
-        user.photoKey?.let { key ->
-            userRepository.updatePhotoKey(user.id, null)
-            imageStorage.delete(ImageVisibility.PRIVATE, key)
+        val keys = listOfNotNull(user.photoKey, user.photoThumbnailKey, user.photoFullKey)
+        if (keys.isNotEmpty()) {
+            userRepository.clearPhoto(user.id)
+            // Original et variantes de profil vivent tous dans le bucket privé.
+            keys.forEach { imageStorage.delete(ImageVisibility.PRIVATE, it) }
         }
         return DeleteProfilePhotoResult.Success
     }

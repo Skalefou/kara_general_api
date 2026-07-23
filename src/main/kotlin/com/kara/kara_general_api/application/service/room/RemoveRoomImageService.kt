@@ -21,7 +21,9 @@ class RemoveRoomImageService(
         val image = room.images.find { it.id == command.imageId } ?: return RemoveRoomImageResult.ImageNotFound
 
         roomRepository.removeImage(room.id, image.id)
-        imageStorage.delete(ImageVisibility.PUBLIC, image.objectKey)
+        // L'original est dans le bucket privé ; les variantes affichables dans le bucket public.
+        imageStorage.delete(ImageVisibility.PRIVATE, image.objectKey)
+        image.variants.forEach { imageStorage.delete(ImageVisibility.PUBLIC, it.objectKey) }
 
         return RemoveRoomImageResult.Success
     }

@@ -22,7 +22,14 @@ data class User(
     val deactivatedAt: Instant? = null,
     val mustChangePassword: Boolean = false,
     val tempPasswordExpiresAt: Instant? = null,
+    /** Clé de l'**original privé** de la photo de profil (`profiles/{userId}/originals/...`), null si absente. */
     val photoKey: String? = null,
+    /** Statut de traitement asynchrone de la photo ; null tant qu'aucune photo n'a été téléversée. */
+    val photoStatus: PhotoStatus? = null,
+    /** Clé de la variante `thumbnail` (bucket privé), renseignée quand [photoStatus] == READY. */
+    val photoThumbnailKey: String? = null,
+    /** Clé de la variante `full` (bucket privé), renseignée quand [photoStatus] == READY. */
+    val photoFullKey: String? = null,
     val stripeCustomerId: String? = null,
     val fcmToken: String? = null,
 ) {

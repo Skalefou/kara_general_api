@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.user
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.CreateServerAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.DeleteAccountRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.ProfilePhotoUploadResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UpdateProfileRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
@@ -92,16 +93,18 @@ interface UserApi {
 
     @Operation(
         summary = "Téléverser sa photo de profil",
-        description = "Image privée (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max). Accessible uniquement via une URL signée " +
-            "courte durée, retournée dans la réponse.",
+        description = "Image privée (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max). L'original est stocké dans le " +
+            "bucket privé puis redimensionné en variantes (thumbnail, full) par un worker externe, de façon " +
+            "asynchrone. La réponse est immédiate (202, statut PROCESSING) ; les URL signées par variante " +
+            "apparaissent une fois la photo READY (voir GET /me/photo).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
         value = [
             ApiResponse(
-                responseCode = "200",
-                description = "Photo enregistrée ; URL signée retournée",
-                content = [Content(schema = Schema(implementation = ProfilePhotoResponse::class))],
+                responseCode = "202",
+                description = "Original accepté ; génération des variantes lancée (statut PROCESSING)",
+                content = [Content(schema = Schema(implementation = ProfilePhotoUploadResponse::class))],
             ),
             ApiResponse(
                 responseCode = "413",

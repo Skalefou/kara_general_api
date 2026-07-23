@@ -16,7 +16,8 @@ import java.time.Instant
 private const val USER_COLUMNS =
     "id, email, password_hash, first_name, last_name, phone_number, birth_date, role, " +
         "firebase_uid, created_at, email_verified, deleted_at, deactivated_at, " +
-        "must_change_password, temp_password_expires_at, photo_object_key, stripe_customer_id, fcm_token"
+        "must_change_password, temp_password_expires_at, photo_object_key, photo_status, " +
+        "photo_thumbnail_key, photo_full_key, stripe_customer_id, fcm_token"
 
 @Component
 class UserRepositoryAdapter(
@@ -151,14 +152,59 @@ class UserRepositoryAdapter(
         jdbc.update(sql, mapOf("id" to id.value))
     }
 
-    override fun updatePhotoKey(id: UserId, photoKey: String?) {
-        val sql = "UPDATE users SET photo_object_key = :photoKey WHERE id = :id AND deleted_at IS NULL"
+    override fun markPhotoProcessing(id: UserId, originalKey: String) {
+        // Nouvelle photo : on efface les variantes de l'ancienne le temps du retraitement asynchrone.
+        val sql =
+            """
+            UPDATE users SET
+                photo_object_key    = :originalKey,
+                photo_status        = 'PROCESSING',
+                photo_thumbnail_key = NULL,
+                photo_full_key      = NULL
+            WHERE id = :id AND deleted_at IS NULL
+            """.trimIndent()
         jdbc.update(
             sql,
             MapSqlParameterSource()
                 .addValue("id", id.value)
-                .addValue("photoKey", photoKey),
+                .addValue("originalKey", originalKey),
         )
+    }
+
+    override fun markPhotoReady(id: UserId, thumbnailKey: String, fullKey: String) {
+        val sql =
+            """
+            UPDATE users SET
+                photo_status        = 'READY',
+                photo_thumbnail_key = :thumbnailKey,
+                photo_full_key      = :fullKey
+            WHERE id = :id AND deleted_at IS NULL
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("thumbnailKey", thumbnailKey)
+                .addValue("fullKey", fullKey),
+        )
+    }
+
+    override fun markPhotoFailed(id: UserId) {
+        val sql = "UPDATE users SET photo_status = 'FAILED' WHERE id = :id AND deleted_at IS NULL"
+        jdbc.update(sql, mapOf("id" to id.value))
+    }
+
+    override fun clearPhoto(id: UserId) {
+        val sql =
+            """
+            UPDATE users SET
+                photo_object_key    = NULL,
+                photo_status        = NULL,
+                photo_thumbnail_key = NULL,
+                photo_full_key      = NULL
+            WHERE id = :id AND deleted_at IS NULL
+            """.trimIndent()
+        jdbc.update(sql, mapOf("id" to id.value))
     }
 
     override fun updatePassword(id: UserId, hashedPassword: HashedPassword) {
@@ -226,7 +272,10 @@ class UserRepositoryAdapter(
                 firebase_uid     = :anonymizedFirebaseUid,
                 deleted_at       = NOW(),
                 email_verified   = false,
-                photo_object_key = NULL,
+                photo_object_key    = NULL,
+                photo_status        = NULL,
+                photo_thumbnail_key = NULL,
+                photo_full_key      = NULL,
                 stripe_customer_id = NULL
             WHERE id = :id
             """.trimIndent()

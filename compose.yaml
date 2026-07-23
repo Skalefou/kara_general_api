@@ -17,6 +17,18 @@ services:
     container_name: kara-redis
     ports:
       - '6379:6379'
+  rabbitmq:
+    image: 'rabbitmq:4-management'
+    restart: 'no'
+    container_name: kara-rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

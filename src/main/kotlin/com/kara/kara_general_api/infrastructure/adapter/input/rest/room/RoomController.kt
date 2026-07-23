@@ -25,7 +25,7 @@ import com.kara.kara_general_api.domain.port.input.room.UpdateRoomResult
 import com.kara.kara_general_api.domain.port.input.room.UpdateRoomUseCase
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.CreateRoomRequest
-import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomImageResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomImageUploadResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.UpdateRoomRequest
@@ -143,9 +143,9 @@ class RoomController(
             )
 
         return when (val result = addRoomImageUseCase.addImage(command)) {
-            is AddRoomImageResult.Success ->
-                ResponseEntity.status(HttpStatus.CREATED).body(
-                    RoomImageResponse(id = result.image.id.value, url = result.url),
+            is AddRoomImageResult.Accepted ->
+                ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                    RoomImageUploadResponse(imageId = result.imageId),
                 )
 
             AddRoomImageResult.RoomNotFound -> roomNotFound()

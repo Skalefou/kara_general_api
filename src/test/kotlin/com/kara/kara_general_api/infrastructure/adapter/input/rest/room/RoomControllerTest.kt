@@ -4,8 +4,6 @@ import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomId
-import com.kara.kara_general_api.domain.model.room.RoomImage
-import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
@@ -454,14 +452,14 @@ class RoomControllerTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `should return 201 with the public url when admin adds a room image`() {
-        val image = RoomImage(RoomImageId(UUID.randomUUID()), "rooms/$ROOM_ID/img.jpg", 0)
-        every { addRoomImageUseCase.addImage(any()) } returns
-            AddRoomImageResult.Success(image, "https://cdn.example/rooms/$ROOM_ID/img.jpg")
+    fun `should return 202 with the image id when admin adds a room image`() {
+        val imageId = UUID.randomUUID()
+        every { addRoomImageUseCase.addImage(any()) } returns AddRoomImageResult.Accepted(imageId)
 
         mockMvc.perform(multipart("/api/v1/rooms/$ROOM_ID/images").file(imageFile()))
-            .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.url").value("https://cdn.example/rooms/$ROOM_ID/img.jpg"))
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.imageId").value(imageId.toString()))
+            .andExpect(jsonPath("$.status").value("PROCESSING"))
     }
 
     @Test

@@ -1,13 +1,19 @@
 package com.kara.kara_general_api.application.service.room
 
+import com.kara.kara_general_api.domain.model.image.ImageJobCorrelation
+import com.kara.kara_general_api.domain.model.image.ImageProcessingJob
+import com.kara.kara_general_api.domain.model.image.ImageProcessingTarget
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
 import com.kara.kara_general_api.domain.model.room.RoomImageId
+import com.kara.kara_general_api.domain.model.room.RoomImageStatus
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageCommand
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
+import com.kara.kara_general_api.domain.port.output.ImageJobCorrelationRepository
+import com.kara.kara_general_api.domain.port.output.ImageProcessingPort
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.ImageVisibility
 import com.kara.kara_general_api.domain.port.output.RoomRepository
@@ -27,7 +33,9 @@ class AddRoomImageServiceTest {
 
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val imageStorage = mockk<ImageStoragePort>(relaxed = true)
-    private val sut = AddRoomImageService(roomRepository, imageStorage)
+    private val imageProcessing = mockk<ImageProcessingPort>(relaxed = true)
+    private val correlationRepository = mockk<ImageJobCorrelationRepository>(relaxed = true)
+    private val sut = AddRoomImageService(roomRepository, imageStorage, imageProcessing, correlationRepository)
 
     private val roomId = RoomId(UUID.randomUUID())
     private val room =
@@ -64,20 +72,35 @@ class AddRoomImageServiceTest {
     }
 
     @Test
-    fun `should upload to the public bucket and persist the image at the next position`() {
-        val existing = RoomImage(RoomImageId.generate(), "rooms/x.jpg", 0)
+    fun `should upload the private original, persist PROCESSING and enqueue a processing job`() {
+        val existing = RoomImage(RoomImageId.generate(), "rooms/x/originals/y.jpg", 0)
         every { roomRepository.findById(roomId) } returns room.copy(images = listOf(existing))
         val savedImage = slot<RoomImage>()
         every { roomRepository.addImage(any(), capture(savedImage)) } answers { savedImage.captured }
-        every { imageStorage.publicUrl(any()) } returns "https://cdn.example/rooms/new.jpg"
+        val correlation = slot<ImageJobCorrelation>()
+        every { correlationRepository.save(capture(correlation)) } returns Unit
+        val job = slot<ImageProcessingJob>()
+        every { imageProcessing.enqueue(capture(job)) } returns Unit
 
         val result = sut.addImage(AddRoomImageCommand(roomId, byteArrayOf(1, 2, 3), "image/png"))
 
-        val success = assertIs<AddRoomImageResult.Success>(result)
-        assertEquals("https://cdn.example/rooms/new.jpg", success.url)
+        val accepted = assertIs<AddRoomImageResult.Accepted>(result)
+        // Persistance : original privé, statut PROCESSING, position suivante.
+        assertEquals(RoomImageStatus.PROCESSING, savedImage.captured.status)
         assertEquals(1, savedImage.captured.position)
-        assertTrue(savedImage.captured.objectKey.startsWith("rooms/${roomId.value}/"))
+        assertEquals(accepted.imageId, savedImage.captured.id.value)
+        assertTrue(savedImage.captured.objectKey.startsWith("rooms/${roomId.value}/originals/"))
         assertTrue(savedImage.captured.objectKey.endsWith(".png"))
-        verify { imageStorage.upload(ImageVisibility.PUBLIC, savedImage.captured.objectKey, any(), "image/png") }
+        verify {
+            imageStorage.upload(ImageVisibility.PRIVATE, savedImage.captured.objectKey, any(), "image/png")
+        }
+        // Corrélation + job cohérents (même jobId, cible ROOM, source = original privé).
+        assertEquals(ImageProcessingTarget.ROOM, correlation.captured.target)
+        assertEquals(roomId.value, correlation.captured.ownerId)
+        assertEquals(accepted.imageId, correlation.captured.imageId)
+        assertEquals(correlation.captured.jobId, job.captured.jobId)
+        assertEquals(ImageProcessingTarget.ROOM, job.captured.target)
+        assertEquals(savedImage.captured.objectKey, job.captured.sourceKey)
+        assertEquals("image/png", job.captured.contentType)
     }
 }

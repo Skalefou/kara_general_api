@@ -1,10 +1,19 @@
 package com.kara.kara_general_api.domain.port.input.user
 
+import com.kara.kara_general_api.domain.model.user.PhotoStatus
 import com.kara.kara_general_api.domain.model.user.UserId
 
 sealed interface GetProfilePhotoResult {
-    /** [photoUrl] : URL signée courte durée vers la photo de profil. */
-    data class Success(val photoUrl: String) : GetProfilePhotoResult
+    /**
+     * [status] reflète l'avancement du traitement. Les URL signées par variante ([thumbnailUrl], [fullUrl])
+     * ne sont renseignées que lorsque [status] == READY ; sinon elles sont nulles (le client affiche un état
+     * de chargement ou d'échec).
+     */
+    data class Success(
+        val status: PhotoStatus,
+        val thumbnailUrl: String?,
+        val fullUrl: String?,
+    ) : GetProfilePhotoResult
 
     data object UserNotFound : GetProfilePhotoResult
 
