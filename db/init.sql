@@ -33,7 +33,11 @@ CREATE TABLE IF NOT EXISTS users (
     deactivated_at           TIMESTAMPTZ,
     must_change_password     BOOLEAN      NOT NULL DEFAULT FALSE,
     temp_password_expires_at TIMESTAMPTZ,
-    photo_object_key         VARCHAR(512),
+    -- Photo de profil : original PRIVÉ + variantes générées de façon asynchrone par le worker (bucket privé).
+    photo_object_key         VARCHAR(512),              -- clé de l'original privé
+    photo_status             VARCHAR(20),               -- PROCESSING | READY | FAILED (NULL si aucune photo)
+    photo_thumbnail_key      VARCHAR(512),              -- clé variante thumbnail (renseignée si READY)
+    photo_full_key           VARCHAR(512),              -- clé variante full (renseignée si READY)
     -- Identifiant client Stripe (créé paresseusement au 1er paiement). Jamais logué.
     stripe_customer_id       VARCHAR(255),
     -- Token d'appareil FCM (notifications push). Nullable tant qu'aucun appareil n'est enregistré.
@@ -66,11 +70,43 @@ CREATE TABLE IF NOT EXISTS rooms (
 -- Filtrage viewport (bbox) : sert le BETWEEN sur latitude/longitude (SELECT et COUNT).
 CREATE INDEX IF NOT EXISTS idx_rooms_lat_lng ON rooms (latitude, longitude);
 
+-- Images de salle : traitées de façon asynchrone par le worker externe. object_key = clé de l'ORIGINAL PRIVÉ.
+-- image_id est l'identité partagée avec le worker (préfixe de clé des variantes) et la cible de la FK des
+-- variantes. status ∈ {PROCESSING, READY, FAILED} ; error_code renseigné en cas d'échec.
 CREATE TABLE IF NOT EXISTS room_images (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    image_id   UUID NOT NULL UNIQUE,
     object_key VARCHAR(512) NOT NULL,
+    status     VARCHAR(20)  NOT NULL DEFAULT 'PROCESSING',
+    error_code VARCHAR(50),
     position   INT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Variantes publiques (bucket public) d'une image de salle, écrites au retour du worker. La FK cible
+-- room_images.image_id ; ON DELETE CASCADE supprime les variantes avec l'image.
+CREATE TABLE IF NOT EXISTS room_image_variants (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    image_id     UUID NOT NULL REFERENCES room_images(image_id) ON DELETE CASCADE,
+    name         VARCHAR(50)  NOT NULL,
+    object_key   VARCHAR(512) NOT NULL,
+    width        INT          NOT NULL,
+    height       INT          NOT NULL,
+    size_bytes   BIGINT       NOT NULL,
+    content_type VARCHAR(100) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_image_variants_image_id ON room_image_variants (image_id);
+
+-- Corrélation jobId → entité à mettre à jour au retour du worker (salle ou profil). Écrite lors de l'enqueue,
+-- lue à la réception sur image-results. Le jobId du contrat étant un UUID opaque, on ne peut pas y encoder
+-- le type : cette table porte la correspondance.
+CREATE TABLE IF NOT EXISTS image_jobs (
+    job_id     UUID PRIMARY KEY,
+    target     VARCHAR(20) NOT NULL,   -- ROOM | PROFILE
+    owner_id   UUID        NOT NULL,   -- roomId (ROOM) ou userId (PROFILE)
+    image_id   UUID        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

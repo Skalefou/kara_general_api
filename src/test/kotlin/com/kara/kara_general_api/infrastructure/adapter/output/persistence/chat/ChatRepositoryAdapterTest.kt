@@ -9,6 +9,7 @@ import com.kara.kara_general_api.domain.model.chat.MessageReaction
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.NotificationService
+import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -39,6 +40,9 @@ class ChatRepositoryAdapterTest {
 
     @MockkBean
     lateinit var imageStoragePort: ImageStoragePort
+
+    @MockkBean
+    lateinit var paymentGateway: PaymentGateway
 
     @Autowired
     private lateinit var adapter: ChatRepositoryAdapter

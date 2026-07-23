@@ -5,7 +5,9 @@ import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
 import com.kara.kara_general_api.domain.model.room.RoomImageId
+import com.kara.kara_general_api.domain.model.room.RoomImageVariant
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
+import java.util.UUID
 
 interface RoomRepository {
     fun save(room: Room): Room
@@ -30,9 +32,18 @@ interface RoomRepository {
 
     fun deleteById(id: RoomId): Boolean
 
-    /** Persiste une image rattachée à une salle. */
+    /** Persiste une image (statut PROCESSING) rattachée à une salle. */
     fun addImage(roomId: RoomId, image: RoomImage): RoomImage
 
     /** Supprime une image d'une salle. Retourne true si une ligne a été supprimée. */
     fun removeImage(roomId: RoomId, imageId: RoomImageId): Boolean
+
+    /**
+     * Marque l'image [imageId] READY et (ré)écrit ses variantes. Idempotent : un rejeu écrase les mêmes
+     * variantes. No-op silencieux si l'image n'existe plus.
+     */
+    fun markImageReady(imageId: UUID, variants: List<RoomImageVariant>)
+
+    /** Marque l'image [imageId] FAILED avec le code d'erreur du worker. No-op si l'image n'existe plus. */
+    fun markImageFailed(imageId: UUID, errorCode: String)
 }

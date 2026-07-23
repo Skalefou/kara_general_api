@@ -179,8 +179,9 @@ class AuthControllerTest {
 
     @Test
     fun `should return signed photoUrl when the user has a profile photo`() {
-        val userWithPhoto = user.withPhotoKey("users/abc/photo.jpg")
-        every { imageStorage.signedUrl("users/abc/photo.jpg", any()) } returns "https://signed.example/photo"
+        // La photo est exposée via la variante `full` traitée (READY), pas via l'original privé.
+        val userWithPhoto = user.copy(photoFullKey = "users/abc/full.webp")
+        every { imageStorage.signedUrl("users/abc/full.webp", any()) } returns "https://signed.example/photo"
         every { loginUseCase.login(any()) } returns
             LoginResult.Success(
                 userWithPhoto,

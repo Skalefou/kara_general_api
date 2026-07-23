@@ -44,6 +44,13 @@ class UserEntity(
     var tempPasswordExpiresAt: Instant? = null,
     @Column(name = "photo_object_key", columnDefinition = "varchar(512)")
     var photoObjectKey: String? = null,
+    // PROCESSING | READY | FAILED ; null tant qu'aucune photo n'a été téléversée.
+    @Column(name = "photo_status", columnDefinition = "varchar(20)")
+    var photoStatus: String? = null,
+    @Column(name = "photo_thumbnail_key", columnDefinition = "varchar(512)")
+    var photoThumbnailKey: String? = null,
+    @Column(name = "photo_full_key", columnDefinition = "varchar(512)")
+    var photoFullKey: String? = null,
     @Column(name = "stripe_customer_id", columnDefinition = "varchar(255)")
     var stripeCustomerId: String? = null,
     @Column(name = "fcm_token", columnDefinition = "varchar(512)")

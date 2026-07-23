@@ -26,8 +26,20 @@ interface UserRepository {
 
     fun markEmailVerified(id: UserId)
 
-    /** Met à jour la clé de la photo de profil (null pour retirer la photo). */
-    fun updatePhotoKey(id: UserId, photoKey: String?)
+    /**
+     * Enregistre l'original privé [originalKey] et bascule la photo en PROCESSING, en effaçant les clés de
+     * variantes précédentes (une nouvelle photo invalide l'ancienne le temps du retraitement).
+     */
+    fun markPhotoProcessing(id: UserId, originalKey: String)
+
+    /** Marque la photo READY et enregistre les clés de variantes (idempotent : rejeu = écrasement). */
+    fun markPhotoReady(id: UserId, thumbnailKey: String, fullKey: String)
+
+    /** Marque la photo FAILED (traitement worker en échec). */
+    fun markPhotoFailed(id: UserId)
+
+    /** Efface toute trace de photo de profil (original + variantes + statut). */
+    fun clearPhoto(id: UserId)
 
     fun anonymize(id: UserId)
 

@@ -92,7 +92,9 @@ services:
     networks: [kara_net]
     environment:
       # Defaults to the pre-prod Postgres credentials; override with POSTGRES_EXPORTER_DSN if set.
-      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable}
+      DATA_SOURCE_URI: "postgres:5432/kara-db?sslmode=disable"   # host:port/db, PAS de scheme, PAS de creds
+      DATA_SOURCE_USER: "${POSTGRES_USER}"
+      DATA_SOURCE_PASS: "${POSTGRES_PASSWORD}"
       PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
     expose:
       - "9187"

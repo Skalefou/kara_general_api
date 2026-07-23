@@ -1,7 +1,7 @@
 package com.kara.kara_general_api.domain.port.input.room
 
 import com.kara.kara_general_api.domain.model.room.RoomId
-import com.kara.kara_general_api.domain.model.room.RoomImage
+import java.util.UUID
 
 data class AddRoomImageCommand(
     val roomId: RoomId,
@@ -25,8 +25,11 @@ data class AddRoomImageCommand(
 }
 
 sealed interface AddRoomImageResult {
-    /** [url] : URL publique (CDN) de l'image ajoutée. */
-    data class Success(val image: RoomImage, val url: String) : AddRoomImageResult
+    /**
+     * L'original a été accepté et le traitement des variantes est lancé de façon asynchrone.
+     * [imageId] permet au client de suivre le statut ; l'image est en PROCESSING jusqu'au retour du worker.
+     */
+    data class Accepted(val imageId: UUID) : AddRoomImageResult
 
     data object RoomNotFound : AddRoomImageResult
 

@@ -5,6 +5,8 @@ import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
 import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomImageId
+import com.kara.kara_general_api.domain.model.room.RoomImageStatus
+import com.kara.kara_general_api.domain.model.room.RoomImageVariant
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import org.springframework.jdbc.core.RowMapper
@@ -20,13 +22,17 @@ class RoomRepositoryAdapter(
     private val rowMapper: RoomRowMapper,
 ) : RoomRepository {
 
-    private val imageRowMapper =
+    private val variantRowMapper =
         RowMapper { rs, _ ->
-            RoomImage(
-                id = RoomImageId(rs.getObject("id", UUID::class.java)),
-                objectKey = rs.getString("object_key"),
-                position = rs.getInt("position"),
-            )
+            rs.getObject("image_id", UUID::class.java) to
+                RoomImageVariant(
+                    name = rs.getString("name"),
+                    objectKey = rs.getString("object_key"),
+                    width = rs.getInt("width"),
+                    height = rs.getInt("height"),
+                    sizeBytes = rs.getLong("size_bytes"),
+                    contentType = rs.getString("content_type"),
+                )
         }
 
     override fun save(room: Room): Room {
@@ -200,23 +206,28 @@ class RoomRepositoryAdapter(
     }
 
     override fun addImage(roomId: RoomId, image: RoomImage): RoomImage {
+        // image_id = id : identité unique de l'image, reprise dans les clés de variantes et corrélée au worker.
         val sql =
             """
-            INSERT INTO room_images (id, room_id, object_key, position, created_at)
-            VALUES (:id, :roomId, :objectKey, :position, NOW())
+            INSERT INTO room_images (id, room_id, image_id, object_key, status, error_code, position, created_at)
+            VALUES (:id, :roomId, :imageId, :objectKey, :status, :errorCode, :position, NOW())
             """.trimIndent()
         jdbc.update(
             sql,
             MapSqlParameterSource()
                 .addValue("id", image.id.value)
                 .addValue("roomId", roomId.value)
+                .addValue("imageId", image.id.value)
                 .addValue("objectKey", image.objectKey)
+                .addValue("status", image.status.name)
+                .addValue("errorCode", image.errorCode)
                 .addValue("position", image.position),
         )
         return image
     }
 
     override fun removeImage(roomId: RoomId, imageId: RoomImageId): Boolean {
+        // Les variantes sont supprimées par la FK ON DELETE CASCADE (image_id).
         val sql = "DELETE FROM room_images WHERE id = :id AND room_id = :roomId"
         val rows =
             jdbc.update(
@@ -226,34 +237,99 @@ class RoomRepositoryAdapter(
         return rows > 0
     }
 
+    override fun markImageReady(imageId: UUID, variants: List<RoomImageVariant>) {
+        val updated =
+            jdbc.update(
+                "UPDATE room_images SET status = 'READY', error_code = NULL WHERE image_id = :imageId",
+                mapOf("imageId" to imageId),
+            )
+        if (updated == 0) return // image supprimée entre-temps : rien à faire (idempotent)
+        // Rejeu at-least-once : on réécrit l'ensemble des variantes (clés déterministes → même contenu).
+        jdbc.update("DELETE FROM room_image_variants WHERE image_id = :imageId", mapOf("imageId" to imageId))
+        val sql =
+            """
+            INSERT INTO room_image_variants (id, image_id, name, object_key, width, height, size_bytes, content_type)
+            VALUES (:id, :imageId, :name, :objectKey, :width, :height, :sizeBytes, :contentType)
+            """.trimIndent()
+        variants.forEach { variant ->
+            jdbc.update(
+                sql,
+                MapSqlParameterSource()
+                    .addValue("id", UUID.randomUUID())
+                    .addValue("imageId", imageId)
+                    .addValue("name", variant.name)
+                    .addValue("objectKey", variant.objectKey)
+                    .addValue("width", variant.width)
+                    .addValue("height", variant.height)
+                    .addValue("sizeBytes", variant.sizeBytes)
+                    .addValue("contentType", variant.contentType),
+            )
+        }
+    }
+
+    override fun markImageFailed(imageId: UUID, errorCode: String) {
+        jdbc.update(
+            "UPDATE room_images SET status = 'FAILED', error_code = :errorCode WHERE image_id = :imageId",
+            mapOf("imageId" to imageId, "errorCode" to errorCode),
+        )
+    }
+
     private fun findImages(roomId: RoomId): List<RoomImage> {
         val sql =
             """
-            SELECT id, object_key, position
+            SELECT id, image_id, object_key, position, status, error_code
             FROM room_images
             WHERE room_id = :roomId
             ORDER BY position ASC
             """.trimIndent()
-        return jdbc.query(sql, mapOf("roomId" to roomId.value), imageRowMapper)
+        val images =
+            jdbc.query(sql, mapOf("roomId" to roomId.value)) { rs, _ -> mapImageRow(rs) }
+        return attachVariants(images)
     }
 
     private fun findImagesByRoomIds(roomIds: List<UUID>): Map<UUID, List<RoomImage>> {
         val sql =
             """
-            SELECT id, room_id, object_key, position
+            SELECT id, room_id, image_id, object_key, position, status, error_code
             FROM room_images
             WHERE room_id IN (:roomIds)
             ORDER BY position ASC
             """.trimIndent()
         val rows =
             jdbc.query(sql, mapOf("roomIds" to roomIds)) { rs, _ ->
-                rs.getObject("room_id", UUID::class.java) to
-                    RoomImage(
-                        id = RoomImageId(rs.getObject("id", UUID::class.java)),
-                        objectKey = rs.getString("object_key"),
-                        position = rs.getInt("position"),
-                    )
+                rs.getObject("room_id", UUID::class.java) to mapImageRow(rs)
             }
-        return rows.groupBy({ it.first }, { it.second })
+        val variantsByImage = loadVariants(rows.map { it.second.id.value })
+        return rows
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, images) -> images.map { it.copy(variants = variantsByImage[it.id.value].orEmpty()) } }
+    }
+
+    private fun mapImageRow(rs: java.sql.ResultSet): RoomImage =
+        RoomImage(
+            id = RoomImageId(rs.getObject("image_id", UUID::class.java)),
+            objectKey = rs.getString("object_key"),
+            position = rs.getInt("position"),
+            status = RoomImageStatus.valueOf(rs.getString("status")),
+            errorCode = rs.getString("error_code"),
+        )
+
+    private fun attachVariants(images: List<RoomImage>): List<RoomImage> {
+        if (images.isEmpty()) return images
+        val variantsByImage = loadVariants(images.map { it.id.value })
+        return images.map { it.copy(variants = variantsByImage[it.id.value].orEmpty()) }
+    }
+
+    private fun loadVariants(imageIds: List<UUID>): Map<UUID, List<RoomImageVariant>> {
+        if (imageIds.isEmpty()) return emptyMap()
+        val sql =
+            """
+            SELECT image_id, name, object_key, width, height, size_bytes, content_type
+            FROM room_image_variants
+            WHERE image_id IN (:imageIds)
+            ORDER BY name ASC
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("imageIds" to imageIds), variantRowMapper)
+            .groupBy({ it.first }, { it.second })
     }
 }

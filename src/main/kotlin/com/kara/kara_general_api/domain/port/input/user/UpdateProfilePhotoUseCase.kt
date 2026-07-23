@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.domain.port.input.user
 
 import com.kara.kara_general_api.domain.model.user.UserId
+import java.util.UUID
 
 data class UpdateProfilePhotoCommand(
     val userId: UserId,
@@ -24,8 +25,11 @@ data class UpdateProfilePhotoCommand(
 }
 
 sealed interface UpdateProfilePhotoResult {
-    /** [photoUrl] : URL signée courte durée permettant d'afficher immédiatement la nouvelle photo. */
-    data class Success(val photoUrl: String) : UpdateProfilePhotoResult
+    /**
+     * L'original a été accepté ; les variantes (thumbnail/full) sont générées de façon asynchrone.
+     * La photo reste en PROCESSING jusqu'au retour du worker. [imageId] permet d'en suivre le statut.
+     */
+    data class Accepted(val imageId: UUID) : UpdateProfilePhotoResult
 
     data object UserNotFound : UpdateProfilePhotoResult
 

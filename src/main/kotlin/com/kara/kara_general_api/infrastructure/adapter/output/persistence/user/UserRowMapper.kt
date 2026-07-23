@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.user
 
+import com.kara.kara_general_api.domain.model.user.PhotoStatus
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.UserRole
@@ -31,6 +32,9 @@ class UserRowMapper : RowMapper<User> {
             mustChangePassword = rs.getBoolean("must_change_password"),
             tempPasswordExpiresAt = rs.getTimestamp("temp_password_expires_at")?.toInstant(),
             photoKey = rs.getString("photo_object_key"),
+            photoStatus = rs.getString("photo_status")?.let { PhotoStatus.valueOf(it) },
+            photoThumbnailKey = rs.getString("photo_thumbnail_key"),
+            photoFullKey = rs.getString("photo_full_key"),
             stripeCustomerId = rs.getString("stripe_customer_id"),
             fcmToken = rs.getString("fcm_token"),
         )

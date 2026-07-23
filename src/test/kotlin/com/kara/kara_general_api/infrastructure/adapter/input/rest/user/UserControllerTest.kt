@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.user
 
+import com.kara.kara_general_api.domain.model.user.PhotoStatus
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.UserRole
@@ -278,8 +279,16 @@ class UserControllerTest {
     @WithMockUser(username = USER_ID, roles = ["ADMIN"])
     fun `should expose a signed photo url for accounts that have a photo`() {
         every { listAllAccountsUseCase.listAllAccounts(any()) } returns
-            AccountPage(accounts = listOf(user.copy(photoKey = "profiles/x.jpg")), page = 0, size = 20, totalElements = 1)
-        every { imageStorage.signedUrl("profiles/x.jpg", any()) } returns "https://signed.example/x"
+            AccountPage(
+                accounts =
+                    listOf(
+                        user.copy(photoStatus = PhotoStatus.READY, photoFullKey = "profiles/x/full.webp"),
+                    ),
+                page = 0,
+                size = 20,
+                totalElements = 1,
+            )
+        every { imageStorage.signedUrl("profiles/x/full.webp", any()) } returns "https://signed.example/x"
 
         mockMvc.perform(get("/api/v1/users"))
             .andExpect(status().isOk)
@@ -357,13 +366,14 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = USER_ID)
-    fun `should return 200 with a signed url when a profile photo is uploaded`() {
-        every { updateProfilePhotoUseCase.updatePhoto(any()) } returns
-            UpdateProfilePhotoResult.Success("https://signed.example/photo")
+    fun `should return 202 with the image id when a profile photo upload is accepted`() {
+        val imageId = UUID.randomUUID()
+        every { updateProfilePhotoUseCase.updatePhoto(any()) } returns UpdateProfilePhotoResult.Accepted(imageId)
 
         mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.photoUrl").value("https://signed.example/photo"))
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.imageId").value(imageId.toString()))
+            .andExpect(jsonPath("$.status").value("PROCESSING"))
     }
 
     @Test
@@ -394,13 +404,31 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = USER_ID)
-    fun `should return 200 with the signed url of the profile photo`() {
+    fun `should return 200 with the signed variant urls of a ready profile photo`() {
         every { getProfilePhotoUseCase.getPhotoUrl(any()) } returns
-            GetProfilePhotoResult.Success("https://signed.example/photo")
+            GetProfilePhotoResult.Success(
+                status = PhotoStatus.READY,
+                thumbnailUrl = "https://signed.example/thumb",
+                fullUrl = "https://signed.example/full",
+            )
 
         mockMvc.perform(get("/api/v1/users/me/photo"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.photoUrl").value("https://signed.example/photo"))
+            .andExpect(jsonPath("$.status").value("READY"))
+            .andExpect(jsonPath("$.variants.thumbnail").value("https://signed.example/thumb"))
+            .andExpect(jsonPath("$.variants.full").value("https://signed.example/full"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 200 with only the status while the profile photo is processing`() {
+        every { getProfilePhotoUseCase.getPhotoUrl(any()) } returns
+            GetProfilePhotoResult.Success(status = PhotoStatus.PROCESSING, thumbnailUrl = null, fullUrl = null)
+
+        mockMvc.perform(get("/api/v1/users/me/photo"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("PROCESSING"))
+            .andExpect(jsonPath("$.variants").isEmpty)
     }
 
     @Test

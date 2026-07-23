@@ -1,7 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.CreateRoomRequest
-import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomImageResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomImageUploadResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomListResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.RoomResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.room.dto.UpdateRoomRequest
@@ -167,15 +167,18 @@ interface RoomApi {
 
     @Operation(
         summary = "Ajouter une image à une salle",
-        description = "Réservé aux administrateurs. Image publique (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max) servie par le CDN.",
+        description = "Réservé aux administrateurs. L'original (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max) est " +
+            "stocké dans le bucket privé puis redimensionné en variantes WebP par un worker externe, de façon " +
+            "asynchrone. La réponse est immédiate (202, statut PROCESSING) ; les variantes publiques (CDN) " +
+            "apparaissent une fois l'image READY (voir GET de la salle).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
         value = [
             ApiResponse(
-                responseCode = "201",
-                description = "Image ajoutée ; URL publique retournée",
-                content = [Content(schema = Schema(implementation = RoomImageResponse::class))],
+                responseCode = "202",
+                description = "Original accepté ; traitement des variantes lancé (statut PROCESSING)",
+                content = [Content(schema = Schema(implementation = RoomImageUploadResponse::class))],
             ),
             ApiResponse(
                 responseCode = "404",
