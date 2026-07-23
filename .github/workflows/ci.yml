@@ -42,10 +42,33 @@ jobs:
           path: build/reports/tests
           if-no-files-found: ignore
 
-  # Construit et publie l'image Docker — uniquement sur un tag "v*", après des tests verts.
+  # Lint Kotlin via ktlint en mode STANDALONE (jar officiel épinglé).
+  # Le repo n'a pas de plugin Gradle ktlint/detekt : on n'appelle donc pas ./gradlew ktlintCheck.
+  lint:
+    name: Ktlint
+    runs-on: ubuntu-latest
+    env:
+      KTLINT_VERSION: '1.5.0' # version épinglée — jamais de "latest"/"master"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Téléchargement du jar officiel ktlint pour la version épinglée.
+      - name: Download ktlint
+        run: |
+          curl -sSLf --retry 3 \
+            -o ktlint \
+            "https://github.com/pinterest/ktlint/releases/download/${KTLINT_VERSION}/ktlint"
+          chmod +x ktlint
+
+      # Analyse bloquante : toute violation fait échouer le job.
+      - name: Run ktlint
+        run: ./ktlint --relative "src/**/*.kt"
+
+  # Construit et publie l'image Docker — uniquement sur un tag "v*", après tests + lint verts.
   docker:
     name: Build & Push image
-    needs: test
+    needs: [test, lint]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
