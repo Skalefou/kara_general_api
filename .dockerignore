@@ -1,0 +1,14 @@
+# Keep the Docker build context small and reproducible.
+# The Dockerfile only needs Cargo manifests + src; everything below is noise.
+/target
+**/*.rs.bk
+.git
+.gitignore
+.idea
+.vscode
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
+README.md
