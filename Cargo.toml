@@ -1,0 +1,61 @@
+[package]
+name = "kara-image-worker"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "kara_image_worker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kara-image-worker"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+    "signal",
+    "sync",
+] }
+# AMQP / RabbitMQ
+lapin = "4"
+futures-lite = "2"
+# Image decode / resize / encode
+image = "0.25"
+fast_image_resize = "6"
+webp = "0.3"
+# Object storage (GCS via S3 interop)
+aws-sdk-s3 = "1"
+aws-config = "1"
+# (De)serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Configuration / env
+config = { version = "0.15", default-features = false }
+dotenvy = "0.15"
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.18", features = ["http-listener"] }
+# Errors
+thiserror = "2"
+anyhow = "1"
+# Retry / backoff
+backoff = "0.4"
+# Async trait methods on the domain ports (object-safe for `Arc<dyn Port>`
+# dependency injection at the composition root).
+async-trait = "0.1"
+
+[dev-dependencies]
+testcontainers = "0.27"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
