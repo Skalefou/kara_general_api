@@ -98,6 +98,17 @@ CREATE TABLE IF NOT EXISTS room_services (
 CREATE INDEX IF NOT EXISTS idx_room_services_room_id ON room_services (room_id);
 CREATE INDEX IF NOT EXISTS idx_room_services_service_id ON room_services (service_id);
 
+-- Catalogue générique des produits consommables : liste de référence indépendante de toute salle,
+-- utilisée pour la gestion de stock et la consommation pendant une réservation. Prix unitaire fixe.
+CREATE TABLE IF NOT EXISTS products (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        VARCHAR(255) NOT NULL,
+    description TEXT,
+    price       NUMERIC(10,2) NOT NULL,
+    currency    VARCHAR(10)  NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ============================================================================
 -- Chat (messagerie temps réel) — MVP texte
 -- ============================================================================

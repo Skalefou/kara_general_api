@@ -60,6 +60,12 @@ class SecurityConfig {
                 authorize(HttpMethod.GET, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
+                // Catalogue générique des produits consommables : gestion réservée au back-office (ADMIN)
+                // pour toutes les opérations (création, listing de gestion, modification, suppression).
+                authorize(HttpMethod.POST, "/api/v1/products", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.GET, "/api/v1/products", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.PATCH, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.DELETE, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/me", authenticated)
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))
