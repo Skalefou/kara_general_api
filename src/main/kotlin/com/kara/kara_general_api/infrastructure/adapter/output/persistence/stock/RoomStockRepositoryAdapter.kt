@@ -59,6 +59,19 @@ class RoomStockRepositoryAdapter(
         )
     }
 
+    override fun findQuantity(roomId: RoomId, productId: ProductId): Int? {
+        val sql =
+            """
+            SELECT quantity
+            FROM room_products
+            WHERE room_id = :roomId AND product_id = :productId
+            """.trimIndent()
+        return jdbc.query(
+            sql,
+            mapOf("roomId" to roomId.value, "productId" to productId.value),
+        ) { rs, _ -> rs.getInt("quantity") }.firstOrNull()
+    }
+
     override fun deleteByRoomIdAndProductId(roomId: RoomId, productId: ProductId): Boolean {
         val sql = "DELETE FROM room_products WHERE room_id = :roomId AND product_id = :productId"
         val rows =

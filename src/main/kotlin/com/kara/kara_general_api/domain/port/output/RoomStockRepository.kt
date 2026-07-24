@@ -12,6 +12,12 @@ interface RoomStockRepository {
     /** Insère ou met à jour la quantité d'un produit pour une salle (upsert sur (room_id, product_id)). */
     fun upsert(item: RoomStockItem)
 
+    /**
+     * Quantité disponible d'un produit dans le stock d'une salle, ou `null` si le produit n'y est pas
+     * référencé (jamais mis en stock pour cette salle). Une valeur 0 signifie « référencé mais épuisé ».
+     */
+    fun findQuantity(roomId: RoomId, productId: ProductId): Int?
+
     /** Retire un produit du stock d'une salle. Retourne true si une ligne a été supprimée. */
     fun deleteByRoomIdAndProductId(roomId: RoomId, productId: ProductId): Boolean
 }

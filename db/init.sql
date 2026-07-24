@@ -213,6 +213,24 @@ CREATE TABLE IF NOT EXISTS booking_options (
 CREATE INDEX IF NOT EXISTS idx_booking_options_booking_id ON booking_options (booking_id);
 CREATE INDEX IF NOT EXISTS idx_booking_options_option_id ON booking_options (option_id);
 
+-- Commandes de produits passées pendant une réservation active. Le prix unitaire est figé au tarif du produit
+-- au moment de la commande ; total_price = unit_price × quantity. Le débit/crédit du moyen de paiement est
+-- géré par la brique paiement (hors de cette table). status : PLACED (extensible).
+CREATE TABLE IF NOT EXISTS orders (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id  UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id  UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity    INT           NOT NULL,
+    unit_price  NUMERIC(10,2) NOT NULL,
+    currency    VARCHAR(10)   NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL,
+    status      VARCHAR(30)   NOT NULL,
+    created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_booking_id ON orders (booking_id);
+
 -- Agenda serveurs : affectation d'un serveur à une salle sur un créneau [start_at, end_at). Édité par
 -- l'ADMIN depuis le back-office. Deux créneaux d'un même serveur ne doivent pas se chevaucher (contrôle
 -- applicatif). ON DELETE CASCADE : un serveur ou une salle supprimé purge ses créneaux.

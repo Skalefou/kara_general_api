@@ -59,6 +59,9 @@ class SecurityConfig {
                 // Création de réservation et initiation de paiement : réservées au client authentifié.
                 authorize(HttpMethod.POST, "/api/v1/bookings", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/payments", authenticated)
+                // Commande d'un produit pendant une réservation active : réservée au client authentifié.
+                // L'autorisation propriétaire (réservation appartenant au client) est vérifiée dans le use case.
+                authorize(HttpMethod.POST, "/api/v1/bookings/*/orders", authenticated)
                 // Catalogue global des services : gestion réservée au back-office (ADMIN) pour toutes les
                 // opérations (création, listing de gestion, suppression).
                 authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))

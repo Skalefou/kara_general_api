@@ -11,6 +11,7 @@ import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -116,6 +117,15 @@ class RoomStockRepositoryAdapterTest {
             listOf("Coca-Cola 33cl", "Eau minérale 50cl", "Part de pizza"),
             stock.map { it.product.name },
         )
+    }
+
+    @Test
+    fun `findQuantity returns the stored quantity when present and null when absent`() {
+        val productId = insertProduct("Coca-Cola 33cl", "2.50")
+        adapter.upsert(RoomStockItem(roomId, productId, 24))
+
+        assertEquals(24, adapter.findQuantity(roomId, productId))
+        assertNull(adapter.findQuantity(roomId, ProductId(UUID.randomUUID())))
     }
 
     @Test
