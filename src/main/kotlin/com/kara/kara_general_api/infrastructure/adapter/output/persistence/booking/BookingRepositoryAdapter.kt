@@ -15,7 +15,8 @@ import java.time.Instant
 import java.util.UUID
 
 private const val BOOKING_COLUMNS =
-    "id, room_id, user_id, start_at, end_at, number_of_people, total_price, currency, status, created_at, expires_at"
+    "id, room_id, user_id, start_at, end_at, number_of_people, total_price, currency, status, " +
+        "payment_mode, created_at, expires_at"
 
 @Component
 class BookingRepositoryAdapter(
@@ -27,9 +28,9 @@ class BookingRepositoryAdapter(
         val sql =
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
-                                  total_price, currency, status, created_at, expires_at)
+                                  total_price, currency, status, payment_mode, created_at, expires_at)
             VALUES (:id, :roomId, :userId, :startAt, :endAt, :numberOfPeople,
-                    :totalPrice, :currency, :status, :createdAt, :expiresAt)
+                    :totalPrice, :currency, :status, :paymentMode, :createdAt, :expiresAt)
             ON CONFLICT (id) DO UPDATE SET
                 start_at         = EXCLUDED.start_at,
                 end_at           = EXCLUDED.end_at,
@@ -50,6 +51,7 @@ class BookingRepositoryAdapter(
                 .addValue("totalPrice", booking.totalPrice)
                 .addValue("currency", booking.currency.name)
                 .addValue("status", booking.status.name)
+                .addValue("paymentMode", booking.paymentMode.name)
                 .addValue("createdAt", Timestamp.from(booking.createdAt))
                 .addValue("expiresAt", Timestamp.from(booking.expiresAt)),
         )
@@ -162,12 +164,15 @@ class BookingRepositoryAdapter(
     }
 
     override fun cancelExpiredPending(now: Instant): Int {
-        // Annule toutes les réservations PENDING dont la fenêtre de paiement est échue.
+        // Annule les réservations PENDING en mode PAY_ALL dont la fenêtre de paiement (15 min) est échue.
+        // Les réservations en mode SHARED_POT sont EXCLUES : c'est le délai de la cagnotte qui gouverne leur
+        // annulation (cf. PoolDeadlineScheduler / CancelExpiredPoolsService).
         val sql =
             """
             UPDATE bookings
             SET status = 'CANCELLED'
             WHERE status = 'PENDING'
+              AND payment_mode = 'PAY_ALL'
               AND expires_at <= :now
             """.trimIndent()
         return jdbc.update(sql, MapSqlParameterSource().addValue("now", Timestamp.from(now)))

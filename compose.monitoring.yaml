@@ -1,0 +1,144 @@
+# =============================================================================
+# Self-hosted monitoring stack: Prometheus + Grafana + Loki + exporters.
+# Attaches to the pre-prod project's `kara_net` network (declared in compose.preprod.yaml)
+# as an EXTERNAL network, so it reaches the app services by hostname (api, postgres, redis).
+#
+# Run order (kara_net must exist first — it is created by the pre-prod stack):
+#   docker compose --env-file .env.preprod -f compose.preprod.yaml up -d          # creates kara_net
+#   docker compose --env-file .env.preprod -f compose.monitoring.yaml -p kara-monitoring up -d
+#
+# NOTHING here is published to the Internet. Only Grafana is bound, and only to loopback
+# (127.0.0.1:3000), to be exposed via `tailscale serve`. Everything else stays on kara_net.
+# See monitoring/README.md for the full Tailscale + firewall setup.
+# =============================================================================
+
+services:
+  prometheus:
+    image: 'prom/prometheus:v3.1.0'
+    container_name: kara-prometheus-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"           # allows `POST /-/reload` to hot-reload rules/config
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
+    expose:
+      - "9090"                             # internal-only; scraped/queried within kara_net
+
+  grafana:
+    image: 'grafana/grafana:11.4.0'
+    container_name: kara-grafana-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      # Admin bootstrap + hardening. Password comes from the env file (never hard-coded).
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:?set GF_SECURITY_ADMIN_PASSWORD in .env.preprod}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"    # cookies only over HTTPS (Tailscale serve terminates TLS)
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      # Served behind Tailscale HTTPS; the tailnet hostname is set at `tailscale serve` time.
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      # LOOPBACK ONLY. Exposed to the tailnet via `sudo tailscale serve --bg 3000`.
+      # Never change this to 0.0.0.0 / a bare "3000:3000" — that would put Grafana on the Internet.
+      - "127.0.0.1:3000:3000"
+
+  loki:
+    image: 'grafana/loki:3.3.2'
+    container_name: kara-loki-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    command: "-config.file=/etc/loki/loki-config.yml"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    expose:
+      - "3100"                             # internal-only; Grafana + promtail reach it over kara_net
+
+  promtail:
+    image: 'grafana/promtail:3.3.2'
+    container_name: kara-promtail-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    depends_on:
+      - loki
+    command: "-config.file=/etc/promtail/promtail-config.yml"
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      # Docker container logs + metadata (read-only) for service discovery and log shipping.
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail_positions:/tmp
+
+  postgres_exporter:
+    image: 'quay.io/prometheuscommunity/postgres-exporter:v0.16.0'
+    container_name: kara-postgres-exporter-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    environment:
+      # Defaults to the pre-prod Postgres credentials; override with POSTGRES_EXPORTER_DSN if set.
+      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable}
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    expose:
+      - "9187"
+
+  node_exporter:
+    image: 'prom/node-exporter:v1.8.2'
+    container_name: kara-node-exporter-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    pid: host                              # so process/host metrics reflect the real host
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    expose:
+      - "9100"
+
+  alertmanager:
+    image: 'prom/alertmanager:v0.28.0'
+    container_name: kara-alertmanager-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    expose:
+      - "9093"
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  promtail_positions:
+  alertmanager_data:
+
+# Joins the pre-prod network created by compose.preprod.yaml (name: kara_net).
+# `external: true` means "it already exists" — bring the pre-prod stack up first.
+networks:
+  kara_net:
+    external: true
+    name: kara_net

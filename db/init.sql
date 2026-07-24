@@ -1,3 +1,22 @@
+-- ============================================================================
+-- Schéma de production — source de vérité DDL (prod).
+-- Miroir fidèle des classes @Entity de infrastructure/adapter/output/persistence
+-- (types, nullabilité, defaults, contraintes uniques et index déclarés côté code).
+-- Les clés étrangères ne sont pas exprimées par les entités (identifiants UUID nus)
+-- mais sont ajoutées ici pour l'intégrité référentielle en production.
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Observabilité : pg_stat_statements agrège les statistiques d'exécution des requêtes
+-- (temps total, appels, lignes) pour détecter les requêtes lentes. La bibliothèque doit
+-- être préchargée via shared_preload_libraries (cf. `command:` du service postgres).
+-- Idempotent : ne recrée pas l'extension si elle existe déjà.
+-- ---------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- ---------------------------------------------------------------------------
+-- Comptes utilisateurs (tous rôles : GUEST/CLIENT/SERVER/ADMIN).
+-- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email                    VARCHAR(255) NOT NULL UNIQUE,
@@ -9,33 +28,38 @@ CREATE TABLE IF NOT EXISTS users (
     role                     VARCHAR(50)  NOT NULL,
     firebase_uid             VARCHAR(128) NOT NULL UNIQUE,
     created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    email_verified           BOOLEAN      NOT NULL DEFAULT FALSE,
+    email_verified           BOOLEAN      NOT NULL,
     deleted_at               TIMESTAMPTZ,
     deactivated_at           TIMESTAMPTZ,
     must_change_password     BOOLEAN      NOT NULL DEFAULT FALSE,
     temp_password_expires_at TIMESTAMPTZ,
     photo_object_key         VARCHAR(512),
     -- Identifiant client Stripe (créé paresseusement au 1er paiement). Jamais logué.
-    stripe_customer_id       VARCHAR(255)
+    stripe_customer_id       VARCHAR(255),
+    -- Token d'appareil FCM (notifications push). Nullable tant qu'aucun appareil n'est enregistré.
+    fcm_token                VARCHAR(512)
 );
 
+-- ---------------------------------------------------------------------------
+-- Salles louables à l'heure.
+-- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rooms (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name        VARCHAR(255) NOT NULL,
-    description TEXT         NOT NULL,
+    description TEXT         NOT NULL DEFAULT '',
     street      VARCHAR(255) NOT NULL,
     city        VARCHAR(100) NOT NULL,
     postal_code VARCHAR(20)  NOT NULL,
     country     VARCHAR(100) NOT NULL,
-    price_per_person_per_hour NUMERIC(10,2) NOT NULL,
-    currency    VARCHAR(10)  NOT NULL,
-    max_capacity              INT NOT NULL,
-    is_there_wifi             BOOLEAN NOT NULL,
-    is_there_sono_pro         BOOLEAN NOT NULL,
-    is_there_air_conditioning BOOLEAN NOT NULL,
+    price_per_person_per_hour NUMERIC(10,2) NOT NULL DEFAULT 0,
+    currency    VARCHAR(10)  NOT NULL DEFAULT 'EUR',
+    max_capacity              INT     NOT NULL DEFAULT 0,
+    is_there_wifi             BOOLEAN NOT NULL DEFAULT FALSE,
+    is_there_sono_pro         BOOLEAN NOT NULL DEFAULT FALSE,
+    is_there_air_conditioning BOOLEAN NOT NULL DEFAULT FALSE,
     latitude    DOUBLE PRECISION,
     longitude   DOUBLE PRECISION,
-    status      VARCHAR(50)  NOT NULL DEFAULT 'OPEN',
+    status      VARCHAR(50)  NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -46,11 +70,9 @@ CREATE TABLE IF NOT EXISTS room_images (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     object_key VARCHAR(512) NOT NULL,
-    position   INT NOT NULL DEFAULT 0,
+    position   INT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_room_images_room_id ON room_images (room_id);
 
 -- Catalogue global des services réutilisables : forfaits fixes (indépendants du nombre de personnes
 -- et de la durée). Un service n'est plus rattaché en dur à une seule salle.
@@ -106,12 +128,12 @@ CREATE TABLE IF NOT EXISTS messages (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type            VARCHAR(20) NOT NULL DEFAULT 'text',
+    type            VARCHAR(20) NOT NULL,
     text            TEXT,
     reply_to_id     UUID REFERENCES messages(id) ON DELETE SET NULL,
     is_forwarded    BOOLEAN NOT NULL DEFAULT FALSE,
     is_pinned       BOOLEAN NOT NULL DEFAULT FALSE,
-    sent_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    sent_at         TIMESTAMPTZ NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_sent_at ON messages (conversation_id, sent_at);
@@ -128,6 +150,11 @@ CREATE TABLE IF NOT EXISTS message_reactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_message_reactions_message_id ON message_reactions (message_id);
+
+-- ============================================================================
+-- Réservations & règlement
+-- ============================================================================
+
 -- Réservations : un créneau réservé sur une salle par un client. Le prix total est figé à la création.
 -- Le chevauchement de créneaux est contrôlé applicativement (statuts PENDING/CONFIRMED).
 CREATE TABLE IF NOT EXISTS bookings (
@@ -140,6 +167,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     total_price      NUMERIC(10,2) NOT NULL,
     currency         VARCHAR(10)  NOT NULL,
     status           VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
+    -- Mode de règlement : PAY_ALL (fenêtre 15 min) ou SHARED_POT (délai gouverné par la cagnotte).
+    payment_mode     VARCHAR(20)  NOT NULL DEFAULT 'PAY_ALL',
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     expires_at       TIMESTAMPTZ  NOT NULL
 );
@@ -190,3 +219,42 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments (booking_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments (user_id);
+
+-- Cagnottes (règlement Stripe en autorisation à capture manuelle). Le montant cible est figé (= prix total
+-- de la réservation). Rien n'est prélevé tant que toutes les parts ne sont pas autorisées ; à complétude,
+-- toutes les autorisations sont capturées et la réservation passe CONFIRMED. Le délai (< 7 jours, validité
+-- des autorisations Stripe) déclenche sinon l'annulation de toutes les autorisations (zéro prélèvement).
+CREATE TABLE IF NOT EXISTS pools (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id        UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    target_amount     NUMERIC(10,2) NOT NULL,
+    currency          VARCHAR(10)  NOT NULL,
+    status            VARCHAR(50)  NOT NULL DEFAULT 'OPEN',
+    deadline          TIMESTAMPTZ  NOT NULL,
+    global_link_token VARCHAR(255) NOT NULL,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_booking_id ON pools (booking_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_global_link_token ON pools (global_link_token);
+CREATE INDEX IF NOT EXISTS idx_pools_status_deadline ON pools (status, deadline);
+
+-- Parts d'une cagnotte : le montant de chaque part est réglé par un PaymentIntent Stripe à capture manuelle.
+-- La somme des parts égale le montant cible de la cagnotte (invariant maintenu applicativement).
+CREATE TABLE IF NOT EXISTS pool_shares (
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pool_id                  UUID NOT NULL REFERENCES pools(id) ON DELETE CASCADE,
+    participant_name         VARCHAR(255) NOT NULL,
+    email                    VARCHAR(255),
+    amount                   NUMERIC(10,2) NOT NULL,
+    status                   VARCHAR(50)  NOT NULL DEFAULT 'PENDING',
+    stripe_payment_intent_id VARCHAR(255),
+    unique_link_token        VARCHAR(255),
+    payer_user_id            UUID REFERENCES users(id) ON DELETE SET NULL,
+    is_creator_share         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pool_shares_pool_id ON pool_shares (pool_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pool_shares_unique_link_token ON pool_shares (unique_link_token);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pool_shares_stripe_payment_intent_id ON pool_shares (stripe_payment_intent_id);

@@ -4,12 +4,17 @@ import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomOptionId
 import com.kara.kara_general_api.domain.model.user.UserId
+import com.kara.kara_general_api.domain.port.input.booking.CancelBookingCommand
+import com.kara.kara_general_api.domain.port.input.booking.CancelBookingResult
+import com.kara.kara_general_api.domain.port.input.booking.CancelBookingUseCase
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingCommand
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingUseCase
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingCommand
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingUseCase
+import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailResult
+import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailUseCase
 import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
 import com.kara.kara_general_api.domain.port.input.booking.ListServerBookingsUseCase
 import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyCommand
@@ -20,7 +25,9 @@ import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationR
 import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.AdminBookingResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingConversationResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingDetailResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.BookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.CancelBookingResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.CreateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingResponse
@@ -42,6 +49,8 @@ class BookingController(
     private val listAllBookingsUseCase: ListAllBookingsUseCase,
     private val openBookingConversationUseCase: OpenBookingConversationUseCase,
     private val triggerEmergencyUseCase: TriggerEmergencyUseCase,
+    private val getBookingDetailUseCase: GetBookingDetailUseCase,
+    private val cancelBookingUseCase: CancelBookingUseCase,
 ) : BookingApi {
 
     override fun triggerEmergency(id: UUID, authentication: Authentication): ResponseEntity<Any> {
@@ -82,6 +91,38 @@ class BookingController(
         }
     }
 
+    override fun getBooking(
+        bookingId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val requesterId = UserId(UUID.fromString(authentication.name))
+        return when (val result = getBookingDetailUseCase.getDetail(BookingId(bookingId), requesterId)) {
+            is GetBookingDetailResult.Found ->
+                ResponseEntity.ok(BookingDetailResponse.from(result.view))
+            GetBookingDetailResult.NotFound -> bookingNotFound()
+            GetBookingDetailResult.NotOwner -> bookingNotOwner()
+        }
+    }
+
+    override fun cancelBooking(
+        bookingId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val command =
+            CancelBookingCommand(
+                bookingId = BookingId(bookingId),
+                requesterId = UserId(UUID.fromString(authentication.name)),
+            )
+        return when (val result = cancelBookingUseCase.cancel(command)) {
+            is CancelBookingResult.Cancelled ->
+                ResponseEntity.ok(CancelBookingResponse.from(result.booking, result.refunded))
+            CancelBookingResult.NotFound -> bookingNotFound()
+            CancelBookingResult.NotOwner -> bookingNotOwner()
+            CancelBookingResult.AlreadyCancelled -> bookingAlreadyCancelled()
+            CancelBookingResult.AlreadyStarted -> bookingAlreadyStarted()
+        }
+    }
+
     private fun bookingNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
             ProblemDetail.forStatusAndDetail(
@@ -104,6 +145,39 @@ class BookingController(
             },
         )
 
+    private fun bookingNotOwner(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN,
+                "Cette réservation n'appartient pas à l'utilisateur courant.",
+            ).apply {
+                title = "Accès refusé"
+                setProperty("code", "BOOKING_NOT_OWNER")
+            },
+        )
+
+    private fun bookingAlreadyCancelled(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "Cette réservation est déjà annulée.",
+            ).apply {
+                title = "Réservation déjà annulée"
+                setProperty("code", "BOOKING_ALREADY_CANCELLED")
+            },
+        )
+
+    private fun bookingAlreadyStarted(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "La réservation a déjà commencé : elle ne peut plus être annulée.",
+            ).apply {
+                title = "Réservation déjà commencée"
+                setProperty("code", "BOOKING_ALREADY_STARTED")
+            },
+        )
+
     override fun createBooking(
         request: CreateBookingRequest,
         authentication: Authentication,
@@ -116,6 +190,7 @@ class BookingController(
                 endAt = request.endAt,
                 numberOfPeople = request.numberOfPeople,
                 selectedOptionIds = request.optionIds.map { RoomOptionId(it) },
+                paymentMode = request.paymentMode,
             )
         return when (val result = createBookingUseCase.createBooking(command)) {
             is CreateBookingResult.Created ->

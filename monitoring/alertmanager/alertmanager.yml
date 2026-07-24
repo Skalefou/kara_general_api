@@ -1,0 +1,42 @@
+# Alertmanager routing. Default receiver is a no-op webhook placeholder — wire up a real
+# channel (Slack / email) before relying on alerts in production.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: default
+    # Placeholder sink. Alerts are grouped and visible in the Alertmanager UI (internal, kara_net)
+    # even without a working webhook. Replace with a real integration below.
+    webhook_configs:
+      - url: http://localhost:9094/noop
+        send_resolved: true
+
+    # --- TODO: Slack ---------------------------------------------------------
+    # slack_configs:
+    #   - api_url: '${SLACK_WEBHOOK_URL}'        # keep the secret in .env.preprod, never here
+    #     channel: '#kara-alerts'
+    #     send_resolved: true
+    #     title: '{{ .CommonAnnotations.summary }}'
+    #     text: '{{ .CommonAnnotations.description }}'
+
+    # --- TODO: Email ---------------------------------------------------------
+    # email_configs:
+    #   - to: 'ops@kara.example'
+    #     from: 'alertmanager@kara.example'
+    #     smarthost: 'smtp.resend.com:587'
+    #     auth_username: 'resend'
+    #     auth_password: '${MAIL_PASSWORD}'
+    #     send_resolved: true
+
+# Example: silence a lower-severity alert while a critical one for the same alertname fires.
+inhibit_rules:
+  - source_matchers: ['severity = critical']
+    target_matchers: ['severity = warning']
+    equal: ['alertname']

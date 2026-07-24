@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.domain.port.input.booking
 
 import com.kara.kara_general_api.domain.model.booking.Booking
+import com.kara.kara_general_api.domain.model.booking.PaymentMode
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomOptionId
 import com.kara.kara_general_api.domain.model.user.UserId
@@ -14,6 +15,7 @@ data class CreateBookingCommand(
     val endAt: Instant,
     val numberOfPeople: Int,
     val selectedOptionIds: List<RoomOptionId>,
+    val paymentMode: PaymentMode = PaymentMode.PAY_ALL,
 )
 
 sealed interface CreateBookingResult {

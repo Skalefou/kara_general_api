@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.payment
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.Payment
 import com.kara.kara_general_api.domain.model.payment.PaymentId
 import com.kara.kara_general_api.domain.port.output.PaymentRepository
@@ -64,5 +65,16 @@ class PaymentRepositoryAdapter(
             mapOf("stripePaymentIntentId" to stripePaymentIntentId),
             rowMapper,
         ).firstOrNull()
+    }
+
+    override fun findByBookingId(bookingId: BookingId): List<Payment> {
+        val sql =
+            """
+            SELECT $PAYMENT_COLUMNS
+            FROM payments
+            WHERE booking_id = :bookingId
+            ORDER BY created_at ASC
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("bookingId" to bookingId.value), rowMapper)
     }
 }

@@ -13,3 +13,27 @@ spring:
   sql:
     init:
       mode: never
+
+# Actuator / observability — production.
+# Only health, info and prometheus are exposed; every other actuator endpoint stays off.
+# Public reachability is further restricted by Caddy (403 on /actuator*) and the host firewall
+# (port 8080 is never open to the Internet). Prometheus scrapes /actuator/prometheus over the
+# internal Docker network only.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      # Enables the liveness/readiness probe groups (/actuator/health/liveness, /readiness).
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      # Stamped on every metric so Prometheus/Grafana can filter by application.
+      application: kara-general-api
+  prometheus:
+    metrics:
+      export:
+        enabled: true

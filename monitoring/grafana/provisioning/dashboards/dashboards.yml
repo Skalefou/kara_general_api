@@ -1,0 +1,16 @@
+# Dashboard provider: loads every *.json dashboard found under /var/lib/grafana/dashboards.
+# Drop exported dashboard JSON files there (see monitoring/README.md for community dashboards
+# to import). A minimal working dashboard (kara-api-overview.json) ships out of the box.
+apiVersion: 1
+
+providers:
+  - name: kara-dashboards
+    orgId: 1
+    folder: Kara
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

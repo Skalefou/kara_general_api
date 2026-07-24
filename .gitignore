@@ -41,7 +41,9 @@ out/
 
 # Fichier d'environnement
 .env
+.env.preprod
 private.pem
 
 # Documentation
 doc-api.json
+.ua/

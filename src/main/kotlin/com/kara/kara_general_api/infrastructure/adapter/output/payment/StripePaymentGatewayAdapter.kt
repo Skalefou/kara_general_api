@@ -10,10 +10,12 @@ import com.stripe.model.Customer
 import com.stripe.model.EphemeralKey
 import com.stripe.model.Event
 import com.stripe.model.PaymentIntent
+import com.stripe.model.Refund
 import com.stripe.net.Webhook
 import com.stripe.param.CustomerCreateParams
 import com.stripe.param.EphemeralKeyCreateParams
 import com.stripe.param.PaymentIntentCreateParams
+import com.stripe.param.RefundCreateParams
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
@@ -57,18 +59,53 @@ class StripePaymentGatewayAdapter(
     }
 
     override fun createPaymentIntent(amount: BigDecimal, currency: Currency, customerId: String): PaymentIntentResult {
-        val amountMinorUnits = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
         val params =
-            PaymentIntentCreateParams.builder()
-                .setAmount(amountMinorUnits)
-                .setCurrency(currency.name.lowercase())
-                .setCustomer(customerId)
-                .setAutomaticPaymentMethods(
-                    PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build(),
-                )
+            basePaymentIntentParams(amount, currency, customerId).build()
+        val intent = PaymentIntent.create(params)
+        return PaymentIntentResult(clientSecret = intent.clientSecret, paymentIntentId = intent.id)
+    }
+
+    override fun createManualCapturePaymentIntent(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentResult {
+        // Capture manuelle : les fonds sont seulement AUTORISÉS (bloqués), jamais prélevés ici. La capture
+        // n'a lieu que lorsque toute la cagnotte est complète (cf. PoolSettlementService).
+        val params =
+            basePaymentIntentParams(amount, currency, customerId)
+                .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL)
                 .build()
         val intent = PaymentIntent.create(params)
         return PaymentIntentResult(clientSecret = intent.clientSecret, paymentIntentId = intent.id)
+    }
+
+    override fun capturePaymentIntent(paymentIntentId: String) {
+        PaymentIntent.retrieve(paymentIntentId).capture()
+    }
+
+    override fun cancelPaymentIntent(paymentIntentId: String) {
+        PaymentIntent.retrieve(paymentIntentId).cancel()
+    }
+
+    override fun refundPaymentIntent(paymentIntentId: String) {
+        // Remboursement intégral d'un paiement capturé (annulation d'une réservation confirmée).
+        Refund.create(RefundCreateParams.builder().setPaymentIntent(paymentIntentId).build())
+    }
+
+    private fun basePaymentIntentParams(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentCreateParams.Builder {
+        val amountMinorUnits = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
+        return PaymentIntentCreateParams.builder()
+            .setAmount(amountMinorUnits)
+            .setCurrency(currency.name.lowercase())
+            .setCustomer(customerId)
+            .setAutomaticPaymentMethods(
+                PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build(),
+            )
     }
 
     override fun verifyAndParseWebhook(payload: String, signature: String): StripeWebhookEvent? =

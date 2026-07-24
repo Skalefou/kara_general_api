@@ -70,6 +70,22 @@ class SecurityConfig {
                 // Agenda des serveurs : édition réservée au back-office (ADMIN) sur toutes les opérations.
                 authorize("/api/v1/server-shifts", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/server-shifts/**", hasRole(UserRole.ADMIN.name))
+                // Récapitulatifs publics de cagnotte (lecture sans authentification). Le paiement d'une part
+                // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
+                authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)
+                authorize(HttpMethod.GET, "/api/v1/pools/share/**", permitAll)
+                // Observabilité (double barrière — cf. Caddyfile qui renvoie 404 sur /actuator* côté public,
+                // et le pare-feu hôte qui n'expose jamais le port 8080 sur Internet).
+                // Seuls ces trois endpoints actuator sont ouverts, et uniquement joignables via le réseau
+                // Docker interne (sonde de santé du conteneur + scrape Prometheus) :
+                //   - /actuator/health : liveness/readiness du conteneur ;
+                //   - /actuator/prometheus : métriques Micrometer, scrapées par Prometheus (api:8080) ;
+                //   - /actuator/info : métadonnées applicatives, sans secret.
+                // Aucun autre endpoint actuator n'est exposé (management.endpoints.web.exposure.include).
+                authorize(HttpMethod.GET, "/actuator/health", permitAll)
+                authorize(HttpMethod.GET, "/actuator/health/**", permitAll)
+                authorize(HttpMethod.GET, "/actuator/prometheus", permitAll)
+                authorize(HttpMethod.GET, "/actuator/info", permitAll)
                 authorize(anyRequest, authenticated)
             }
             exceptionHandling {

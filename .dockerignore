@@ -1,0 +1,42 @@
+# Keep the build context small: only the wrapper, build config and src are needed.
+
+# Build outputs & Gradle caches (NOT the gradle/ wrapper dir, which is required)
+build/
+.gradle/
+.kotlin/
+out/
+bin/
+
+# VCS & IDE
+.git/
+.gitignore
+.gitattributes
+.gitlab-ci.yml
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# Secrets / local env (never bake into the image)
+.env
+.env.*
+!.env.preprod.example
+*.pem
+private.pem
+
+# Tooling / analysis / docs junk (not needed to build the jar)
+.ua/
+.claude/
+docs/
+doc-api.json
+HELP.md
+compose.yaml
+compose.preprod.yaml
+Dockerfile
+.dockerignore
+scripts/
+CLAUDE.md

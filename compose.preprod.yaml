@@ -1,0 +1,113 @@
+# Pre-prod stack: Postgres (loads init.sql on first init) + Redis + the API image.
+# Run with:
+#   docker compose --env-file .env.preprod -f compose.preprod.yaml up --build
+#
+# --env-file .env.preprod feeds ${...} interpolation below AND the same file is
+# injected into the containers via `env_file:` — single source of truth.
+# The dev stack in compose.yaml is left untouched.
+
+services:
+  postgres:
+    image: 'postgres:18.2'                 # matches the dev stack (compose.yaml)
+    container_name: kara-db-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    env_file: .env.preprod                 # provides POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
+    # Observability: pg_stat_statements (slow-query profiling, scraped by postgres_exporter) plus
+    # verbose logging of slow statements / checkpoints / lock waits (collected by promtail -> Loki).
+    # `-c` flags extend the default entrypoint; init.sql still runs on first init (CREATE EXTENSION there).
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=all"
+      - "-c"
+      - "log_min_duration_statement=500"
+      - "-c"
+      - "log_checkpoints=on"
+      - "-c"
+      - "log_lock_waits=on"
+    volumes:
+      - postgres_preprod_data:/var/lib/postgresql
+      # Prod schema is loaded by Postgres itself (app has ddl-auto=none / sql.init=never).
+      # Scripts in /docker-entrypoint-initdb.d run ONLY on first init of an empty data dir,
+      # in alphabetical order — numeric prefixes force schema (01) before seed data (02).
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/dummy.sql:/docker-entrypoint-initdb.d/02-dummy.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    image: 'redis:8.2.7'                    # matches the dev stack (compose.yaml)
+    container_name: kara-redis-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: europe-west9-docker.pkg.dev/karapi-ee1cd/kara-images/kara_general_api:0.0.1
+    container_name: kara-api-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    depends_on:
+      postgres:
+        condition: service_healthy          # waits until Postgres is ready AND initialised
+      redis:
+        condition: service_healthy
+    # Secrets (JWT_*, MAIL_*, STRIPE_*, FIREBASE_*, GCS_*, INVOICE_*, ...) come from the env file.
+    env_file: .env.preprod
+    # Explicit overrides win over env_file: pin the profile and the in-network service hosts.
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: '5432'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+    ports:
+      # Kept for the local health check; the firewall blocks 8080 externally.
+      # External traffic now reaches the API through Caddy (TLS) on 443.
+      - '${API_PORT:-8080}:8080'            # host API_PORT -> container 8080
+
+  caddy:
+    image: 'caddy:2'
+    container_name: kara-caddy-preprod
+    restart: unless-stopped
+    networks: [kara_net]
+    depends_on:
+      - api
+    # Terminates TLS for ${DOMAIN} and reverse-proxies to the api service on 8080.
+    env_file: .env.preprod                 # provides DOMAIN + ACME_EMAIL for the Caddyfile
+    ports:
+      - '80:80'                            # ACME HTTP-01 challenge + HTTP->HTTPS redirect
+      - '443:443'                          # HTTPS (Let's Encrypt auto-provisioned)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data                   # persisted certificates
+      - caddy_config:/config
+
+volumes:
+  postgres_preprod_data:
+  caddy_data:
+  caddy_config:
+
+# Explicit, shareable network for the whole pre-prod project. `name: kara_net` pins the real Docker
+# network name (no compose-project prefix) so the monitoring stack (compose.monitoring.yaml) can join
+# it as an `external` network and reach services by hostname (postgres, redis, api) — see monitoring/README.md.
+networks:
+  kara_net:
+    name: kara_net
+    driver: bridge
