@@ -1,8 +1,10 @@
 package com.kara.kara_general_api.application.service.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionStatus
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.payment.PoolStatus
 import com.kara.kara_general_api.domain.port.input.pool.CancelExpiredPoolsUseCase
+import com.kara.kara_general_api.domain.port.output.BookingExtensionRepository
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
@@ -21,6 +23,7 @@ class CancelExpiredPoolsService(
     private val poolRepository: PoolRepository,
     private val poolShareRepository: PoolShareRepository,
     private val bookingRepository: BookingRepository,
+    private val bookingExtensionRepository: BookingExtensionRepository,
     private val poolSettlementService: PoolSettlementService,
     private val poolNotifier: PoolNotifier,
 ) : CancelExpiredPoolsUseCase {
@@ -32,7 +35,13 @@ class CancelExpiredPoolsService(
             val shares = poolShareRepository.findByPoolId(pool.id)
             poolSettlementService.cancelShareHolds(shares)
             poolRepository.updateStatus(pool.id, PoolStatus.EXPIRED)
-            bookingRepository.updateStatus(pool.bookingId, BookingStatus.CANCELLED)
+            if (pool.isForExtension()) {
+                pool.extensionId?.let {
+                    bookingExtensionRepository.updateStatus(it, BookingExtensionStatus.CANCELLED)
+                }
+            } else {
+                bookingRepository.updateStatus(pool.bookingId, BookingStatus.CANCELLED)
+            }
             bookingRepository.findById(pool.bookingId)?.let { poolNotifier.notifyPoolCancelled(it, shares) }
         }
         return expiredPools.size

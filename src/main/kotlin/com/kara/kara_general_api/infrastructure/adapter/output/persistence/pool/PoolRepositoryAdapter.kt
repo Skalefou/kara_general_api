@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolId
@@ -13,10 +14,11 @@ import java.sql.Timestamp
 import java.time.Instant
 
 private const val POOL_COLUMNS =
-    "id, booking_id, target_amount, currency, status, deadline, global_link_token, created_at"
+    "id, booking_id, extension_id, target_amount, currency, status, deadline, global_link_token, created_at"
 
 private const val POOL_COLUMNS_P =
-    "p.id, p.booking_id, p.target_amount, p.currency, p.status, p.deadline, p.global_link_token, p.created_at"
+    "p.id, p.booking_id, p.extension_id, p.target_amount, p.currency, p.status, p.deadline, " +
+        "p.global_link_token, p.created_at"
 
 @Component
 class PoolRepositoryAdapter(
@@ -27,9 +29,9 @@ class PoolRepositoryAdapter(
     override fun save(pool: Pool): Pool {
         val sql =
             """
-            INSERT INTO pools (id, booking_id, target_amount, currency, status, deadline,
+            INSERT INTO pools (id, booking_id, extension_id, target_amount, currency, status, deadline,
                                global_link_token, created_at)
-            VALUES (:id, :bookingId, :targetAmount, :currency, :status, :deadline,
+            VALUES (:id, :bookingId, :extensionId, :targetAmount, :currency, :status, :deadline,
                     :globalLinkToken, :createdAt)
             ON CONFLICT (id) DO UPDATE SET
                 status            = EXCLUDED.status,
@@ -41,6 +43,7 @@ class PoolRepositoryAdapter(
             MapSqlParameterSource()
                 .addValue("id", pool.id.value)
                 .addValue("bookingId", pool.bookingId.value)
+                .addValue("extensionId", pool.extensionId?.value)
                 .addValue("targetAmount", pool.targetAmount)
                 .addValue("currency", pool.currency.name)
                 .addValue("status", pool.status.name)
@@ -57,8 +60,13 @@ class PoolRepositoryAdapter(
     }
 
     override fun findByBookingId(bookingId: BookingId): Pool? {
-        val sql = "SELECT $POOL_COLUMNS FROM pools WHERE booking_id = :bookingId"
+        val sql = "SELECT $POOL_COLUMNS FROM pools WHERE booking_id = :bookingId AND extension_id IS NULL"
         return jdbc.query(sql, mapOf("bookingId" to bookingId.value), rowMapper).firstOrNull()
+    }
+
+    override fun findByExtensionId(extensionId: BookingExtensionId): Pool? {
+        val sql = "SELECT $POOL_COLUMNS FROM pools WHERE extension_id = :extensionId"
+        return jdbc.query(sql, mapOf("extensionId" to extensionId.value), rowMapper).firstOrNull()
     }
 
     override fun findByGlobalLinkToken(token: String): Pool? {

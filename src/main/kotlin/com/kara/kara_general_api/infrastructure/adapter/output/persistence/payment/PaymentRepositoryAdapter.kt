@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 import java.sql.Timestamp
 
 private const val PAYMENT_COLUMNS =
-    "id, booking_id, user_id, amount, currency, status, stripe_payment_intent_id, created_at"
+    "id, booking_id, extension_id, user_id, amount, currency, status, stripe_payment_intent_id, created_at"
 
 @Component
 class PaymentRepositoryAdapter(
@@ -21,9 +21,9 @@ class PaymentRepositoryAdapter(
     override fun save(payment: Payment): Payment {
         val sql =
             """
-            INSERT INTO payments (id, booking_id, user_id, amount, currency, status,
+            INSERT INTO payments (id, booking_id, extension_id, user_id, amount, currency, status,
                                   stripe_payment_intent_id, created_at)
-            VALUES (:id, :bookingId, :userId, :amount, :currency, :status,
+            VALUES (:id, :bookingId, :extensionId, :userId, :amount, :currency, :status,
                     :stripePaymentIntentId, :createdAt)
             ON CONFLICT (id) DO UPDATE SET
                 status = EXCLUDED.status
@@ -33,6 +33,7 @@ class PaymentRepositoryAdapter(
             MapSqlParameterSource()
                 .addValue("id", payment.id.value)
                 .addValue("bookingId", payment.bookingId.value)
+                .addValue("extensionId", payment.extensionId?.value)
                 .addValue("userId", payment.userId.value)
                 .addValue("amount", payment.amount)
                 .addValue("currency", payment.currency.name)

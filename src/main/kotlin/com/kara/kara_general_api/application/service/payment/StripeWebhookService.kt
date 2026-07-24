@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.payment
 
+import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
 import com.kara.kara_general_api.application.service.pool.PoolSettlementService
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.payment.PaymentStatus
@@ -37,6 +38,7 @@ class StripeWebhookService(
     private val paymentRepository: PaymentRepository,
     private val bookingRepository: BookingRepository,
     private val poolSettlementService: PoolSettlementService,
+    private val applyBookingExtensionService: ApplyBookingExtensionService,
 ) : HandleStripeWebhookUseCase {
 
     @Transactional
@@ -60,7 +62,12 @@ class StripeWebhookService(
         if (payment.status == PaymentStatus.PAID) return StripeWebhookResult.Handled
 
         paymentRepository.save(payment.markPaid())
-        bookingRepository.updateStatus(payment.bookingId, BookingStatus.CONFIRMED)
+        val extensionId = payment.extensionId
+        if (extensionId != null) {
+            applyBookingExtensionService.apply(extensionId)
+        } else {
+            bookingRepository.updateStatus(payment.bookingId, BookingStatus.CONFIRMED)
+        }
         return StripeWebhookResult.Handled
     }
 }

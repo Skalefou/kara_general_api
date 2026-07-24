@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
+import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
 import kotlin.test.assertEquals
 
 class PoolSettlementServiceTest {
@@ -31,8 +32,16 @@ class PoolSettlementServiceTest {
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val paymentGateway = mockk<PaymentGateway>(relaxed = true)
     private val poolNotifier = mockk<PoolNotifier>(relaxed = true)
+    private val applyBookingExtensionService = mockk<ApplyBookingExtensionService>(relaxed = true)
     private val sut =
-        PoolSettlementService(poolRepository, poolShareRepository, bookingRepository, paymentGateway, poolNotifier)
+        PoolSettlementService(
+            poolRepository,
+            poolShareRepository,
+            bookingRepository,
+            paymentGateway,
+            poolNotifier,
+            applyBookingExtensionService,
+        )
 
     private val poolId = PoolId(UUID.randomUUID())
     private val bookingId = BookingId(UUID.randomUUID())

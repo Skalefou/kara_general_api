@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.payment
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.Payment
 import com.kara.kara_general_api.domain.model.payment.PaymentId
@@ -23,5 +24,7 @@ class PaymentRowMapper : RowMapper<Payment> {
             status = PaymentStatus.valueOf(rs.getString("status")),
             stripePaymentIntentId = rs.getString("stripe_payment_intent_id"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
+            extensionId =
+                rs.getObject("extension_id", UUID::class.java)?.let { BookingExtensionId(it) },
         )
 }

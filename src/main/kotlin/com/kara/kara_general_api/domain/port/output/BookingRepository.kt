@@ -5,6 +5,7 @@ import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.UserId
+import java.math.BigDecimal
 import java.time.Instant
 
 interface BookingRepository {
@@ -28,7 +29,11 @@ interface BookingRepository {
      */
     fun existsOverlapping(roomId: RoomId, startAt: Instant, endAt: Instant): Boolean
 
+    fun findNextStartAfter(roomId: RoomId, after: Instant, excluding: BookingId, now: Instant): Instant?
+
     fun updateStatus(id: BookingId, status: BookingStatus)
+
+    fun updateEndAt(id: BookingId, endAt: Instant, totalPrice: BigDecimal)
 
     /**
      * Annule (PENDING → CANCELLED) toutes les réservations dont la fenêtre de paiement est échue

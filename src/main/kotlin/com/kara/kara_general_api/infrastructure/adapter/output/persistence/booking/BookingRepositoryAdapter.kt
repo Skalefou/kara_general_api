@@ -10,6 +10,7 @@ import com.kara.kara_general_api.domain.port.output.BookingRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Component
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
@@ -161,6 +162,43 @@ class BookingRepositoryAdapter(
     override fun updateStatus(id: BookingId, status: BookingStatus) {
         val sql = "UPDATE bookings SET status = :status WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
+    }
+
+    override fun findNextStartAfter(
+        roomId: RoomId,
+        after: Instant,
+        excluding: BookingId,
+        now: Instant,
+    ): Instant? {
+        val sql =
+            """
+            SELECT MIN(start_at) AS next_start
+            FROM bookings
+            WHERE room_id = :roomId
+              AND id <> :excluding
+              AND (status = 'CONFIRMED' OR (status = 'PENDING' AND expires_at > :now))
+              AND start_at >= :after
+            """.trimIndent()
+        return jdbc.query(
+            sql,
+            MapSqlParameterSource()
+                .addValue("roomId", roomId.value)
+                .addValue("excluding", excluding.value)
+                .addValue("after", Timestamp.from(after))
+                .addValue("now", Timestamp.from(now)),
+        ) { rs, _ -> rs.getTimestamp("next_start")?.toInstant() }
+            .firstOrNull()
+    }
+
+    override fun updateEndAt(id: BookingId, endAt: Instant, totalPrice: BigDecimal) {
+        val sql = "UPDATE bookings SET end_at = :endAt, total_price = :totalPrice WHERE id = :id"
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("endAt", Timestamp.from(endAt))
+                .addValue("totalPrice", totalPrice),
+        )
     }
 
     override fun cancelExpiredPending(now: Instant): Int {

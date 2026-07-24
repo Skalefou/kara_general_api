@@ -24,6 +24,8 @@ class PaymentEntity(
     var id: UUID = UUID.randomUUID(),
     @Column(name = "booking_id", nullable = false, columnDefinition = "uuid")
     var bookingId: UUID,
+    @Column(name = "extension_id", columnDefinition = "uuid")
+    var extensionId: UUID? = null,
     @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
     var userId: UUID,
     @Column(nullable = false, columnDefinition = "numeric(10,2)")

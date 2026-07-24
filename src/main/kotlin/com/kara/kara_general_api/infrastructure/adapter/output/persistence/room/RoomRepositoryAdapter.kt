@@ -34,10 +34,10 @@ class RoomRepositoryAdapter(
             """
             INSERT INTO rooms (id, name, description, street, city, postal_code, country, price_per_person_per_hour,
                                currency, max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
-                               latitude, longitude, status, created_at)
+                               latitude, longitude, status, opens_at, closes_at, time_zone, created_at)
             VALUES (:id, :name, :description, :street, :city, :postalCode, :country, :pricePerPersonPerHour,
                     :currency, :maxCapacity, :isThereWifi, :isThereSonoPro, :isThereAirConditioning,
-                    :latitude, :longitude, :status, :createdAt)
+                    :latitude, :longitude, :status, :opensAt, :closesAt, :timeZone, :createdAt)
             ON CONFLICT (id) DO UPDATE SET
                 name                      = EXCLUDED.name,
                 description               = EXCLUDED.description,
@@ -53,7 +53,10 @@ class RoomRepositoryAdapter(
                 is_there_air_conditioning = EXCLUDED.is_there_air_conditioning,
                 latitude                  = EXCLUDED.latitude,
                 longitude                 = EXCLUDED.longitude,
-                status                    = EXCLUDED.status
+                status                    = EXCLUDED.status,
+                opens_at                  = EXCLUDED.opens_at,
+                closes_at                 = EXCLUDED.closes_at,
+                time_zone                 = EXCLUDED.time_zone
             """.trimIndent()
         jdbc.update(
             sql,
@@ -74,6 +77,9 @@ class RoomRepositoryAdapter(
                 .addValue("latitude", room.latitude)
                 .addValue("longitude", room.longitude)
                 .addValue("status", room.status.name)
+                .addValue("opensAt", room.opensAt)
+                .addValue("closesAt", room.closesAt)
+                .addValue("timeZone", room.timeZone.id)
                 .addValue("createdAt", Timestamp.from(room.createdAt)),
         )
         return room
@@ -84,7 +90,7 @@ class RoomRepositoryAdapter(
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
                    max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
-                   latitude, longitude, status, created_at
+                   latitude, longitude, status, opens_at, closes_at, time_zone, created_at
             FROM rooms
             WHERE id = :id
             """.trimIndent()
@@ -97,7 +103,7 @@ class RoomRepositoryAdapter(
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
                    max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
-                   latitude, longitude, status, created_at
+                   latitude, longitude, status, opens_at, closes_at, time_zone, created_at
             FROM rooms
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
@@ -120,7 +126,7 @@ class RoomRepositoryAdapter(
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
                    max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
-                   latitude, longitude, status, created_at
+                   latitude, longitude, status, opens_at, closes_at, time_zone, created_at
             FROM rooms
             WHERE latitude BETWEEN :minLat AND :maxLat
               AND longitude BETWEEN :minLng AND :maxLng

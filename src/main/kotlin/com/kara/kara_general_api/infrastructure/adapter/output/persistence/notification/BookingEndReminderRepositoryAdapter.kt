@@ -75,4 +75,9 @@ class BookingEndReminderRepositoryAdapter(
                 .addValue("sentAt", Timestamp.from(Instant.now())),
         )
     }
+
+    override fun deleteByBookingId(bookingId: BookingId) {
+        val sql = "DELETE FROM booking_end_reminders WHERE booking_id = :bookingId"
+        jdbc.update(sql, mapOf("bookingId" to bookingId.value))
+    }
 }

@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.pool
 
+import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolShare
 import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
@@ -32,6 +33,7 @@ class PoolSettlementService(
     private val bookingRepository: BookingRepository,
     private val paymentGateway: PaymentGateway,
     private val poolNotifier: PoolNotifier,
+    private val applyBookingExtensionService: ApplyBookingExtensionService,
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -111,7 +113,13 @@ class PoolSettlementService(
                 poolShareRepository.save(share.markCaptured())
             }
         poolRepository.updateStatus(pool.id, PoolStatus.SETTLED)
-        bookingRepository.updateStatus(pool.bookingId, BookingStatus.CONFIRMED)
+
+        val extensionId = pool.extensionId
+        if (extensionId != null) {
+            applyBookingExtensionService.apply(extensionId)
+        } else {
+            bookingRepository.updateStatus(pool.bookingId, BookingStatus.CONFIRMED)
+        }
         bookingRepository.findById(pool.bookingId)?.let { poolNotifier.notifyPoolConfirmed(it) }
     }
 }

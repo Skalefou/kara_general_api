@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.payment.dto
 
 import com.kara.kara_general_api.domain.port.input.payment.InitiateBookingPaymentResult
+import com.kara.kara_general_api.domain.port.input.payment.InitiateExtensionPaymentResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
@@ -21,6 +22,15 @@ data class InitiateBookingPaymentResponse(
 ) {
     companion object {
         fun from(ready: InitiateBookingPaymentResult.Ready): InitiateBookingPaymentResponse =
+            InitiateBookingPaymentResponse(
+                paymentId = ready.paymentId,
+                clientSecret = ready.clientSecret,
+                ephemeralKeySecret = ready.ephemeralKeySecret,
+                customerId = ready.customerId,
+                publishableKey = ready.publishableKey,
+            )
+
+        fun from(ready: InitiateExtensionPaymentResult.Ready): InitiateBookingPaymentResponse =
             InitiateBookingPaymentResponse(
                 paymentId = ready.paymentId,
                 clientSecret = ready.clientSecret,

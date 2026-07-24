@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS rooms (
     latitude    DOUBLE PRECISION,
     longitude   DOUBLE PRECISION,
     status      VARCHAR(50)  NOT NULL,
+    opens_at    TIME,
+    closes_at   TIME,
+    time_zone   VARCHAR(64)  NOT NULL DEFAULT 'Europe/Paris',
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -213,6 +216,27 @@ CREATE TABLE IF NOT EXISTS booking_options (
 CREATE INDEX IF NOT EXISTS idx_booking_options_booking_id ON booking_options (booking_id);
 CREATE INDEX IF NOT EXISTS idx_booking_options_option_id ON booking_options (option_id);
 
+CREATE TABLE IF NOT EXISTS booking_extensions (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id         UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    additional_minutes INT           NOT NULL,
+    previous_end_at    TIMESTAMPTZ   NOT NULL,
+    new_end_at         TIMESTAMPTZ   NOT NULL,
+    price              NUMERIC(10,2) NOT NULL,
+    currency           VARCHAR(10)   NOT NULL,
+    status             VARCHAR(50)   NOT NULL DEFAULT 'PENDING',
+    payment_mode       VARCHAR(20)   NOT NULL DEFAULT 'PAY_ALL',
+    created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    expires_at         TIMESTAMPTZ   NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_extensions_booking_id ON booking_extensions (booking_id);
+CREATE INDEX IF NOT EXISTS idx_booking_extensions_user_id ON booking_extensions (user_id);
+CREATE INDEX IF NOT EXISTS idx_booking_extensions_status_expires ON booking_extensions (status, expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_extensions_pending_booking
+    ON booking_extensions (booking_id) WHERE status = 'PENDING';
+
 -- Commandes de produits passées pendant une réservation active. Le prix unitaire est figé au tarif du produit
 -- au moment de la commande ; total_price = unit_price × quantity. Le débit/crédit du moyen de paiement est
 -- géré par la brique paiement (hors de cette table). status : PLACED (extensible).
@@ -265,6 +289,7 @@ CREATE INDEX IF NOT EXISTS idx_server_shifts_start_at ON server_shifts (start_at
 CREATE TABLE IF NOT EXISTS payments (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id               UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    extension_id             UUID REFERENCES booking_extensions(id) ON DELETE CASCADE,
     user_id                  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount                   NUMERIC(10,2) NOT NULL,
     currency                 VARCHAR(10)  NOT NULL,
@@ -283,6 +308,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments (user_id);
 CREATE TABLE IF NOT EXISTS pools (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id        UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    extension_id      UUID REFERENCES booking_extensions(id) ON DELETE CASCADE,
     target_amount     NUMERIC(10,2) NOT NULL,
     currency          VARCHAR(10)  NOT NULL,
     status            VARCHAR(50)  NOT NULL DEFAULT 'OPEN',
@@ -291,7 +317,8 @@ CREATE TABLE IF NOT EXISTS pools (
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_booking_id ON pools (booking_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_booking_id ON pools (booking_id) WHERE extension_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_extension_id ON pools (extension_id) WHERE extension_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_global_link_token ON pools (global_link_token);
 CREATE INDEX IF NOT EXISTS idx_pools_status_deadline ON pools (status, deadline);
 

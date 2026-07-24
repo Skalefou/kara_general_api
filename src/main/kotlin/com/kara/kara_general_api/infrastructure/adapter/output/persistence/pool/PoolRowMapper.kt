@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolId
@@ -22,5 +23,7 @@ class PoolRowMapper : RowMapper<Pool> {
             deadline = rs.getTimestamp("deadline").toInstant(),
             globalLinkToken = rs.getString("global_link_token"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
+            extensionId =
+                rs.getObject("extension_id", UUID::class.java)?.let { BookingExtensionId(it) },
         )
 }

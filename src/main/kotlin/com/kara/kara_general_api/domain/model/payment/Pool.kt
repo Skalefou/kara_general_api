@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.model.payment
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.room.Currency
 import java.math.BigDecimal
@@ -26,8 +27,11 @@ data class Pool(
     val deadline: Instant,
     val globalLinkToken: String,
     val createdAt: Instant,
+    val extensionId: BookingExtensionId? = null,
 ) {
     fun isOpen(): Boolean = status == PoolStatus.OPEN
+
+    fun isForExtension(): Boolean = extensionId != null
 
     fun isExpired(now: Instant): Boolean = !deadline.isAfter(now)
 
@@ -66,6 +70,7 @@ data class Pool(
             currency: Currency,
             deadline: Instant,
             globalLinkToken: String,
+            extensionId: BookingExtensionId? = null,
         ): Pool =
             Pool(
                 id = PoolId.generate(),
@@ -76,6 +81,7 @@ data class Pool(
                 deadline = deadline,
                 globalLinkToken = globalLinkToken,
                 createdAt = Instant.now(),
+                extensionId = extensionId,
             )
     }
 }

@@ -14,7 +14,7 @@ import java.util.UUID
 @Table(
     name = "pools",
     indexes = [
-        Index(name = "idx_pools_booking_id", columnList = "booking_id", unique = true),
+        Index(name = "idx_pools_booking_id", columnList = "booking_id"),
         Index(name = "idx_pools_global_link_token", columnList = "global_link_token", unique = true),
         Index(name = "idx_pools_status_deadline", columnList = "status, deadline"),
     ],
@@ -23,8 +23,10 @@ class PoolEntity(
     @Id
     @Column(columnDefinition = "uuid")
     var id: UUID = UUID.randomUUID(),
-    @Column(name = "booking_id", nullable = false, unique = true, columnDefinition = "uuid")
+    @Column(name = "booking_id", nullable = false, columnDefinition = "uuid")
     var bookingId: UUID,
+    @Column(name = "extension_id", columnDefinition = "uuid")
+    var extensionId: UUID? = null,
     @Column(name = "target_amount", nullable = false, columnDefinition = "numeric(10,2)")
     var targetAmount: BigDecimal,
     @Column(nullable = false, columnDefinition = "varchar(10)")

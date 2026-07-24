@@ -65,6 +65,10 @@ class SecurityConfig {
                 // Produits commandables d'une réservation : lecture réservée au client (propriété vérifiée
                 // dans le use case).
                 authorize(HttpMethod.GET, "/api/v1/bookings/*/available-products", authenticated)
+                authorize(HttpMethod.GET, "/api/v1/bookings/*/extension-options", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/bookings/*/extensions", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/extensions/*/payment", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/extensions/*/pool", authenticated)
                 // Catalogue global des services : gestion réservée au back-office (ADMIN) pour toutes les
                 // opérations (création, listing de gestion, suppression).
                 authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))

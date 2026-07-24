@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.PoolId
 import com.kara.kara_general_api.domain.model.payment.PoolShareId
@@ -118,6 +119,9 @@ class PoolController(
 
     override fun getPoolByBooking(bookingId: UUID, authentication: Authentication): ResponseEntity<Any> =
         toResponse(getPoolUseCase.getByBookingId(BookingId(bookingId), callerId(authentication)))
+
+    override fun getPoolByExtension(extensionId: UUID, authentication: Authentication): ResponseEntity<Any> =
+        toResponse(getPoolUseCase.getByExtensionId(BookingExtensionId(extensionId), callerId(authentication)))
 
     private fun toResponse(result: GetPoolResult): ResponseEntity<Any> =
         when (result) {
