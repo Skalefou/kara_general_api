@@ -231,6 +231,19 @@ CREATE TABLE IF NOT EXISTS orders (
 
 CREATE INDEX IF NOT EXISTS idx_orders_booking_id ON orders (booking_id);
 
+-- Rappels de fin de réservation envoyés (idempotence des notifications push « fin imminente »).
+-- Un rappel de type `kind` (TEN_MINUTES / TWO_MINUTES) n'est envoyé qu'une fois par réservation :
+-- l'unicité (booking_id, kind) garantit qu'un tick de planificateur ne renotifie pas.
+CREATE TABLE IF NOT EXISTS booking_end_reminders (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    kind       VARCHAR(20)  NOT NULL,
+    sent_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_booking_end_reminders_booking_kind UNIQUE (booking_id, kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_end_reminders_booking_id ON booking_end_reminders (booking_id);
+
 -- Agenda serveurs : affectation d'un serveur à une salle sur un créneau [start_at, end_at). Édité par
 -- l'ADMIN depuis le back-office. Deux créneaux d'un même serveur ne doivent pas se chevaucher (contrôle
 -- applicatif). ON DELETE CASCADE : un serveur ou une salle supprimé purge ses créneaux.

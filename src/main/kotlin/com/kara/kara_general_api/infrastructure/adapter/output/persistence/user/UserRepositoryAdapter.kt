@@ -203,6 +203,16 @@ class UserRepositoryAdapter(
         )
     }
 
+    override fun updateFcmToken(id: UserId, token: String) {
+        val sql = "UPDATE users SET fcm_token = :token WHERE id = :id AND deleted_at IS NULL"
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("token", token),
+        )
+    }
+
     override fun anonymize(id: UserId) {
         val sql =
             """
