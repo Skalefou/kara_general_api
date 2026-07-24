@@ -3,16 +3,19 @@ package com.kara.kara_general_api.application.service.order
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.order.Order
 import com.kara.kara_general_api.domain.model.order.OrderId
+import com.kara.kara_general_api.domain.model.order.OrderPlacedAlert
 import com.kara.kara_general_api.domain.model.order.OrderStatus
 import com.kara.kara_general_api.domain.model.stock.RoomStockItem
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderCommand
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderResult
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderUseCase
 import com.kara.kara_general_api.domain.port.output.BookingRepository
+import com.kara.kara_general_api.domain.port.output.OrderPlacedEventPublisher
 import com.kara.kara_general_api.domain.port.output.OrderRepository
 import com.kara.kara_general_api.domain.port.output.PaymentMethodPort
 import com.kara.kara_general_api.domain.port.output.ProductRepository
 import com.kara.kara_general_api.domain.port.output.RoomStockRepository
+import com.kara.kara_general_api.domain.port.output.ServerShiftRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -34,6 +37,8 @@ class PlaceOrderService(
     private val roomStockRepository: RoomStockRepository,
     private val orderRepository: OrderRepository,
     private val paymentMethodPort: PaymentMethodPort,
+    private val serverShiftRepository: ServerShiftRepository,
+    private val orderPlacedEventPublisher: OrderPlacedEventPublisher,
 ) : PlaceOrderUseCase {
 
     @Transactional
@@ -81,6 +86,23 @@ class PlaceOrderService(
                 status = OrderStatus.PLACED,
                 createdAt = now,
             )
-        return PlaceOrderResult.Success(orderRepository.save(order))
+        val saved = orderRepository.save(order)
+
+        val alert =
+            OrderPlacedAlert(
+                orderId = saved.id,
+                bookingId = booking.id,
+                roomId = booking.roomId,
+                productName = product.name,
+                quantity = saved.quantity,
+                totalPrice = saved.totalPrice,
+                currency = saved.currency,
+                placedAt = saved.createdAt,
+            )
+        serverShiftRepository
+            .findServerIdsAssignedTo(booking.roomId, booking.startAt, booking.endAt)
+            .forEach { serverId -> orderPlacedEventPublisher.publishOrderPlaced(serverId, alert) }
+
+        return PlaceOrderResult.Success(saved)
     }
 }

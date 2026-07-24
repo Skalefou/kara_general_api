@@ -12,10 +12,12 @@ import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderCommand
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
+import com.kara.kara_general_api.domain.port.output.OrderPlacedEventPublisher
 import com.kara.kara_general_api.domain.port.output.OrderRepository
 import com.kara.kara_general_api.domain.port.output.PaymentMethodPort
 import com.kara.kara_general_api.domain.port.output.ProductRepository
 import com.kara.kara_general_api.domain.port.output.RoomStockRepository
+import com.kara.kara_general_api.domain.port.output.ServerShiftRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -34,6 +36,8 @@ class PlaceOrderServiceTest {
     private val roomStockRepository = mockk<RoomStockRepository>(relaxed = true)
     private val orderRepository = mockk<OrderRepository>(relaxed = true)
     private val paymentMethodPort = mockk<PaymentMethodPort>(relaxed = true)
+    private val serverShiftRepository = mockk<ServerShiftRepository>(relaxed = true)
+    private val orderPlacedEventPublisher = mockk<OrderPlacedEventPublisher>(relaxed = true)
 
     private val sut =
         PlaceOrderService(
@@ -42,6 +46,8 @@ class PlaceOrderServiceTest {
             roomStockRepository,
             orderRepository,
             paymentMethodPort,
+            serverShiftRepository,
+            orderPlacedEventPublisher,
         )
 
     private val roomId = RoomId(UUID.randomUUID())
@@ -89,6 +95,8 @@ class PlaceOrderServiceTest {
         every { paymentMethodPort.hasRegisteredPaymentMethod(userId) } returns true
         val savedSlot = slot<com.kara.kara_general_api.domain.model.order.Order>()
         every { orderRepository.save(capture(savedSlot)) } answers { savedSlot.captured }
+        val serverId = UserId(UUID.randomUUID())
+        every { serverShiftRepository.findServerIdsAssignedTo(roomId, any(), any()) } returns setOf(serverId)
 
         val result = sut.placeOrder(command(quantity = 2))
 
@@ -98,6 +106,25 @@ class PlaceOrderServiceTest {
         assertEquals(2, success.order.quantity)
         verify(exactly = 1) { roomStockRepository.upsert(RoomStockItem(roomId, productId, 8)) }
         verify(exactly = 1) { orderRepository.save(any()) }
+        verify(exactly = 1) { orderPlacedEventPublisher.publishOrderPlaced(serverId, any()) }
+    }
+
+    @Test
+    fun `notifies every assigned server when the order is placed`() {
+        every { bookingRepository.findById(bookingId) } returns activeBooking()
+        every { productRepository.findById(productId) } returns product()
+        every { roomStockRepository.findQuantity(roomId, productId) } returns 10
+        every { paymentMethodPort.hasRegisteredPaymentMethod(userId) } returns true
+        val savedSlot = slot<com.kara.kara_general_api.domain.model.order.Order>()
+        every { orderRepository.save(capture(savedSlot)) } answers { savedSlot.captured }
+        val serverA = UserId(UUID.randomUUID())
+        val serverB = UserId(UUID.randomUUID())
+        every { serverShiftRepository.findServerIdsAssignedTo(roomId, any(), any()) } returns setOf(serverA, serverB)
+
+        sut.placeOrder(command(quantity = 1))
+
+        verify(exactly = 1) { orderPlacedEventPublisher.publishOrderPlaced(serverA, any()) }
+        verify(exactly = 1) { orderPlacedEventPublisher.publishOrderPlaced(serverB, any()) }
     }
 
     @Test
@@ -193,5 +220,6 @@ class PlaceOrderServiceTest {
         assertEquals(PlaceOrderResult.PaymentMethodRequired, result)
         verify(exactly = 0) { roomStockRepository.upsert(any()) }
         verify(exactly = 0) { orderRepository.save(any()) }
+        verify(exactly = 0) { orderPlacedEventPublisher.publishOrderPlaced(any(), any()) }
     }
 }
