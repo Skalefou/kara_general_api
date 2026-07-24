@@ -123,8 +123,18 @@ class ProductControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = ["SERVER"])
+    fun `should return 200 when a server lists products to stock a room`() {
+        every { listProductsUseCase.listProducts() } returns listOf(product)
+
+        mockMvc.perform(get("/api/v1/products"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+    }
+
+    @Test
     @WithMockUser(roles = ["CLIENT"])
-    fun `should return 403 when non-admin lists products`() {
+    fun `should return 403 when a client lists products`() {
         mockMvc.perform(get("/api/v1/products"))
             .andExpect(status().isForbidden)
     }

@@ -109,6 +109,20 @@ CREATE TABLE IF NOT EXISTS products (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Stock par salle : rattache un produit du catalogue générique à une salle avec une quantité disponible.
+-- Un produit absent de cette table (ou en quantité 0) ne peut pas être vendu pour la salle concernée.
+CREATE TABLE IF NOT EXISTS room_products (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity   INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_room_products_room_product UNIQUE (room_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_products_room_id ON room_products (room_id);
+CREATE INDEX IF NOT EXISTS idx_room_products_product_id ON room_products (product_id);
+
 -- ============================================================================
 -- Chat (messagerie temps réel) — MVP texte
 -- ============================================================================

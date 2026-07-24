@@ -36,6 +36,11 @@ class SecurityConfig {
                 authorize("/swagger-ui/**", permitAll)
                 authorize("/swagger-ui.html", permitAll)
                 authorize("/v3/api-docs/**", permitAll)
+                // Stock par salle : géré par le serveur de service (autorisation fine dans le use case) ou
+                // l'admin. Doit précéder les règles /rooms/** génériques (GET public, DELETE ADMIN) ci-dessous.
+                authorize(HttpMethod.GET, "/api/v1/rooms/*/stock", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
+                authorize(HttpMethod.PUT, "/api/v1/rooms/*/stock/**", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
+                authorize(HttpMethod.DELETE, "/api/v1/rooms/*/stock/**", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/rooms/**", permitAll)
                 authorize(HttpMethod.POST, "/api/v1/rooms", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.POST, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
@@ -60,10 +65,11 @@ class SecurityConfig {
                 authorize(HttpMethod.GET, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
-                // Catalogue générique des produits consommables : gestion réservée au back-office (ADMIN)
-                // pour toutes les opérations (création, listing de gestion, modification, suppression).
+                // Catalogue générique des produits consommables : création/modification/suppression réservées
+                // au back-office (ADMIN). Lecture ouverte aussi au SERVER : il pioche dans le catalogue pour
+                // garnir le stock de sa salle.
                 authorize(HttpMethod.POST, "/api/v1/products", hasRole(UserRole.ADMIN.name))
-                authorize(HttpMethod.GET, "/api/v1/products", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.GET, "/api/v1/products", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/me", authenticated)
