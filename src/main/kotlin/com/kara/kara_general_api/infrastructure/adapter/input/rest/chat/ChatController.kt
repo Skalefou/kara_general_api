@@ -12,6 +12,7 @@ import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesQuery
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesResult
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesUseCase
+import com.kara.kara_general_api.domain.port.input.chat.ListAllConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ListConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadCommand
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadResult
@@ -54,6 +55,7 @@ private val PHOTO_URL_TTL: Duration = Duration.ofMinutes(15)
 class ChatController(
     private val createConversationUseCase: CreateConversationUseCase,
     private val listConversationsUseCase: ListConversationsUseCase,
+    private val listAllConversationsUseCase: ListAllConversationsUseCase,
     private val getMessagesUseCase: GetMessagesUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val toggleReactionUseCase: ToggleReactionUseCase,
@@ -74,6 +76,14 @@ class ChatController(
     fun listConversations(authentication: Authentication): ResponseEntity<Any> {
         val conversations =
             listConversationsUseCase.listConversations(currentUserId(authentication))
+                .map { ConversationDto.from(it, ::signedPhotoUrl) }
+        return ResponseEntity.ok(conversations)
+    }
+
+    @GetMapping("/admin/conversations")
+    fun listAllConversations(authentication: Authentication): ResponseEntity<Any> {
+        val conversations =
+            listAllConversationsUseCase.listAllConversations(currentUserId(authentication))
                 .map { ConversationDto.from(it, ::signedPhotoUrl) }
         return ResponseEntity.ok(conversations)
     }
@@ -107,6 +117,7 @@ class ChatController(
                 conversationId = ConversationId(id),
                 limit = limit,
                 before = before?.let { Instant.parse(it) },
+                isAdmin = isAdmin(authentication),
             )
         return when (val result = getMessagesUseCase.getMessages(query)) {
             is GetMessagesResult.Success ->
@@ -138,6 +149,7 @@ class ChatController(
             SendMessageResult.ConversationNotFound -> conversationNotFound()
             SendMessageResult.NotParticipant -> notParticipant()
             SendMessageResult.EmptyText -> emptyText()
+            SendMessageResult.ChatClosed -> chatClosed()
         }
     }
 
@@ -259,6 +271,17 @@ class ChatController(
             ).apply {
                 title = "Message vide"
                 setProperty("code", "EMPTY_MESSAGE")
+            },
+        )
+
+    private fun chatClosed(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "Le chat de cette réservation est fermé (30 minutes après la fin de la réservation).",
+            ).apply {
+                title = "Chat fermé"
+                setProperty("code", "CHAT_CLOSED")
             },
         )
 }

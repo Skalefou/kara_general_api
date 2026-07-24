@@ -16,4 +16,6 @@ class ConversationEntity(
     var id: UUID = UUID.randomUUID(),
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
     var createdAt: Instant = Instant.now(),
+    @Column(name = "booking_id", columnDefinition = "uuid", unique = true)
+    var bookingId: UUID? = null,
 )

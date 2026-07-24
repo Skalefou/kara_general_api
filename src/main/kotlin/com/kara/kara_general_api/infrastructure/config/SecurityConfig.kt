@@ -46,6 +46,11 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/bookings/estimate", permitAll)
                 // Webhook Stripe : signé et vérifié applicativement (STRIPE_WEBHOOK_SECRET), donc ouvert.
                 authorize(HttpMethod.POST, "/api/v1/stripe/webhook", permitAll)
+                // Réservations rattachées au serveur (via son agenda) : réservées au rôle SERVER.
+                authorize(HttpMethod.GET, "/api/v1/bookings/me/assigned", hasRole(UserRole.SERVER.name))
+                // Supervision admin : toutes les réservations et tous les chats.
+                authorize(HttpMethod.GET, "/api/v1/bookings", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.GET, "/api/v1/chat/admin/**", hasRole(UserRole.ADMIN.name))
                 // Création de réservation et initiation de paiement : réservées au client authentifié.
                 authorize(HttpMethod.POST, "/api/v1/bookings", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/payments", authenticated)
@@ -59,6 +64,12 @@ class SecurityConfig {
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/**", hasRole(UserRole.ADMIN.name))
+                // Agenda personnel du serveur : un SERVER consulte ses propres créneaux (doit précéder
+                // les règles ADMIN génériques ci-dessous, sinon /me tomberait sous /server-shifts/**).
+                authorize(HttpMethod.GET, "/api/v1/server-shifts/me", hasRole(UserRole.SERVER.name))
+                // Agenda des serveurs : édition réservée au back-office (ADMIN) sur toutes les opérations.
+                authorize("/api/v1/server-shifts", hasRole(UserRole.ADMIN.name))
+                authorize("/api/v1/server-shifts/**", hasRole(UserRole.ADMIN.name))
                 // Récapitulatifs publics de cagnotte (lecture sans authentification). Le paiement d'une part
                 // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
                 authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)

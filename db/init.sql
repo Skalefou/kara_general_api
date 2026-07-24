@@ -104,8 +104,12 @@ CREATE INDEX IF NOT EXISTS idx_room_services_service_id ON room_services (servic
 
 CREATE TABLE IF NOT EXISTS conversations (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Conversation rattachée à une réservation (nullable) : sert au verrou « chat fermé 30 min après ».
+    booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_booking_id ON conversations (booking_id) WHERE booking_id IS NOT NULL;
 
 -- Participation d'un utilisateur à une conversation + état de lecture (last_read_at pilote les non-lus).
 CREATE TABLE IF NOT EXISTS conversation_participants (
@@ -183,6 +187,23 @@ CREATE TABLE IF NOT EXISTS booking_options (
 
 CREATE INDEX IF NOT EXISTS idx_booking_options_booking_id ON booking_options (booking_id);
 CREATE INDEX IF NOT EXISTS idx_booking_options_option_id ON booking_options (option_id);
+
+-- Agenda serveurs : affectation d'un serveur à une salle sur un créneau [start_at, end_at). Édité par
+-- l'ADMIN depuis le back-office. Deux créneaux d'un même serveur ne doivent pas se chevaucher (contrôle
+-- applicatif). ON DELETE CASCADE : un serveur ou une salle supprimé purge ses créneaux.
+CREATE TABLE IF NOT EXISTS server_shifts (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    server_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    start_at   TIMESTAMPTZ NOT NULL,
+    end_at     TIMESTAMPTZ NOT NULL,
+    note       TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_server_shifts_server_id ON server_shifts (server_id);
+CREATE INDEX IF NOT EXISTS idx_server_shifts_room_id ON server_shifts (room_id);
+CREATE INDEX IF NOT EXISTS idx_server_shifts_start_at ON server_shifts (start_at);
 
 -- Paiements « payer tout » (Stripe). Le webhook Stripe fait foi : payment_intent.succeeded → PAID + booking CONFIRMED.
 CREATE TABLE IF NOT EXISTS payments (

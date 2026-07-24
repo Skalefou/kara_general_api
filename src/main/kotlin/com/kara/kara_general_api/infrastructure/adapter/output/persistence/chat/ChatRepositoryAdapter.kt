@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.chat
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.chat.Conversation
 import com.kara.kara_general_api.domain.model.chat.ConversationId
 import com.kara.kara_general_api.domain.model.chat.Message
@@ -11,6 +12,7 @@ import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Component
+import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
@@ -19,6 +21,13 @@ import java.util.UUID
 class ChatRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : ChatRepository {
+
+    private fun mapConversation(rs: ResultSet): Conversation =
+        Conversation(
+            id = ConversationId(rs.getObject("id", UUID::class.java)),
+            createdAt = rs.getTimestamp("created_at").toInstant(),
+            bookingId = rs.getObject("booking_id", UUID::class.java)?.let { BookingId(it) },
+        )
 
     private val messageRowMapper =
         RowMapper { rs, _ ->
@@ -37,43 +46,49 @@ class ChatRepositoryAdapter(
 
     override fun createConversation(conversation: Conversation, participantIds: Set<UserId>) {
         jdbc.update(
-            "INSERT INTO conversations (id, created_at) VALUES (:id, :createdAt)",
+            "INSERT INTO conversations (id, created_at, booking_id) VALUES (:id, :createdAt, :bookingId)",
             MapSqlParameterSource()
                 .addValue("id", conversation.id.value)
-                .addValue("createdAt", Timestamp.from(conversation.createdAt)),
+                .addValue("createdAt", Timestamp.from(conversation.createdAt))
+                .addValue("bookingId", conversation.bookingId?.value),
         )
+        addParticipants(conversation.id, participantIds)
+    }
+
+    override fun findConversationByBookingId(bookingId: BookingId): Conversation? {
+        val sql = "SELECT id, created_at, booking_id FROM conversations WHERE booking_id = :bookingId"
+        return jdbc.query(sql, mapOf("bookingId" to bookingId.value)) { rs, _ -> mapConversation(rs) }.firstOrNull()
+    }
+
+    override fun addParticipants(conversationId: ConversationId, participantIds: Set<UserId>) {
         if (participantIds.isEmpty()) return
         val batch =
             participantIds.map { userId ->
                 MapSqlParameterSource()
                     .addValue("id", UUID.randomUUID())
-                    .addValue("conversationId", conversation.id.value)
+                    .addValue("conversationId", conversationId.value)
                     .addValue("userId", userId.value)
             }.toTypedArray()
         jdbc.batchUpdate(
             """
             INSERT INTO conversation_participants (id, conversation_id, user_id, last_read_at, created_at)
             VALUES (:id, :conversationId, :userId, NULL, NOW())
+            ON CONFLICT ON CONSTRAINT uq_conversation_participants_conversation_user DO NOTHING
             """.trimIndent(),
             batch,
         )
     }
 
     override fun findConversationById(id: ConversationId): Conversation? {
-        val sql = "SELECT id, created_at FROM conversations WHERE id = :id"
-        return jdbc.query(sql, mapOf("id" to id.value)) { rs, _ ->
-            Conversation(
-                id = ConversationId(rs.getObject("id", UUID::class.java)),
-                createdAt = rs.getTimestamp("created_at").toInstant(),
-            )
-        }.firstOrNull()
+        val sql = "SELECT id, created_at, booking_id FROM conversations WHERE id = :id"
+        return jdbc.query(sql, mapOf("id" to id.value)) { rs, _ -> mapConversation(rs) }.firstOrNull()
     }
 
     // Tri par activité récente : dernier message posté, à défaut date de création de la conversation.
     override fun findConversationsForUser(userId: UserId): List<Conversation> {
         val sql =
             """
-            SELECT c.id, c.created_at
+            SELECT c.id, c.created_at, c.booking_id
             FROM conversations c
             JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = :userId
             ORDER BY COALESCE(
@@ -81,12 +96,20 @@ class ChatRepositoryAdapter(
                 c.created_at
             ) DESC
             """.trimIndent()
-        return jdbc.query(sql, mapOf("userId" to userId.value)) { rs, _ ->
-            Conversation(
-                id = ConversationId(rs.getObject("id", UUID::class.java)),
-                createdAt = rs.getTimestamp("created_at").toInstant(),
-            )
-        }
+        return jdbc.query(sql, mapOf("userId" to userId.value)) { rs, _ -> mapConversation(rs) }
+    }
+
+    override fun findAllConversations(): List<Conversation> {
+        val sql =
+            """
+            SELECT c.id, c.created_at, c.booking_id
+            FROM conversations c
+            ORDER BY COALESCE(
+                (SELECT MAX(m.sent_at) FROM messages m WHERE m.conversation_id = c.id),
+                c.created_at
+            ) DESC
+            """.trimIndent()
+        return jdbc.query(sql) { rs, _ -> mapConversation(rs) }
     }
 
     // Conversation dont l'ensemble des participants est EXACTEMENT celui fourni : même cardinalité et
@@ -96,7 +119,7 @@ class ChatRepositoryAdapter(
         val ids = participantIds.map { it.value }
         val sql =
             """
-            SELECT c.id, c.created_at
+            SELECT c.id, c.created_at, c.booking_id
             FROM conversations c
             WHERE c.id = (
                 SELECT p.conversation_id
@@ -111,12 +134,7 @@ class ChatRepositoryAdapter(
             MapSqlParameterSource()
                 .addValue("count", ids.size)
                 .addValue("ids", ids)
-        return jdbc.query(sql, params) { rs, _ ->
-            Conversation(
-                id = ConversationId(rs.getObject("id", UUID::class.java)),
-                createdAt = rs.getTimestamp("created_at").toInstant(),
-            )
-        }.firstOrNull()
+        return jdbc.query(sql, params) { rs, _ -> mapConversation(rs) }.firstOrNull()
     }
 
     override fun findParticipantIds(conversationId: ConversationId): Set<UserId> {
