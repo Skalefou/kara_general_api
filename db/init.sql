@@ -341,3 +341,10 @@ CREATE TABLE IF NOT EXISTS pool_shares (
 CREATE INDEX IF NOT EXISTS idx_pool_shares_pool_id ON pool_shares (pool_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pool_shares_unique_link_token ON pool_shares (unique_link_token);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pool_shares_stripe_payment_intent_id ON pool_shares (stripe_payment_intent_id);
+
+CREATE TABLE IF NOT EXISTS shedlock (
+    name       VARCHAR(64)  NOT NULL PRIMARY KEY,
+    lock_until TIMESTAMP    NOT NULL,
+    locked_at  TIMESTAMP    NOT NULL,
+    locked_by  VARCHAR(255) NOT NULL
+);

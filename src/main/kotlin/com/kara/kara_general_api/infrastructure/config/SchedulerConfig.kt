@@ -1,9 +1,29 @@
 package com.kara.kara_general_api.infrastructure.config
 
+import net.javacrumbs.shedlock.core.LockProvider
+import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider
+import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.EnableScheduling
+import javax.sql.DataSource
 
-/** Active le planificateur Spring (tâches @Scheduled : annulation des réservations expirées, rappels…). */
+/**
+ * Active le planificateur Spring (tâches @Scheduled : annulation des réservations expirées, rappels…) et le
+ * verrou distribué ShedLock : en déploiement multi-instance, une seule instance exécute chaque tâche.
+ */
 @Configuration
 @EnableScheduling
-class SchedulerConfig
+@EnableSchedulerLock(defaultLockAtMostFor = "PT5M")
+class SchedulerConfig {
+
+    @Bean
+    fun lockProvider(dataSource: DataSource): LockProvider =
+        JdbcTemplateLockProvider(
+            JdbcTemplateLockProvider.Configuration.builder()
+                .withJdbcTemplate(JdbcTemplate(dataSource))
+                .usingDbTime()
+                .build(),
+        )
+}
