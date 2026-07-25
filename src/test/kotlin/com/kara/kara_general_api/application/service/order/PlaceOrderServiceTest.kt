@@ -7,7 +7,6 @@ import com.kara.kara_general_api.domain.model.product.Product
 import com.kara.kara_general_api.domain.model.product.ProductId
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomId
-import com.kara.kara_general_api.domain.model.stock.RoomStockItem
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderCommand
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderResult
@@ -92,6 +91,7 @@ class PlaceOrderServiceTest {
         every { bookingRepository.findById(bookingId) } returns activeBooking()
         every { productRepository.findById(productId) } returns product()
         every { roomStockRepository.findQuantity(roomId, productId) } returns 10
+        every { roomStockRepository.tryDecrement(roomId, productId, any()) } returns true
         every { paymentMethodPort.hasRegisteredPaymentMethod(userId) } returns true
         val savedSlot = slot<com.kara.kara_general_api.domain.model.order.Order>()
         every { orderRepository.save(capture(savedSlot)) } answers { savedSlot.captured }
@@ -104,7 +104,7 @@ class PlaceOrderServiceTest {
         assertEquals(BigDecimal("2.50"), success.order.unitPrice)
         assertEquals(BigDecimal("5.00"), success.order.totalPrice)
         assertEquals(2, success.order.quantity)
-        verify(exactly = 1) { roomStockRepository.upsert(RoomStockItem(roomId, productId, 8)) }
+        verify(exactly = 1) { roomStockRepository.tryDecrement(roomId, productId, 2) }
         verify(exactly = 1) { orderRepository.save(any()) }
         verify(exactly = 1) { orderPlacedEventPublisher.publishOrderPlaced(serverId, any()) }
     }
@@ -114,6 +114,7 @@ class PlaceOrderServiceTest {
         every { bookingRepository.findById(bookingId) } returns activeBooking()
         every { productRepository.findById(productId) } returns product()
         every { roomStockRepository.findQuantity(roomId, productId) } returns 10
+        every { roomStockRepository.tryDecrement(roomId, productId, any()) } returns true
         every { paymentMethodPort.hasRegisteredPaymentMethod(userId) } returns true
         val savedSlot = slot<com.kara.kara_general_api.domain.model.order.Order>()
         every { orderRepository.save(capture(savedSlot)) } answers { savedSlot.captured }
@@ -134,7 +135,7 @@ class PlaceOrderServiceTest {
         val result = sut.placeOrder(command())
 
         assertEquals(PlaceOrderResult.BookingNotFound, result)
-        verify(exactly = 0) { roomStockRepository.upsert(any()) }
+        verify(exactly = 0) { roomStockRepository.tryDecrement(any(), any(), any()) }
         verify(exactly = 0) { orderRepository.save(any()) }
     }
 
@@ -192,7 +193,7 @@ class PlaceOrderServiceTest {
         val result = sut.placeOrder(command(quantity = 5))
 
         assertEquals(PlaceOrderResult.InsufficientStock, result)
-        verify(exactly = 0) { roomStockRepository.upsert(any()) }
+        verify(exactly = 0) { roomStockRepository.tryDecrement(any(), any(), any()) }
         verify(exactly = 0) { orderRepository.save(any()) }
     }
 
@@ -218,7 +219,22 @@ class PlaceOrderServiceTest {
         val result = sut.placeOrder(command(quantity = 2))
 
         assertEquals(PlaceOrderResult.PaymentMethodRequired, result)
-        verify(exactly = 0) { roomStockRepository.upsert(any()) }
+        verify(exactly = 0) { roomStockRepository.tryDecrement(any(), any(), any()) }
+        verify(exactly = 0) { orderRepository.save(any()) }
+        verify(exactly = 0) { orderPlacedEventPublisher.publishOrderPlaced(any(), any()) }
+    }
+
+    @Test
+    fun `returns InsufficientStock when a concurrent order emptied the stock before the decrement`() {
+        every { bookingRepository.findById(bookingId) } returns activeBooking()
+        every { productRepository.findById(productId) } returns product()
+        every { roomStockRepository.findQuantity(roomId, productId) } returns 10
+        every { paymentMethodPort.hasRegisteredPaymentMethod(userId) } returns true
+        every { roomStockRepository.tryDecrement(roomId, productId, 2) } returns false
+
+        val result = sut.placeOrder(command(quantity = 2))
+
+        assertEquals(PlaceOrderResult.InsufficientStock, result)
         verify(exactly = 0) { orderRepository.save(any()) }
         verify(exactly = 0) { orderPlacedEventPublisher.publishOrderPlaced(any(), any()) }
     }

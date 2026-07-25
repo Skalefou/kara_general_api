@@ -72,6 +72,27 @@ class RoomStockRepositoryAdapter(
         ) { rs, _ -> rs.getInt("quantity") }.firstOrNull()
     }
 
+    override fun tryDecrement(roomId: RoomId, productId: ProductId, quantity: Int): Boolean {
+        val sql =
+            """
+            UPDATE room_products
+            SET quantity = quantity - :quantity
+            WHERE room_id = :roomId
+              AND product_id = :productId
+              AND quantity >= :quantity
+            """.trimIndent()
+        val rows =
+            jdbc.update(
+                sql,
+                mapOf(
+                    "roomId" to roomId.value,
+                    "productId" to productId.value,
+                    "quantity" to quantity,
+                ),
+            )
+        return rows > 0
+    }
+
     override fun deleteByRoomIdAndProductId(roomId: RoomId, productId: ProductId): Boolean {
         val sql = "DELETE FROM room_products WHERE room_id = :roomId AND product_id = :productId"
         val rows =

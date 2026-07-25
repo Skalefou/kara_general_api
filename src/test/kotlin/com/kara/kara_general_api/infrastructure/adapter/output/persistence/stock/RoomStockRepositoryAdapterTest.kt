@@ -129,6 +129,31 @@ class RoomStockRepositoryAdapterTest {
     }
 
     @Test
+    fun `tryDecrement lowers the quantity and returns true when the stock covers the request`() {
+        val productId = insertProduct("Coca-Cola 33cl", "2.50")
+        adapter.upsert(RoomStockItem(roomId, productId, 10))
+
+        assertTrue(adapter.tryDecrement(roomId, productId, 4))
+
+        assertEquals(6, adapter.findQuantity(roomId, productId))
+    }
+
+    @Test
+    fun `tryDecrement leaves the quantity untouched and returns false when the stock is too low`() {
+        val productId = insertProduct("Coca-Cola 33cl", "2.50")
+        adapter.upsert(RoomStockItem(roomId, productId, 3))
+
+        assertFalse(adapter.tryDecrement(roomId, productId, 4))
+
+        assertEquals(3, adapter.findQuantity(roomId, productId))
+    }
+
+    @Test
+    fun `tryDecrement returns false when the product is not in the room stock`() {
+        assertFalse(adapter.tryDecrement(roomId, ProductId(UUID.randomUUID()), 1))
+    }
+
+    @Test
     fun `deleteByRoomIdAndProductId removes the row and returns true, false when absent`() {
         val productId = insertProduct("Coca-Cola 33cl", "2.50")
         adapter.upsert(RoomStockItem(roomId, productId, 24))
