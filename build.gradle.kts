@@ -42,6 +42,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    implementation("net.javacrumbs.shedlock:shedlock-spring:6.9.0")
+    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:6.9.0")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     runtimeOnly("org.glassfish.jaxb:jaxb-runtime:4.0.5")

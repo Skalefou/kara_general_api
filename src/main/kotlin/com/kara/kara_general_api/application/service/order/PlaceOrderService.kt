@@ -5,7 +5,6 @@ import com.kara.kara_general_api.domain.model.order.Order
 import com.kara.kara_general_api.domain.model.order.OrderId
 import com.kara.kara_general_api.domain.model.order.OrderPlacedAlert
 import com.kara.kara_general_api.domain.model.order.OrderStatus
-import com.kara.kara_general_api.domain.model.stock.RoomStockItem
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderCommand
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderResult
 import com.kara.kara_general_api.domain.port.input.order.PlaceOrderUseCase
@@ -64,13 +63,9 @@ class PlaceOrderService(
             return PlaceOrderResult.PaymentMethodRequired
         }
 
-        roomStockRepository.upsert(
-            RoomStockItem(
-                roomId = booking.roomId,
-                productId = command.productId,
-                quantity = available - command.quantity,
-            ),
-        )
+        if (!roomStockRepository.tryDecrement(booking.roomId, command.productId, command.quantity)) {
+            return PlaceOrderResult.InsufficientStock
+        }
 
         val unitPrice = product.price
         val order =
