@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     -- Conversation rattachée à une réservation (nullable) : sert au verrou « chat fermé 30 min après ».
-    booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE
+    booking_id UUID
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_booking_id ON conversations (booking_id) WHERE booking_id IS NOT NULL;
@@ -203,6 +203,10 @@ CREATE TABLE IF NOT EXISTS bookings (
 
 CREATE INDEX IF NOT EXISTS idx_bookings_room_id ON bookings (room_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings (user_id);
+
+ALTER TABLE conversations DROP CONSTRAINT IF EXISTS fk_conversations_booking;
+ALTER TABLE conversations ADD CONSTRAINT fk_conversations_booking
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE;
 
 -- Options retenues au moment de la réservation (fige les identifiants d'options). Modelée sur room_services.
 CREATE TABLE IF NOT EXISTS booking_options (
@@ -348,3 +352,13 @@ CREATE TABLE IF NOT EXISTS shedlock (
     locked_at  TIMESTAMP    NOT NULL,
     locked_by  VARCHAR(255) NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS booking_access_check_ins (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id    UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    server_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    checked_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_booking_access_check_ins_booking UNIQUE (booking_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_access_check_ins_server_id ON booking_access_check_ins (server_id);
