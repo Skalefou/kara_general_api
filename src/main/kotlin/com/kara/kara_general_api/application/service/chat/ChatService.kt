@@ -14,6 +14,7 @@ import com.kara.kara_general_api.domain.model.chat.ReplyPreview
 import com.kara.kara_general_api.domain.model.chat.TypingEvent
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
+import com.kara.kara_general_api.domain.model.user.displayName
 import com.kara.kara_general_api.domain.model.user.UserRole
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationCommand
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationResult
@@ -297,9 +298,6 @@ class ChatService(
         val cache = HashMap<UserId, User?>()
         return { id -> cache.getOrPut(id) { userRepository.findById(id) } }
     }
-
-    private fun User?.displayName(): String =
-        this?.let { "${it.firstName} ${it.lastName}".trim() } ?: ""
 
     /** Vrai si la conversation est rattachée à une réservation dont la fenêtre de chat (fin + 30 min) est échue. */
     private fun isBookingChatClosed(conversation: Conversation): Boolean {

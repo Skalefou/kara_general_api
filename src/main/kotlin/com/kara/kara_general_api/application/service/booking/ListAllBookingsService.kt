@@ -6,6 +6,7 @@ import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
+import com.kara.kara_general_api.domain.model.user.displayName
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
@@ -31,7 +32,7 @@ class ListAllBookingsService(
             AdminBooking(
                 booking = booking,
                 roomName = room?.name ?: "Salle inconnue",
-                clientName = client?.let { "${it.firstName} ${it.lastName}".trim() } ?: "Client inconnu",
+                clientName = client.displayName("Client inconnu"),
             )
         }
     }
