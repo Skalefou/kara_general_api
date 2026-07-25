@@ -53,6 +53,11 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/stripe/webhook", permitAll)
                 // Réservations rattachées au serveur (via son agenda) : réservées au rôle SERVER.
                 authorize(HttpMethod.GET, "/api/v1/bookings/me/assigned", hasRole(UserRole.SERVER.name))
+                authorize(
+                    HttpMethod.POST,
+                    "/api/v1/bookings/*/validate-access",
+                    hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name),
+                )
                 // Supervision admin : toutes les réservations et tous les chats.
                 authorize(HttpMethod.GET, "/api/v1/bookings", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/chat/admin/**", hasRole(UserRole.ADMIN.name))
