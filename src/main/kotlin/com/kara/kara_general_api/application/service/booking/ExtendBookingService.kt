@@ -9,6 +9,8 @@ import com.kara.kara_general_api.domain.port.input.booking.ExtendBookingUseCase
 import com.kara.kara_general_api.domain.port.output.BookingExtensionRepository
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
+import org.slf4j.LoggerFactory
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -20,6 +22,8 @@ class ExtendBookingService(
     private val bookingExtensionRepository: BookingExtensionRepository,
     private val extensionFeasibility: ExtensionFeasibility,
 ) : ExtendBookingUseCase {
+
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
     override fun extend(command: ExtendBookingCommand): ExtendBookingResult {
@@ -57,6 +61,11 @@ class ExtendBookingService(
                 now = now,
             )
 
-        return ExtendBookingResult.Created(bookingExtensionRepository.save(extension))
+        return try {
+            ExtendBookingResult.Created(bookingExtensionRepository.save(extension))
+        } catch (e: DataIntegrityViolationException) {
+            logger.debug("Concurrent pending extension rejected for booking {}", booking.id.value, e)
+            ExtendBookingResult.ExtensionAlreadyPending
+        }
     }
 }

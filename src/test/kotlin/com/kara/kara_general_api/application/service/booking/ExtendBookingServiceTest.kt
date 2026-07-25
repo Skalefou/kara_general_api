@@ -20,6 +20,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
+import org.springframework.dao.DataIntegrityViolationException
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
@@ -137,6 +138,20 @@ class ExtendBookingServiceTest {
             )
 
         val result = sut.extend(command())
+
+        assertEquals(ExtendBookingResult.ExtensionAlreadyPending, result)
+    }
+
+    @Test
+    fun `should refuse when a concurrent request already inserted a pending extension`() {
+        every { bookingRepository.findById(bookingId) } returns booking()
+        every { bookingExtensionRepository.findPendingByBookingId(bookingId) } returns null
+        every { roomRepository.findById(roomId) } returns room
+        every { extensionFeasibility.maxAdditionalMinutes(any(), any(), any()) } returns 120
+        every { bookingExtensionRepository.save(any()) } throws
+            DataIntegrityViolationException("idx_booking_extensions_pending_booking")
+
+        val result = sut.extend(command(additionalMinutes = 60))
 
         assertEquals(ExtendBookingResult.ExtensionAlreadyPending, result)
     }
