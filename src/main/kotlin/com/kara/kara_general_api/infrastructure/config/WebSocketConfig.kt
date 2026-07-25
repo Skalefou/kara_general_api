@@ -10,12 +10,14 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 /**
  * Configuration STOMP. Endpoint de handshake « /ws » (WebSocket brut). Broker simple en mémoire
  * sur « /topic », préfixe applicatif « /app ». L'authentification a lieu sur la frame CONNECT via
- * [StompAuthChannelInterceptor].
+ * [StompAuthChannelInterceptor], l'autorisation des abonnements sur la frame SUBSCRIBE via
+ * [StompSubscribeAuthorizationInterceptor].
  */
 @Configuration
 @EnableWebSocketMessageBroker
 class WebSocketConfig(
     private val stompAuthChannelInterceptor: StompAuthChannelInterceptor,
+    private val stompSubscribeAuthorizationInterceptor: StompSubscribeAuthorizationInterceptor,
 ) : WebSocketMessageBrokerConfigurer {
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
@@ -28,6 +30,6 @@ class WebSocketConfig(
     }
 
     override fun configureClientInboundChannel(registration: ChannelRegistration) {
-        registration.interceptors(stompAuthChannelInterceptor)
+        registration.interceptors(stompAuthChannelInterceptor, stompSubscribeAuthorizationInterceptor)
     }
 }
