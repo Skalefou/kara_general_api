@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.model.chat
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.user.UserId
 import java.time.Instant
 
@@ -43,6 +44,7 @@ data class MessageView(
  */
 data class ConversationView(
     val id: ConversationId,
+    val bookingId: BookingId?,
     val counterpartName: String,
     val counterpartPhotoKey: String?,
     val lastMessagePreview: String,

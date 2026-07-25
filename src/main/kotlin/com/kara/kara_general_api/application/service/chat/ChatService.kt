@@ -224,6 +224,7 @@ class ChatService(
         val lastReadAt = chatRepository.findLastReadAtByParticipant(conversationId)[currentUserId]
         return ConversationView(
             id = conversationId,
+            bookingId = conversation?.bookingId,
             counterpartName = counterpart.displayName(),
             counterpartPhotoKey = counterpart?.photoKey,
             lastMessagePreview = lastMessage?.text?.take(PREVIEW_MAX_LENGTH) ?: "",

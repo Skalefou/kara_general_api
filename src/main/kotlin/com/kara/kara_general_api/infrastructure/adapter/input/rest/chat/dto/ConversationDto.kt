@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter
 
 data class ConversationDto(
     val id: String,
+    val bookingId: String?,
     val title: String,
     val counterpartName: String,
     val counterpartPhotoUrl: String?,
@@ -17,6 +18,7 @@ data class ConversationDto(
         fun from(view: ConversationView, photoUrl: (String) -> String): ConversationDto =
             ConversationDto(
                 id = view.id.value.toString(),
+                bookingId = view.bookingId?.value?.toString(),
                 title = view.counterpartName,
                 counterpartName = view.counterpartName,
                 counterpartPhotoUrl = view.counterpartPhotoKey?.let(photoUrl),

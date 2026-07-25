@@ -181,6 +181,7 @@ class ChatControllerTest {
             listOf(
                 ConversationView(
                     id = ConversationId(UUID.fromString(CONVERSATION_ID)),
+                    bookingId = null,
                     counterpartName = "John Doe",
                     counterpartPhotoKey = null,
                     lastMessagePreview = "hey",
@@ -205,6 +206,7 @@ class ChatControllerTest {
             CreateConversationResult.Success(
                 ConversationView(
                     id = ConversationId(UUID.fromString(CONVERSATION_ID)),
+                    bookingId = null,
                     counterpartName = "John Doe",
                     counterpartPhotoKey = null,
                     lastMessagePreview = "",
