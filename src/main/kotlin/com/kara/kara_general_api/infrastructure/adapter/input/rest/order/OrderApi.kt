@@ -44,7 +44,7 @@ interface OrderApi {
             ),
             ApiResponse(
                 responseCode = "402",
-                description = "Aucun moyen de paiement enregistré (PAYMENT_METHOD_REQUIRED)",
+                description = "Paiement des commandes indisponible, Stripe reste à intégrer (PAYMENT_METHOD_REQUIRED)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(

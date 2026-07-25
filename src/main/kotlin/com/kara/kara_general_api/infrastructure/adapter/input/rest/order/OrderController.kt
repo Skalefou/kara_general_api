@@ -105,9 +105,9 @@ class OrderController(
         ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(
             ProblemDetail.forStatusAndDetail(
                 HttpStatus.PAYMENT_REQUIRED,
-                "Aucun moyen de paiement n'est enregistré : ajoutez-en un pour pouvoir commander.",
+                "Le paiement des commandes n'est pas encore disponible : Stripe reste à intégrer.",
             ).apply {
-                title = "Moyen de paiement requis"
+                title = "Stripe à intégrer"
                 setProperty("code", "PAYMENT_METHOD_REQUIRED")
             },
         )
