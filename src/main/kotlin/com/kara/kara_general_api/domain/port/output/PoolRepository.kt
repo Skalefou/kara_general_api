@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.port.output
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolId
@@ -14,6 +15,8 @@ interface PoolRepository {
     fun findById(id: PoolId): Pool?
 
     fun findByBookingId(bookingId: BookingId): Pool?
+
+    fun findByExtensionId(extensionId: BookingExtensionId): Pool?
 
     /** Retrouve la cagnotte par son token de lien global (recap public « rejoindre la cagnotte »). */
     fun findByGlobalLinkToken(token: String): Pool?

@@ -17,6 +17,7 @@ import com.kara.kara_general_api.domain.port.output.StripeWebhookEvent
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
@@ -29,7 +30,15 @@ class StripeWebhookServiceTest {
     private val paymentRepository = mockk<PaymentRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val poolSettlementService = mockk<PoolSettlementService>(relaxed = true)
-    private val sut = StripeWebhookService(paymentGateway, paymentRepository, bookingRepository, poolSettlementService)
+    private val applyBookingExtensionService = mockk<ApplyBookingExtensionService>(relaxed = true)
+    private val sut =
+        StripeWebhookService(
+            paymentGateway,
+            paymentRepository,
+            bookingRepository,
+            poolSettlementService,
+            applyBookingExtensionService,
+        )
 
     private val bookingId = BookingId(UUID.randomUUID())
 

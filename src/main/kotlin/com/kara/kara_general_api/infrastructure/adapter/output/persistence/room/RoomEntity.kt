@@ -7,6 +7,7 @@ import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalTime
 import java.util.UUID
 
 @Entity
@@ -48,6 +49,12 @@ class RoomEntity(
     var longitude: Double? = null,
     @Column(nullable = false, columnDefinition = "varchar(50)")
     var status: String = "OPEN",
+    @Column(name = "opens_at", columnDefinition = "time")
+    var opensAt: LocalTime? = null,
+    @Column(name = "closes_at", columnDefinition = "time")
+    var closesAt: LocalTime? = null,
+    @Column(name = "time_zone", nullable = false, columnDefinition = "varchar(64) default 'Europe/Paris'")
+    var timeZone: String = "Europe/Paris",
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
     var createdAt: Instant = Instant.now(),
 )

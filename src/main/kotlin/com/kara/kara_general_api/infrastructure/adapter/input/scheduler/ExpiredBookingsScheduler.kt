@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.scheduler
 
 import com.kara.kara_general_api.domain.port.input.booking.CancelExpiredBookingsUseCase
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -17,6 +18,7 @@ class ExpiredBookingsScheduler(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Scheduled(fixedDelay = 60_000)
+    @SchedulerLock(name = "cancelExpiredBookings", lockAtMostFor = "PT5M", lockAtLeastFor = "PT5S")
     fun cancelExpiredBookings() {
         val cancelled = cancelExpiredBookingsUseCase.cancelExpired(Instant.now())
         if (cancelled > 0) {

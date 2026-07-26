@@ -75,6 +75,15 @@ INSERT INTO services (id, label, description, price, currency, created_at) VALUE
     ('22222222-2222-2222-2222-222222222223',
      'Agent de sécurité', 'Agent de sécurité présent sur l''événement', 25.00, 'EUR', NOW());
 
+-- Catalogue générique de produits consommables (liste de référence pour la gestion de stock) --
+INSERT INTO products (id, name, description, price, currency, created_at) VALUES
+    ('44444444-4444-4444-4444-444444444441',
+     'Coca-Cola 33cl', 'Canette 33cl', 2.50, 'EUR', NOW()),
+    ('44444444-4444-4444-4444-444444444442',
+     'Eau minérale 50cl', 'Bouteille 50cl', 1.50, 'EUR', NOW()),
+    ('44444444-4444-4444-4444-444444444443',
+     'Part de pizza', 'Part de pizza margherita', 4.00, 'EUR', NOW());
+
 -- Rattachement des services à la salle de démonstration (comportement front-client inchangé) --
 INSERT INTO room_services (id, room_id, service_id, created_at) VALUES
     ('33333333-3333-3333-3333-333333333331', '11111111-1111-1111-1111-111111111111',

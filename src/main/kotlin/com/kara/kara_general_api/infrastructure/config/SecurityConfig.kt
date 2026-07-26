@@ -36,6 +36,11 @@ class SecurityConfig {
                 authorize("/swagger-ui/**", permitAll)
                 authorize("/swagger-ui.html", permitAll)
                 authorize("/v3/api-docs/**", permitAll)
+                // Stock par salle : géré par le serveur de service (autorisation fine dans le use case) ou
+                // l'admin. Doit précéder les règles /rooms/** génériques (GET public, DELETE ADMIN) ci-dessous.
+                authorize(HttpMethod.GET, "/api/v1/rooms/*/stock", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
+                authorize(HttpMethod.PUT, "/api/v1/rooms/*/stock/**", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
+                authorize(HttpMethod.DELETE, "/api/v1/rooms/*/stock/**", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/rooms/**", permitAll)
                 authorize(HttpMethod.POST, "/api/v1/rooms", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.POST, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
@@ -46,19 +51,52 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/bookings/estimate", permitAll)
                 // Webhook Stripe : signé et vérifié applicativement (STRIPE_WEBHOOK_SECRET), donc ouvert.
                 authorize(HttpMethod.POST, "/api/v1/stripe/webhook", permitAll)
+                // Réservations rattachées au serveur (via son agenda) : réservées au rôle SERVER.
+                authorize(HttpMethod.GET, "/api/v1/bookings/me/assigned", hasRole(UserRole.SERVER.name))
+                authorize(
+                    HttpMethod.POST,
+                    "/api/v1/bookings/*/validate-access",
+                    hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name),
+                )
+                // Supervision admin : toutes les réservations et tous les chats.
+                authorize(HttpMethod.GET, "/api/v1/bookings", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.GET, "/api/v1/chat/admin/**", hasRole(UserRole.ADMIN.name))
                 // Création de réservation et initiation de paiement : réservées au client authentifié.
                 authorize(HttpMethod.POST, "/api/v1/bookings", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/payments", authenticated)
+                // Commande d'un produit pendant une réservation active : réservée au client authentifié.
+                // L'autorisation propriétaire (réservation appartenant au client) est vérifiée dans le use case.
+                authorize(HttpMethod.POST, "/api/v1/bookings/*/orders", authenticated)
+                // Produits commandables d'une réservation : lecture réservée au client (propriété vérifiée
+                // dans le use case).
+                authorize(HttpMethod.GET, "/api/v1/bookings/*/available-products", authenticated)
+                authorize(HttpMethod.GET, "/api/v1/bookings/*/extension-options", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/bookings/*/extensions", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/extensions/*/payment", authenticated)
+                authorize(HttpMethod.POST, "/api/v1/extensions/*/pool", authenticated)
                 // Catalogue global des services : gestion réservée au back-office (ADMIN) pour toutes les
                 // opérations (création, listing de gestion, suppression).
                 authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
+                // Catalogue générique des produits consommables : création/modification/suppression réservées
+                // au back-office (ADMIN). Lecture ouverte aussi au SERVER : il pioche dans le catalogue pour
+                // garnir le stock de sa salle.
+                authorize(HttpMethod.POST, "/api/v1/products", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.GET, "/api/v1/products", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
+                authorize(HttpMethod.PATCH, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
+                authorize(HttpMethod.DELETE, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/me", authenticated)
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/**", hasRole(UserRole.ADMIN.name))
+                // Agenda personnel du serveur : un SERVER consulte ses propres créneaux (doit précéder
+                // les règles ADMIN génériques ci-dessous, sinon /me tomberait sous /server-shifts/**).
+                authorize(HttpMethod.GET, "/api/v1/server-shifts/me", hasRole(UserRole.SERVER.name))
+                // Agenda des serveurs : édition réservée au back-office (ADMIN) sur toutes les opérations.
+                authorize("/api/v1/server-shifts", hasRole(UserRole.ADMIN.name))
+                authorize("/api/v1/server-shifts/**", hasRole(UserRole.ADMIN.name))
                 // Récapitulatifs publics de cagnotte (lecture sans authentification). Le paiement d'une part
                 // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
                 authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)

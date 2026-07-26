@@ -15,6 +15,7 @@ import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageResult
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesResult
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesUseCase
+import com.kara.kara_general_api.domain.port.input.chat.ListAllConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ListConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadResult
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadUseCase
@@ -57,6 +58,9 @@ class ChatControllerTest {
 
     @MockkBean
     private lateinit var listConversationsUseCase: ListConversationsUseCase
+
+    @MockkBean
+    private lateinit var listAllConversationsUseCase: ListAllConversationsUseCase
 
     @MockkBean
     private lateinit var getMessagesUseCase: GetMessagesUseCase
@@ -177,6 +181,7 @@ class ChatControllerTest {
             listOf(
                 ConversationView(
                     id = ConversationId(UUID.fromString(CONVERSATION_ID)),
+                    bookingId = null,
                     counterpartName = "John Doe",
                     counterpartPhotoKey = null,
                     lastMessagePreview = "hey",
@@ -201,6 +206,7 @@ class ChatControllerTest {
             CreateConversationResult.Success(
                 ConversationView(
                     id = ConversationId(UUID.fromString(CONVERSATION_ID)),
+                    bookingId = null,
                     counterpartName = "John Doe",
                     counterpartPhotoKey = null,
                     lastMessagePreview = "",

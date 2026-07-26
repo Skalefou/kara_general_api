@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
+import com.kara.kara_general_api.domain.port.output.BookingExtensionRepository
 import kotlin.test.assertEquals
 
 class CancelExpiredPoolsServiceTest {
@@ -29,8 +30,16 @@ class CancelExpiredPoolsServiceTest {
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val poolSettlementService = mockk<PoolSettlementService>(relaxed = true)
     private val poolNotifier = mockk<PoolNotifier>(relaxed = true)
+    private val bookingExtensionRepository = mockk<BookingExtensionRepository>(relaxed = true)
     private val sut =
-        CancelExpiredPoolsService(poolRepository, poolShareRepository, bookingRepository, poolSettlementService, poolNotifier)
+        CancelExpiredPoolsService(
+            poolRepository,
+            poolShareRepository,
+            bookingRepository,
+            bookingExtensionRepository,
+            poolSettlementService,
+            poolNotifier,
+        )
 
     private val poolId = PoolId(UUID.randomUUID())
     private val bookingId = BookingId(UUID.randomUUID())

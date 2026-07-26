@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.model.payment
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.user.UserId
@@ -19,6 +20,7 @@ data class Payment(
     val status: PaymentStatus,
     val stripePaymentIntentId: String,
     val createdAt: Instant,
+    val extensionId: BookingExtensionId? = null,
 ) {
     fun markPaid(): Payment = copy(status = PaymentStatus.PAID)
 
@@ -34,6 +36,7 @@ data class Payment(
             amount: BigDecimal,
             currency: Currency,
             stripePaymentIntentId: String,
+            extensionId: BookingExtensionId? = null,
         ): Payment =
             Payment(
                 id = PaymentId.generate(),
@@ -44,6 +47,7 @@ data class Payment(
                 status = PaymentStatus.PENDING,
                 stripePaymentIntentId = stripePaymentIntentId,
                 createdAt = Instant.now(),
+                extensionId = extensionId,
             )
     }
 }

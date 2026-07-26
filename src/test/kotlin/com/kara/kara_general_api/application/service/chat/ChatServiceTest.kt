@@ -1,7 +1,12 @@
 package com.kara.kara_general_api.application.service.chat
 
+import com.kara.kara_general_api.domain.model.booking.Booking
+import com.kara.kara_general_api.domain.model.booking.BookingId
+import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.chat.Conversation
 import com.kara.kara_general_api.domain.model.chat.ConversationId
+import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.chat.MESSAGE_STATUS_SENT
 import com.kara.kara_general_api.domain.model.chat.Message
 import com.kara.kara_general_api.domain.model.chat.MessageId
@@ -20,6 +25,7 @@ import com.kara.kara_general_api.domain.port.input.chat.SendMessageCommand
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageResult
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionCommand
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionResult
+import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.ChatEventPublisher
 import com.kara.kara_general_api.domain.port.output.ChatRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
@@ -39,8 +45,9 @@ class ChatServiceTest {
 
     private val chatRepository = mockk<ChatRepository>(relaxUnitFun = true)
     private val userRepository = mockk<UserRepository>()
+    private val bookingRepository = mockk<BookingRepository>()
     private val eventPublisher = mockk<ChatEventPublisher>(relaxUnitFun = true)
-    private val sut = ChatService(chatRepository, userRepository, eventPublisher)
+    private val sut = ChatService(chatRepository, userRepository, bookingRepository, eventPublisher)
 
     private val meId = UserId(UUID.randomUUID())
     private val otherId = UserId(UUID.randomUUID())
@@ -217,4 +224,35 @@ class ChatServiceTest {
         val success = assertInstanceOf(GetMessagesResult.Success::class.java, result)
         assertTrue(success.messages.first().status == "read")
     }
+
+    @Test
+    fun `sendMessage on a booking conversation is rejected past the 30 min window`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.now().minusSeconds(31 * 60))
+
+        val result = sut.sendMessage(SendMessageCommand(meId, conversationId, "coucou", null, false))
+
+        assertEquals(SendMessageResult.ChatClosed, result)
+        verify(exactly = 0) { chatRepository.saveMessage(any()) }
+    }
+
+    private fun bookingEndingAt(bookingId: BookingId, endAt: Instant): Booking =
+        Booking(
+            id = bookingId,
+            roomId = RoomId(UUID.randomUUID()),
+            userId = otherId,
+            startAt = endAt.minusSeconds(3600),
+            endAt = endAt,
+            numberOfPeople = 4,
+            selectedOptionIds = emptyList(),
+            totalPrice = java.math.BigDecimal("100.00"),
+            currency = Currency.EUR,
+            status = BookingStatus.CONFIRMED,
+            createdAt = Instant.now(),
+            expiresAt = Instant.now(),
+        )
 }

@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.port.input.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.user.UserId
 import java.math.BigDecimal
@@ -14,6 +15,12 @@ data class CreatePoolShareInput(
 
 data class CreatePoolCommand(
     val bookingId: BookingId,
+    val creatorId: UserId,
+    val shares: List<CreatePoolShareInput>,
+)
+
+data class CreateExtensionPoolCommand(
+    val extensionId: BookingExtensionId,
     val creatorId: UserId,
     val shares: List<CreatePoolShareInput>,
 )
@@ -44,6 +51,30 @@ sealed interface CreatePoolResult {
     data object InvalidShares : CreatePoolResult
 }
 
+sealed interface CreateExtensionPoolResult {
+    data class Created(val view: PoolView) : CreateExtensionPoolResult
+
+    data object ExtensionNotFound : CreateExtensionPoolResult
+
+    data object NotOwner : CreateExtensionPoolResult
+
+    data object ExtensionNotPending : CreateExtensionPoolResult
+
+    data object NotSharedPot : CreateExtensionPoolResult
+
+    data object PoolAlreadyExists : CreateExtensionPoolResult
+
+    data object SettlementWindowTooShort : CreateExtensionPoolResult
+
+    data class SharesMismatch(val expected: BigDecimal, val actual: BigDecimal) : CreateExtensionPoolResult
+
+    data object InvalidShares : CreateExtensionPoolResult
+}
+
 interface CreatePoolUseCase {
     fun create(command: CreatePoolCommand): CreatePoolResult
+}
+
+interface CreateExtensionPoolUseCase {
+    fun createForExtension(command: CreateExtensionPoolCommand): CreateExtensionPoolResult
 }

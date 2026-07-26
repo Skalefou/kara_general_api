@@ -8,6 +8,8 @@ import com.kara.kara_general_api.domain.model.room.vo.Address
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Component
 import java.sql.ResultSet
+import java.time.LocalTime
+import java.time.ZoneId
 import java.util.UUID
 
 @Component
@@ -34,5 +36,8 @@ class RoomRowMapper : RowMapper<Room> {
             status = RoomStatus.valueOf(rs.getString("status")),
             latitude = rs.getObject("latitude", Double::class.javaObjectType),
             longitude = rs.getObject("longitude", Double::class.javaObjectType),
+            opensAt = rs.getObject("opens_at", LocalTime::class.java),
+            closesAt = rs.getObject("closes_at", LocalTime::class.java),
+            timeZone = rs.getString("time_zone")?.let { ZoneId.of(it) } ?: Room.DEFAULT_TIME_ZONE,
         )
 }

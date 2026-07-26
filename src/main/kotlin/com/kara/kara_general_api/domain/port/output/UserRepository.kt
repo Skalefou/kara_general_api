@@ -51,4 +51,7 @@ interface UserRepository {
 
     /** Enregistre l'identifiant client Stripe (créé paresseusement au premier paiement). Jamais logué. */
     fun updateStripeCustomerId(id: UserId, stripeCustomerId: String)
+
+    /** Enregistre (ou remplace) le token d'appareil FCM utilisé pour les notifications push. */
+    fun updateFcmToken(id: UserId, token: String)
 }

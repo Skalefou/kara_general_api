@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolId
@@ -30,6 +31,12 @@ class GetPoolService(
     @Transactional(readOnly = true)
     override fun getByBookingId(bookingId: BookingId, requesterId: UserId): GetPoolResult {
         val pool = poolRepository.findByBookingId(bookingId) ?: return GetPoolResult.NotFound
+        return toResult(pool, requesterId)
+    }
+
+    @Transactional(readOnly = true)
+    override fun getByExtensionId(extensionId: BookingExtensionId, requesterId: UserId): GetPoolResult {
+        val pool = poolRepository.findByExtensionId(extensionId) ?: return GetPoolResult.NotFound
         return toResult(pool, requesterId)
     }
 

@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS rooms (
     latitude    DOUBLE PRECISION,
     longitude   DOUBLE PRECISION,
     status      VARCHAR(50)  NOT NULL,
+    opens_at    TIME,
+    closes_at   TIME,
+    time_zone   VARCHAR(64)  NOT NULL DEFAULT 'Europe/Paris',
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -134,14 +137,43 @@ CREATE TABLE IF NOT EXISTS room_services (
 CREATE INDEX IF NOT EXISTS idx_room_services_room_id ON room_services (room_id);
 CREATE INDEX IF NOT EXISTS idx_room_services_service_id ON room_services (service_id);
 
+-- Catalogue générique des produits consommables : liste de référence indépendante de toute salle,
+-- utilisée pour la gestion de stock et la consommation pendant une réservation. Prix unitaire fixe.
+CREATE TABLE IF NOT EXISTS products (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        VARCHAR(255) NOT NULL,
+    description TEXT,
+    price       NUMERIC(10,2) NOT NULL,
+    currency    VARCHAR(10)  NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Stock par salle : rattache un produit du catalogue générique à une salle avec une quantité disponible.
+-- Un produit absent de cette table (ou en quantité 0) ne peut pas être vendu pour la salle concernée.
+CREATE TABLE IF NOT EXISTS room_products (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity   INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_room_products_room_product UNIQUE (room_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_products_room_id ON room_products (room_id);
+CREATE INDEX IF NOT EXISTS idx_room_products_product_id ON room_products (product_id);
+
 -- ============================================================================
 -- Chat (messagerie temps réel) — MVP texte
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS conversations (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Conversation rattachée à une réservation (nullable) : sert au verrou « chat fermé 30 min après ».
+    booking_id UUID
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_booking_id ON conversations (booking_id) WHERE booking_id IS NOT NULL;
 
 -- Participation d'un utilisateur à une conversation + état de lecture (last_read_at pilote les non-lus).
 CREATE TABLE IF NOT EXISTS conversation_participants (
@@ -208,6 +240,10 @@ CREATE TABLE IF NOT EXISTS bookings (
 CREATE INDEX IF NOT EXISTS idx_bookings_room_id ON bookings (room_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings (user_id);
 
+ALTER TABLE conversations DROP CONSTRAINT IF EXISTS fk_conversations_booking;
+ALTER TABLE conversations ADD CONSTRAINT fk_conversations_booking
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE;
+
 -- Options retenues au moment de la réservation (fige les identifiants d'options). Modelée sur room_services.
 CREATE TABLE IF NOT EXISTS booking_options (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -220,10 +256,80 @@ CREATE TABLE IF NOT EXISTS booking_options (
 CREATE INDEX IF NOT EXISTS idx_booking_options_booking_id ON booking_options (booking_id);
 CREATE INDEX IF NOT EXISTS idx_booking_options_option_id ON booking_options (option_id);
 
+CREATE TABLE IF NOT EXISTS booking_extensions (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id         UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    additional_minutes INT           NOT NULL,
+    previous_end_at    TIMESTAMPTZ   NOT NULL,
+    new_end_at         TIMESTAMPTZ   NOT NULL,
+    price              NUMERIC(10,2) NOT NULL,
+    currency           VARCHAR(10)   NOT NULL,
+    status             VARCHAR(50)   NOT NULL DEFAULT 'PENDING',
+    payment_mode       VARCHAR(20)   NOT NULL DEFAULT 'PAY_ALL',
+    created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    expires_at         TIMESTAMPTZ   NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_extensions_booking_id ON booking_extensions (booking_id);
+CREATE INDEX IF NOT EXISTS idx_booking_extensions_user_id ON booking_extensions (user_id);
+CREATE INDEX IF NOT EXISTS idx_booking_extensions_status_expires ON booking_extensions (status, expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_extensions_pending_booking
+    ON booking_extensions (booking_id) WHERE status = 'PENDING';
+
+-- Commandes de produits passées pendant une réservation active. Le prix unitaire est figé au tarif du produit
+-- au moment de la commande ; total_price = unit_price × quantity. Le débit/crédit du moyen de paiement est
+-- géré par la brique paiement (hors de cette table). status : PLACED (extensible).
+CREATE TABLE IF NOT EXISTS orders (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id  UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id  UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity    INT           NOT NULL,
+    unit_price  NUMERIC(10,2) NOT NULL,
+    currency    VARCHAR(10)   NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL,
+    status      VARCHAR(30)   NOT NULL,
+    created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_booking_id ON orders (booking_id);
+
+-- Rappels de fin de réservation envoyés (idempotence des notifications push « fin imminente »).
+-- Un rappel de type `kind` (TEN_MINUTES / TWO_MINUTES) n'est envoyé qu'une fois par réservation :
+-- l'unicité (booking_id, kind) garantit qu'un tick de planificateur ne renotifie pas.
+CREATE TABLE IF NOT EXISTS booking_end_reminders (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    kind       VARCHAR(20)  NOT NULL,
+    sent_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_booking_end_reminders_booking_kind UNIQUE (booking_id, kind)
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_end_reminders_booking_id ON booking_end_reminders (booking_id);
+
+-- Agenda serveurs : affectation d'un serveur à une salle sur un créneau [start_at, end_at). Édité par
+-- l'ADMIN depuis le back-office. Deux créneaux d'un même serveur ne doivent pas se chevaucher (contrôle
+-- applicatif). ON DELETE CASCADE : un serveur ou une salle supprimé purge ses créneaux.
+CREATE TABLE IF NOT EXISTS server_shifts (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    server_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    start_at   TIMESTAMPTZ NOT NULL,
+    end_at     TIMESTAMPTZ NOT NULL,
+    note       TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_server_shifts_server_id ON server_shifts (server_id);
+CREATE INDEX IF NOT EXISTS idx_server_shifts_room_id ON server_shifts (room_id);
+CREATE INDEX IF NOT EXISTS idx_server_shifts_start_at ON server_shifts (start_at);
+
 -- Paiements « payer tout » (Stripe). Le webhook Stripe fait foi : payment_intent.succeeded → PAID + booking CONFIRMED.
 CREATE TABLE IF NOT EXISTS payments (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id               UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    extension_id             UUID REFERENCES booking_extensions(id) ON DELETE CASCADE,
     user_id                  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount                   NUMERIC(10,2) NOT NULL,
     currency                 VARCHAR(10)  NOT NULL,
@@ -242,6 +348,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments (user_id);
 CREATE TABLE IF NOT EXISTS pools (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id        UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    extension_id      UUID REFERENCES booking_extensions(id) ON DELETE CASCADE,
     target_amount     NUMERIC(10,2) NOT NULL,
     currency          VARCHAR(10)  NOT NULL,
     status            VARCHAR(50)  NOT NULL DEFAULT 'OPEN',
@@ -250,7 +357,8 @@ CREATE TABLE IF NOT EXISTS pools (
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_booking_id ON pools (booking_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_booking_id ON pools (booking_id) WHERE extension_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_extension_id ON pools (extension_id) WHERE extension_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pools_global_link_token ON pools (global_link_token);
 CREATE INDEX IF NOT EXISTS idx_pools_status_deadline ON pools (status, deadline);
 
@@ -273,3 +381,20 @@ CREATE TABLE IF NOT EXISTS pool_shares (
 CREATE INDEX IF NOT EXISTS idx_pool_shares_pool_id ON pool_shares (pool_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pool_shares_unique_link_token ON pool_shares (unique_link_token);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_pool_shares_stripe_payment_intent_id ON pool_shares (stripe_payment_intent_id);
+
+CREATE TABLE IF NOT EXISTS shedlock (
+    name       VARCHAR(64)  NOT NULL PRIMARY KEY,
+    lock_until TIMESTAMP    NOT NULL,
+    locked_at  TIMESTAMP    NOT NULL,
+    locked_by  VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS booking_access_check_ins (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id    UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    server_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    checked_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_booking_access_check_ins_booking UNIQUE (booking_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_access_check_ins_server_id ON booking_access_check_ins (server_id);

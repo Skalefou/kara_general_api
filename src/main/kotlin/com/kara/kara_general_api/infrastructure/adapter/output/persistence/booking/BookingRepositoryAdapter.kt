@@ -5,10 +5,12 @@ import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomOptionId
+import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Component
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
@@ -127,9 +129,76 @@ class BookingRepositoryAdapter(
         return count > 0
     }
 
+    override fun findAssignedToServer(serverId: UserId): List<Booking> {
+        // Rattachement serveur→réservation : il existe un créneau d'agenda du serveur, dans la même salle,
+        // dont l'intervalle chevauche celui de la réservation ([a,b) et [c,d) se chevauchent ssi a<d ET b>c).
+        // DISTINCT car plusieurs créneaux du serveur peuvent couvrir une même réservation.
+        val sql =
+            """
+            SELECT DISTINCT b.id, b.room_id, b.user_id, b.start_at, b.end_at, b.number_of_people,
+                   b.total_price, b.currency, b.status, b.created_at, b.expires_at
+            FROM bookings b
+            JOIN server_shifts s
+              ON s.room_id = b.room_id
+             AND s.server_id = :serverId
+             AND s.start_at < b.end_at
+             AND s.end_at > b.start_at
+            WHERE b.status <> 'CANCELLED'
+            ORDER BY b.start_at ASC
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("serverId" to serverId.value), rowMapper)
+    }
+
+    override fun findAllBookings(): List<Booking> {
+        val sql =
+            """
+            SELECT $BOOKING_COLUMNS
+            FROM bookings
+            ORDER BY start_at DESC
+            """.trimIndent()
+        return jdbc.query(sql, emptyMap<String, Any>(), rowMapper)
+    }
+
     override fun updateStatus(id: BookingId, status: BookingStatus) {
         val sql = "UPDATE bookings SET status = :status WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
+    }
+
+    override fun findNextStartAfter(
+        roomId: RoomId,
+        after: Instant,
+        excluding: BookingId,
+        now: Instant,
+    ): Instant? {
+        val sql =
+            """
+            SELECT MIN(start_at) AS next_start
+            FROM bookings
+            WHERE room_id = :roomId
+              AND id <> :excluding
+              AND (status = 'CONFIRMED' OR (status = 'PENDING' AND expires_at > :now))
+              AND start_at >= :after
+            """.trimIndent()
+        return jdbc.query(
+            sql,
+            MapSqlParameterSource()
+                .addValue("roomId", roomId.value)
+                .addValue("excluding", excluding.value)
+                .addValue("after", Timestamp.from(after))
+                .addValue("now", Timestamp.from(now)),
+        ) { rs, _ -> rs.getTimestamp("next_start")?.toInstant() }
+            .firstOrNull()
+    }
+
+    override fun updateEndAt(id: BookingId, endAt: Instant, totalPrice: BigDecimal) {
+        val sql = "UPDATE bookings SET end_at = :endAt, total_price = :totalPrice WHERE id = :id"
+        jdbc.update(
+            sql,
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("endAt", Timestamp.from(endAt))
+                .addValue("totalPrice", totalPrice),
+        )
     }
 
     override fun cancelExpiredPending(now: Instant): Int {

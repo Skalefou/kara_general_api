@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.domain.port.input.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingExtensionId
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.PoolId
 import com.kara.kara_general_api.domain.model.user.UserId
@@ -17,4 +18,6 @@ interface GetPoolUseCase {
     fun getById(poolId: PoolId, requesterId: UserId): GetPoolResult
 
     fun getByBookingId(bookingId: BookingId, requesterId: UserId): GetPoolResult
+
+    fun getByExtensionId(extensionId: BookingExtensionId, requesterId: UserId): GetPoolResult
 }

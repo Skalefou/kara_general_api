@@ -125,6 +125,25 @@ interface PoolApi {
     fun getPoolByBooking(@PathVariable bookingId: UUID, authentication: Authentication): ResponseEntity<Any>
 
     @Operation(
+        summary = "Cagnotte d'une extension de réservation",
+        description = "Statut de la cagnotte ouverte pour une prolongation, réservé au client propriétaire.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Cagnotte trouvée",
+                content = [Content(schema = Schema(implementation = PoolResponse::class))],
+            ),
+            ApiResponse(responseCode = "403", description = "POOL_NOT_OWNER"),
+            ApiResponse(responseCode = "404", description = "POOL_NOT_FOUND"),
+        ],
+    )
+    @GetMapping("/by-extension/{extensionId}")
+    fun getPoolByExtension(@PathVariable extensionId: UUID, authentication: Authentication): ResponseEntity<Any>
+
+    @Operation(
         summary = "Récapitulatif public via le lien global",
         description = "Lecture publique (sans authentification) : résumé de la réservation, progression de la " +
             "cagnotte et message de débit différé. Le paiement, lui, requiert une authentification.",
