@@ -42,6 +42,7 @@ out/
 # Fichier d'environnement
 .env
 .env.preprod
+.env.prod
 private.pem
 
 # Documentation
