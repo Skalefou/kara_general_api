@@ -43,6 +43,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    // TOTP (RFC 6238) — génération/vérification des codes à usage unique de l'A2F.
+    implementation("dev.samstevens.totp:totp:1.7.1")
     implementation("net.javacrumbs.shedlock:shedlock-spring:6.9.0")
     implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:6.9.0")
     developmentOnly("org.springframework.boot:spring-boot-devtools")

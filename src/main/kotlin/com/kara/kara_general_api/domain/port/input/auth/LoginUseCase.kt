@@ -29,6 +29,16 @@ sealed interface LoginResult {
         val mustChangePassword: Boolean,
     ) : LoginResult
 
+    /**
+     * Mot de passe validé, mais le compte exige un second facteur : aucun token n'est délivré. Le front doit
+     * rejouer [mfaToken] sur `/api/v1/auth/login/2fa` (code TOTP) ou `/api/v1/auth/login/2fa/recovery`
+     * (code de secours) avant [expiresInSeconds].
+     */
+    data class TwoFactorRequired(
+        val mfaToken: String,
+        val expiresInSeconds: Long,
+    ) : LoginResult
+
     data object UserNotFound : LoginResult
 
     data object InvalidCredentials : LoginResult

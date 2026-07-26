@@ -21,6 +21,10 @@ import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordResult
 import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.ConsumeRecoveryCodeResult
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.ConsumeRecoveryCodeUseCase
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.VerifyTwoFactorChallengeResult
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.VerifyTwoFactorChallengeUseCase
 import com.kara.kara_general_api.domain.port.output.AccessToken
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.RefreshToken
@@ -72,6 +76,12 @@ class AuthControllerTest {
 
     @MockkBean
     private lateinit var changePasswordUseCase: ChangePasswordUseCase
+
+    @MockkBean
+    private lateinit var verifyTwoFactorChallengeUseCase: VerifyTwoFactorChallengeUseCase
+
+    @MockkBean
+    private lateinit var consumeRecoveryCodeUseCase: ConsumeRecoveryCodeUseCase
 
     @MockkBean
     private lateinit var imageStorage: ImageStoragePort
@@ -491,5 +501,185 @@ class AuthControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(changePasswordRequestBody),
             ).andExpect(status().isUnauthorized)
+    }
+
+    // ----- A2F : deuxième étape de la connexion ------------------------------
+
+    private val twoFactorLoginBody =
+        """
+        {
+          "mfaToken": "mfa-token",
+          "code": "123456"
+        }
+        """.trimIndent()
+
+    private val recoveryLoginBody =
+        """
+        {
+          "mfaToken": "mfa-token",
+          "recoveryCode": "cascade tulipe marteau renard"
+        }
+        """.trimIndent()
+
+    @Test
+    fun `should return 200 with a two-factor challenge instead of tokens when the account requires 2FA`() {
+        every { loginUseCase.login(any()) } returns
+            LoginResult.TwoFactorRequired(mfaToken = "mfa-token", expiresInSeconds = 300)
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.twoFactorRequired").value(true))
+            .andExpect(jsonPath("$.mfaToken").value("mfa-token"))
+            .andExpect(jsonPath("$.expiresIn").value(300))
+            .andExpect(jsonPath("$.accessToken").doesNotExist())
+            .andExpect(jsonPath("$.refreshToken").doesNotExist())
+    }
+
+    @Test
+    fun `should flag twoFactorRequired as false on the plain login response`() {
+        every { loginUseCase.login(any()) } returns
+            LoginResult.Success(
+                user,
+                AccessToken(value = "jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+                mustChangePassword = false,
+            )
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.twoFactorRequired").value(false))
+            .andExpect(jsonPath("$.twoFactorDisabled").value(false))
+    }
+
+    @Test
+    fun `should return 200 with tokens when the two-factor code is valid`() {
+        every { verifyTwoFactorChallengeUseCase.verify(any()) } returns
+            VerifyTwoFactorChallengeResult.Success(
+                user,
+                AccessToken(value = "jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+                mustChangePassword = false,
+            )
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(twoFactorLoginBody),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").value("jwt-token"))
+            .andExpect(jsonPath("$.refreshToken").value("refresh-token-value"))
+            .andExpect(jsonPath("$.user.email").value("client@kara.app"))
+            .andExpect(jsonPath("$.twoFactorDisabled").value(false))
+    }
+
+    @Test
+    fun `should return 400 with INVALID_TWO_FACTOR_CODE when the two-factor code is wrong`() {
+        every { verifyTwoFactorChallengeUseCase.verify(any()) } returns
+            VerifyTwoFactorChallengeResult.InvalidCode
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(twoFactorLoginBody),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("INVALID_TWO_FACTOR_CODE"))
+    }
+
+    @Test
+    fun `should return 400 with TWO_FACTOR_CHALLENGE_EXPIRED when the challenge is unknown or expired`() {
+        every { verifyTwoFactorChallengeUseCase.verify(any()) } returns
+            VerifyTwoFactorChallengeResult.ChallengeExpired
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(twoFactorLoginBody),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("TWO_FACTOR_CHALLENGE_EXPIRED"))
+    }
+
+    @Test
+    fun `should return 429 when too many two-factor codes were submitted`() {
+        every { verifyTwoFactorChallengeUseCase.verify(any()) } returns
+            VerifyTwoFactorChallengeResult.TooManyAttempts
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(twoFactorLoginBody),
+            ).andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.code").value("TWO_FACTOR_TOO_MANY_ATTEMPTS"))
+    }
+
+    @Test
+    fun `should return 200 with twoFactorDisabled when a recovery code is consumed`() {
+        every { consumeRecoveryCodeUseCase.consume(any()) } returns
+            ConsumeRecoveryCodeResult.Success(
+                user,
+                AccessToken(value = "jwt-token", expiresInSeconds = 900),
+                RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
+                mustChangePassword = false,
+            )
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa/recovery")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(recoveryLoginBody),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").value("jwt-token"))
+            .andExpect(jsonPath("$.twoFactorDisabled").value(true))
+    }
+
+    @Test
+    fun `should return 400 with INVALID_RECOVERY_CODE when the recovery code is unknown or already used`() {
+        every { consumeRecoveryCodeUseCase.consume(any()) } returns
+            ConsumeRecoveryCodeResult.InvalidRecoveryCode
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa/recovery")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(recoveryLoginBody),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("INVALID_RECOVERY_CODE"))
+    }
+
+    @Test
+    fun `should return 400 when the challenge behind a recovery login has expired`() {
+        every { consumeRecoveryCodeUseCase.consume(any()) } returns ConsumeRecoveryCodeResult.ChallengeExpired
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa/recovery")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(recoveryLoginBody),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("TWO_FACTOR_CHALLENGE_EXPIRED"))
+    }
+
+    @Test
+    fun `should return 429 when too many recovery codes were submitted`() {
+        every { consumeRecoveryCodeUseCase.consume(any()) } returns ConsumeRecoveryCodeResult.TooManyAttempts
+
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login/2fa/recovery")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(recoveryLoginBody),
+            ).andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.code").value("TWO_FACTOR_TOO_MANY_ATTEMPTS"))
     }
 }
