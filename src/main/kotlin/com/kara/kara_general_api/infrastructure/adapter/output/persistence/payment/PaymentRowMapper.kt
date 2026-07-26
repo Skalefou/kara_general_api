@@ -14,7 +14,10 @@ import java.util.UUID
 
 @Component
 class PaymentRowMapper : RowMapper<Payment> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): Payment =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): Payment =
         Payment(
             id = PaymentId(rs.getObject("id", UUID::class.java)),
             bookingId = BookingId(rs.getObject("booking_id", UUID::class.java)),

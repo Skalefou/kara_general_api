@@ -15,7 +15,6 @@ class RemoveRoomStockService(
     private val roomStockRepository: RoomStockRepository,
     private val serverShiftRepository: ServerShiftRepository,
 ) : RemoveRoomStockUseCase {
-
     @Transactional
     override fun removeRoomStock(command: RemoveRoomStockCommand): RemoveRoomStockResult {
         roomRepository.findById(command.roomId) ?: return RemoveRoomStockResult.RoomNotFound

@@ -26,7 +26,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ListUserPoolsServiceTest {
-
     private val poolRepository = mockk<PoolRepository>()
     private val poolShareRepository = mockk<PoolShareRepository>()
     private val bookingRepository = mockk<BookingRepository>()
@@ -35,10 +34,15 @@ class ListUserPoolsServiceTest {
 
     private val userId = UserId(UUID.randomUUID())
 
-    private fun pool(id: PoolId, bookingId: BookingId) =
-        Pool(id, bookingId, BigDecimal("100.00"), Currency.EUR, PoolStatus.OPEN, Instant.now().plusSeconds(3600), "g", Instant.now())
+    private fun pool(
+        id: PoolId,
+        bookingId: BookingId,
+    ) = Pool(id, bookingId, BigDecimal("100.00"), Currency.EUR, PoolStatus.OPEN, Instant.now().plusSeconds(3600), "g", Instant.now())
 
-    private fun bookingOwnedBy(owner: UserId, roomId: RoomId): Booking {
+    private fun bookingOwnedBy(
+        owner: UserId,
+        roomId: RoomId,
+    ): Booking {
         val booking = mockk<Booking>()
         every { booking.userId } returns owner
         every { booking.roomId } returns roomId
@@ -65,8 +69,30 @@ class ListUserPoolsServiceTest {
         every { roomRepository.findById(roomId) } returns room
         every { poolShareRepository.findByPoolId(poolId) } returns
             listOf(
-                PoolShare(PoolShareId(UUID.randomUUID()), poolId, "A", null, BigDecimal("40.00"), PoolShareStatus.AUTHORIZED, "pi_a", null, null, false),
-                PoolShare(PoolShareId(UUID.randomUUID()), poolId, "B", null, BigDecimal("60.00"), PoolShareStatus.PENDING, null, null, null, true),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    poolId,
+                    "A",
+                    null,
+                    BigDecimal("40.00"),
+                    PoolShareStatus.AUTHORIZED,
+                    "pi_a",
+                    null,
+                    null,
+                    false,
+                ),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    poolId,
+                    "B",
+                    null,
+                    BigDecimal("60.00"),
+                    PoolShareStatus.PENDING,
+                    null,
+                    null,
+                    null,
+                    true,
+                ),
             )
 
         val summaries = sut.listForUser(userId)

@@ -24,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class CreateRoomServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val geocodingPort = mockk<GeocodingPort>()
     private val serviceRepository = mockk<ServiceRepository>()

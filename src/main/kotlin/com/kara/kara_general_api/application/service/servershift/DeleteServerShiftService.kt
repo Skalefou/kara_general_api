@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional
 class DeleteServerShiftService(
     private val serverShiftRepository: ServerShiftRepository,
 ) : DeleteServerShiftUseCase {
-
     @Transactional
     override fun deleteServerShift(id: ServerShiftId): DeleteServerShiftResult =
         if (serverShiftRepository.deleteById(id)) {

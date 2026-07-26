@@ -23,11 +23,11 @@ import java.util.UUID
 
 @Tag(name = "Stock des salles", description = "Gestion du stock de produits par salle (serveur de service et admin)")
 interface RoomStockApi {
-
     @Operation(
         summary = "Consulter le stock d'une salle",
-        description = "Liste les produits en stock d'une salle avec leur quantité. Accessible à l'administrateur " +
-            "et au serveur de service dans cette salle (créneau couvrant l'instant présent).",
+        description =
+            "Liste les produits en stock d'une salle avec leur quantité. Accessible à l'administrateur " +
+                "et au serveur de service dans cette salle (créneau couvrant l'instant présent).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -57,8 +57,9 @@ interface RoomStockApi {
 
     @Operation(
         summary = "Définir la quantité d'un produit dans une salle",
-        description = "Ajoute le produit au stock de la salle ou met à jour sa quantité (upsert). Accessible à " +
-            "l'administrateur et au serveur de service dans cette salle.",
+        description =
+            "Ajoute le produit au stock de la salle ou met à jour sa quantité (upsert). Accessible à " +
+                "l'administrateur et au serveur de service dans cette salle.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -95,8 +96,9 @@ interface RoomStockApi {
 
     @Operation(
         summary = "Retirer un produit du stock d'une salle",
-        description = "Retire un produit du stock de la salle. Accessible à l'administrateur et au serveur de " +
-            "service dans cette salle.",
+        description =
+            "Retire un produit du stock de la salle. Accessible à l'administrateur et au serveur de " +
+                "service dans cette salle.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

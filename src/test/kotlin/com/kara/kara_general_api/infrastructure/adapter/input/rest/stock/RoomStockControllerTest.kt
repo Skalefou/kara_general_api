@@ -36,7 +36,6 @@ private const val PRODUCT_ID = "44444444-4444-4444-4444-444444444441"
 @WebMvcTest(RoomStockController::class)
 @Import(SecurityConfig::class)
 class RoomStockControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -60,7 +59,8 @@ class RoomStockControllerTest {
     fun `should return 200 with the stock when admin lists it`() {
         every { getRoomStockUseCase.getRoomStock(any()) } returns GetRoomStockResult.Success(listOf(entry))
 
-        mockMvc.perform(get("/api/v1/rooms/$ROOM_ID/stock"))
+        mockMvc
+            .perform(get("/api/v1/rooms/$ROOM_ID/stock"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].productId").value(PRODUCT_ID))
@@ -73,20 +73,23 @@ class RoomStockControllerTest {
     fun `should return 200 when the on-duty server lists the stock`() {
         every { getRoomStockUseCase.getRoomStock(any()) } returns GetRoomStockResult.Success(listOf(entry))
 
-        mockMvc.perform(get("/api/v1/rooms/$ROOM_ID/stock"))
+        mockMvc
+            .perform(get("/api/v1/rooms/$ROOM_ID/stock"))
             .andExpect(status().isOk)
     }
 
     @Test
     @WithMockUser(username = USER_ID, roles = ["CLIENT"])
     fun `should return 403 when a client lists the stock`() {
-        mockMvc.perform(get("/api/v1/rooms/$ROOM_ID/stock"))
+        mockMvc
+            .perform(get("/api/v1/rooms/$ROOM_ID/stock"))
             .andExpect(status().isForbidden)
     }
 
     @Test
     fun `should return 401 when unauthenticated lists the stock`() {
-        mockMvc.perform(get("/api/v1/rooms/$ROOM_ID/stock"))
+        mockMvc
+            .perform(get("/api/v1/rooms/$ROOM_ID/stock"))
             .andExpect(status().isUnauthorized)
     }
 
@@ -95,7 +98,8 @@ class RoomStockControllerTest {
     fun `should return 404 when the room is unknown`() {
         every { getRoomStockUseCase.getRoomStock(any()) } returns GetRoomStockResult.RoomNotFound
 
-        mockMvc.perform(get("/api/v1/rooms/$ROOM_ID/stock"))
+        mockMvc
+            .perform(get("/api/v1/rooms/$ROOM_ID/stock"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("ROOM_NOT_FOUND"))
     }
@@ -105,7 +109,8 @@ class RoomStockControllerTest {
     fun `should return 403 when the server is not on duty in the room`() {
         every { getRoomStockUseCase.getRoomStock(any()) } returns GetRoomStockResult.NotAuthorized
 
-        mockMvc.perform(get("/api/v1/rooms/$ROOM_ID/stock"))
+        mockMvc
+            .perform(get("/api/v1/rooms/$ROOM_ID/stock"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("NOT_AUTHORIZED"))
     }
@@ -115,11 +120,12 @@ class RoomStockControllerTest {
     fun `should return 200 when admin sets a product quantity`() {
         every { setRoomStockUseCase.setRoomStock(any()) } returns SetRoomStockResult.Success(entry)
 
-        mockMvc.perform(
-            put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"quantity": 24}"""),
-        ).andExpect(status().isOk)
+        mockMvc
+            .perform(
+                put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"quantity": 24}"""),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.quantity").value(24))
             .andExpect(jsonPath("$.productId").value(PRODUCT_ID))
     }
@@ -127,11 +133,12 @@ class RoomStockControllerTest {
     @Test
     @WithMockUser(username = USER_ID, roles = ["ADMIN"])
     fun `should return 400 when the quantity is negative`() {
-        mockMvc.perform(
-            put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"quantity": -1}"""),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"quantity": -1}"""),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         verify(exactly = 0) { setRoomStockUseCase.setRoomStock(any()) }
@@ -142,11 +149,12 @@ class RoomStockControllerTest {
     fun `should return 404 when setting stock on an unknown product`() {
         every { setRoomStockUseCase.setRoomStock(any()) } returns SetRoomStockResult.ProductNotFound
 
-        mockMvc.perform(
-            put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"quantity": 24}"""),
-        ).andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"quantity": 24}"""),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("PRODUCT_NOT_FOUND"))
     }
 
@@ -155,22 +163,24 @@ class RoomStockControllerTest {
     fun `should return 403 when an off-duty server sets stock`() {
         every { setRoomStockUseCase.setRoomStock(any()) } returns SetRoomStockResult.NotAuthorized
 
-        mockMvc.perform(
-            put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"quantity": 24}"""),
-        ).andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"quantity": 24}"""),
+            ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("NOT_AUTHORIZED"))
     }
 
     @Test
     @WithMockUser(username = USER_ID, roles = ["CLIENT"])
     fun `should return 403 when a client sets stock`() {
-        mockMvc.perform(
-            put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"quantity": 24}"""),
-        ).andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                put("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"quantity": 24}"""),
+            ).andExpect(status().isForbidden)
     }
 
     @Test
@@ -178,7 +188,8 @@ class RoomStockControllerTest {
     fun `should return 204 when admin removes a product from stock`() {
         every { removeRoomStockUseCase.removeRoomStock(any()) } returns RemoveRoomStockResult.Success
 
-        mockMvc.perform(delete("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID"))
+        mockMvc
+            .perform(delete("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID"))
             .andExpect(status().isNoContent)
     }
 
@@ -187,7 +198,8 @@ class RoomStockControllerTest {
     fun `should return 404 when removing a product absent from stock`() {
         every { removeRoomStockUseCase.removeRoomStock(any()) } returns RemoveRoomStockResult.NotInStock
 
-        mockMvc.perform(delete("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID"))
+        mockMvc
+            .perform(delete("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("STOCK_ITEM_NOT_FOUND"))
     }
@@ -195,7 +207,8 @@ class RoomStockControllerTest {
     @Test
     @WithMockUser(username = USER_ID, roles = ["CLIENT"])
     fun `should return 403 when a client removes stock`() {
-        mockMvc.perform(delete("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID"))
+        mockMvc
+            .perform(delete("/api/v1/rooms/$ROOM_ID/stock/$PRODUCT_ID"))
             .andExpect(status().isForbidden)
     }
 }

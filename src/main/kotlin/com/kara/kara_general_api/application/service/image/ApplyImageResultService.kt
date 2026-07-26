@@ -24,7 +24,6 @@ class ApplyImageResultService(
     private val roomRepository: RoomRepository,
     private val userRepository: UserRepository,
 ) : ApplyImageResultUseCase {
-
     @Transactional
     override fun apply(command: ApplyImageResultCommand) {
         val correlation = correlationRepository.findByJobId(command.jobId) ?: return
@@ -34,7 +33,10 @@ class ApplyImageResultService(
         }
     }
 
-    private fun applyRoom(imageId: java.util.UUID, command: ApplyImageResultCommand) {
+    private fun applyRoom(
+        imageId: java.util.UUID,
+        command: ApplyImageResultCommand,
+    ) {
         if (command.success) {
             val variants =
                 command.variants.map {
@@ -53,7 +55,10 @@ class ApplyImageResultService(
         }
     }
 
-    private fun applyProfile(userId: UserId, command: ApplyImageResultCommand) {
+    private fun applyProfile(
+        userId: UserId,
+        command: ApplyImageResultCommand,
+    ) {
         if (!command.success) {
             userRepository.markPhotoFailed(userId)
             return

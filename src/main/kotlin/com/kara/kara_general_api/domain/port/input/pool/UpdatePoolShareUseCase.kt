@@ -17,7 +17,9 @@ data class UpdatePoolShareCommand(
 )
 
 sealed interface UpdatePoolShareResult {
-    data class Updated(val view: PoolView) : UpdatePoolShareResult
+    data class Updated(
+        val view: PoolView,
+    ) : UpdatePoolShareResult
 
     data object PoolNotFound : UpdatePoolShareResult
 

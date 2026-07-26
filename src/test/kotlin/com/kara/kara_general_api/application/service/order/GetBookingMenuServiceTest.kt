@@ -20,12 +20,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class GetBookingMenuServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val roomStockRepository = mockk<RoomStockRepository>()
     private val sut = GetBookingMenuService(bookingRepository, roomStockRepository)
 
-    private val bookingId = com.kara.kara_general_api.domain.model.booking.BookingId(UUID.randomUUID())
+    private val bookingId =
+        com.kara.kara_general_api.domain.model.booking
+            .BookingId(UUID.randomUUID())
     private val roomId = RoomId(UUID.randomUUID())
     private val ownerId = UserId(UUID.randomUUID())
 
@@ -36,11 +37,13 @@ class GetBookingMenuServiceTest {
         return b
     }
 
-    private fun entry(name: String, quantity: Int) =
-        RoomStockEntry(
-            Product(ProductId(UUID.randomUUID()), name, null, BigDecimal("2.50"), Currency.EUR),
-            quantity,
-        )
+    private fun entry(
+        name: String,
+        quantity: Int,
+    ) = RoomStockEntry(
+        Product(ProductId(UUID.randomUUID()), name, null, BigDecimal("2.50"), Currency.EUR),
+        quantity,
+    )
 
     @Test
     fun `should return only products with a positive quantity for the owner`() {

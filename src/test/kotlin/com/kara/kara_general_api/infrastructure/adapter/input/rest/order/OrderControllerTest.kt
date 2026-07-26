@@ -35,7 +35,6 @@ private const val REQUEST_BODY = """{"productId": "$PRODUCT_ID", "quantity": 2}"
 @WebMvcTest(OrderController::class)
 @Import(SecurityConfig::class)
 class OrderControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 

@@ -3,8 +3,8 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.vo.Address
-import com.kara.kara_general_api.domain.model.service.ServiceId
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
+import com.kara.kara_general_api.domain.model.service.ServiceId
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageCommand
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageResult
 import com.kara.kara_general_api.domain.port.input.room.AddRoomImageUseCase
@@ -49,7 +49,6 @@ class RoomController(
     private val removeRoomImageUseCase: RemoveRoomImageUseCase,
     private val imageStorage: ImageStoragePort,
 ) : RoomApi {
-
     override fun createRoom(request: CreateRoomRequest): ResponseEntity<Any> {
         val command =
             CreateRoomCommand(
@@ -66,7 +65,8 @@ class RoomController(
             )
         return when (val result = createRoomUseCase.createRoom(command)) {
             is CreateRoomResult.Success ->
-                ResponseEntity.status(HttpStatus.CREATED)
+                ResponseEntity
+                    .status(HttpStatus.CREATED)
                     .body(RoomResponse.from(result.room, imageStorage::publicUrl))
             CreateRoomResult.AddressNotFound -> addressNotGeocodable()
             is CreateRoomResult.UnknownService -> unknownService(result.serviceId)
@@ -101,7 +101,10 @@ class RoomController(
             GetRoomResult.NotFound -> roomNotFound()
         }
 
-    override fun updateRoom(id: UUID, request: UpdateRoomRequest): ResponseEntity<Any> {
+    override fun updateRoom(
+        id: UUID,
+        request: UpdateRoomRequest,
+    ): ResponseEntity<Any> {
         val command =
             UpdateRoomCommand(
                 id = RoomId(id),
@@ -134,7 +137,10 @@ class RoomController(
             DeleteRoomResult.NotFound -> roomNotFound()
         }
 
-    override fun addRoomImage(id: UUID, file: MultipartFile): ResponseEntity<Any> {
+    override fun addRoomImage(
+        id: UUID,
+        file: MultipartFile,
+    ): ResponseEntity<Any> {
         val command =
             AddRoomImageCommand(
                 roomId = RoomId(id),
@@ -154,99 +160,109 @@ class RoomController(
         }
     }
 
-    override fun removeRoomImage(id: UUID, imageId: UUID): ResponseEntity<Any> =
+    override fun removeRoomImage(
+        id: UUID,
+        imageId: UUID,
+    ): ResponseEntity<Any> =
         when (removeRoomImageUseCase.removeImage(RemoveRoomImageCommand(RoomId(id), RoomImageId(imageId)))) {
             RemoveRoomImageResult.Success -> ResponseEntity.noContent().build()
             RemoveRoomImageResult.RoomNotFound -> roomNotFound()
             RemoveRoomImageResult.ImageNotFound ->
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucune image ne correspond à cet identifiant pour cette salle.",
-                    ).apply {
-                        title = "Image introuvable"
-                        setProperty("code", "ROOM_IMAGE_NOT_FOUND")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.NOT_FOUND,
+                            "Aucune image ne correspond à cet identifiant pour cette salle.",
+                        ).apply {
+                            title = "Image introuvable"
+                            setProperty("code", "ROOM_IMAGE_NOT_FOUND")
+                        },
                 )
         }
 
-    private fun CreateRoomRequest.toAddress(): Address =
-        Address(street = street, city = city, postalCode = postalCode, country = country)
+    private fun CreateRoomRequest.toAddress(): Address = Address(street = street, city = city, postalCode = postalCode, country = country)
 
     private fun roomNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune salle ne correspond à cet identifiant.",
-            ).apply {
-                title = "Salle introuvable"
-                setProperty("code", "ROOM_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune salle ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Salle introuvable"
+                    setProperty("code", "ROOM_NOT_FOUND")
+                },
         )
 
     private fun bboxIncomplete(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Le filtrage par fenêtre géographique exige les 4 paramètres minLat, minLng, maxLat et maxLng.",
-            ).apply {
-                title = "Paramètres bbox incomplets"
-                setProperty("code", "BBOX_INCOMPLETE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Le filtrage par fenêtre géographique exige les 4 paramètres minLat, minLng, maxLat et maxLng.",
+                ).apply {
+                    title = "Paramètres bbox incomplets"
+                    setProperty("code", "BBOX_INCOMPLETE")
+                },
         )
 
     private fun bboxInvalid(detail: String?): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                detail ?: "Fenêtre géographique invalide.",
-            ).apply {
-                title = "Fenêtre géographique invalide"
-                setProperty("code", "BBOX_INVALID")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    detail ?: "Fenêtre géographique invalide.",
+                ).apply {
+                    title = "Fenêtre géographique invalide"
+                    setProperty("code", "BBOX_INVALID")
+                },
         )
 
     private fun unknownService(serviceId: ServiceId): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Le service ${serviceId.value} n'existe pas dans le catalogue global.",
-            ).apply {
-                title = "Service inconnu"
-                setProperty("code", "UNKNOWN_SERVICE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Le service ${serviceId.value} n'existe pas dans le catalogue global.",
+                ).apply {
+                    title = "Service inconnu"
+                    setProperty("code", "UNKNOWN_SERVICE")
+                },
         )
 
     private fun addressNotGeocodable(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "L'adresse fournie n'a pas pu être localisée. Vérifiez la rue, le code postal et la ville.",
-            ).apply {
-                title = "Adresse introuvable"
-                setProperty("code", "ADDRESS_NOT_GEOCODABLE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "L'adresse fournie n'a pas pu être localisée. Vérifiez la rue, le code postal et la ville.",
+                ).apply {
+                    title = "Adresse introuvable"
+                    setProperty("code", "ADDRESS_NOT_GEOCODABLE")
+                },
         )
 
     private fun invalidImageType(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                "Format d'image non supporté. Formats acceptés : JPEG, PNG, WebP, AVIF, HEIC.",
-            ).apply {
-                title = "Format d'image non supporté"
-                setProperty("code", "INVALID_IMAGE_TYPE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                    "Format d'image non supporté. Formats acceptés : JPEG, PNG, WebP, AVIF, HEIC.",
+                ).apply {
+                    title = "Format d'image non supporté"
+                    setProperty("code", "INVALID_IMAGE_TYPE")
+                },
         )
 
     private fun imageTooLarge(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.PAYLOAD_TOO_LARGE,
-                "L'image dépasse la taille maximale autorisée (5 Mo).",
-            ).apply {
-                title = "Image trop volumineuse"
-                setProperty("code", "IMAGE_TOO_LARGE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    "L'image dépasse la taille maximale autorisée (5 Mo).",
+                ).apply {
+                    title = "Image trop volumineuse"
+                    setProperty("code", "IMAGE_TOO_LARGE")
+                },
         )
 }

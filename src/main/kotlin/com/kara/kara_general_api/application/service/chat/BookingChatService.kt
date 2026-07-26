@@ -25,7 +25,6 @@ class BookingChatService(
     private val serverShiftRepository: ServerShiftRepository,
     private val chatRepository: ChatRepository,
 ) : OpenBookingConversationUseCase {
-
     @Transactional
     override fun openBookingConversation(command: OpenBookingConversationCommand): OpenBookingConversationResult {
         val booking =

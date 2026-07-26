@@ -15,10 +15,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class BookingEstimatorTest {
-
     private val roomId = RoomId(UUID.randomUUID())
 
-    private fun room(pricePerPersonPerHour: String = "12.50", maxCapacity: Int = 50): Room =
+    private fun room(
+        pricePerPersonPerHour: String = "12.50",
+        maxCapacity: Int = 50,
+    ): Room =
         Room(
             id = roomId,
             name = "Salle Étoile",
@@ -33,7 +35,10 @@ class BookingEstimatorTest {
             createdAt = Instant.now(),
         )
 
-    private fun option(id: RoomOptionId, price: String): RoomOption =
+    private fun option(
+        id: RoomOptionId,
+        price: String,
+    ): RoomOption =
         RoomOption(
             id = id,
             roomId = roomId,

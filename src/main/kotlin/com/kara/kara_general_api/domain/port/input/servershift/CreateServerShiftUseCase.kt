@@ -14,7 +14,9 @@ data class CreateServerShiftCommand(
 )
 
 sealed interface CreateServerShiftResult {
-    data class Created(val shift: ServerShift) : CreateServerShiftResult
+    data class Created(
+        val shift: ServerShift,
+    ) : CreateServerShiftResult
 
     /** Aucun compte ne correspond à [CreateServerShiftCommand.serverId]. */
     data object ServerNotFound : CreateServerShiftResult

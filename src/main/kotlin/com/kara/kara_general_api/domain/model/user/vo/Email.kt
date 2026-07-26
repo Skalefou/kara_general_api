@@ -1,7 +1,9 @@
 package com.kara.kara_general_api.domain.model.user.vo
 
 @JvmInline
-value class Email private constructor(val value: String) {
+value class Email private constructor(
+    val value: String,
+) {
     init {
         require(EMAIL_REGEX.matches(value)) { "Email invalide" }
     }

@@ -20,14 +20,14 @@ import java.util.UUID
 
 @Tag(name = "Commandes", description = "Commandes de produits pendant une réservation active")
 interface OrderApi {
-
     @Operation(
         summary = "Commander un produit pendant une réservation active",
-        description = "Le client commande un produit à consommer pendant sa réservation active (statut " +
-            "CONFIRMED et instant courant dans le créneau). Le stock de la salle est décrémenté. Un moyen de " +
-            "paiement enregistré est requis : sans lui, aucune commande n'est créée (402) et le client est " +
-            "invité à en mettre un en place — le débit automatique est réalisé par la brique paiement, hors " +
-            "de ce point d'entrée.",
+        description =
+            "Le client commande un produit à consommer pendant sa réservation active (statut " +
+                "CONFIRMED et instant courant dans le créneau). Le stock de la salle est décrémenté. Un moyen de " +
+                "paiement enregistré est requis : sans lui, aucune commande n'est créée (402) et le client est " +
+                "invité à en mettre un en place — le débit automatique est réalisé par la brique paiement, hors " +
+                "de ce point d'entrée.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -59,8 +59,9 @@ interface OrderApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "Réservation non active (BOOKING_NOT_ACTIVE) ou stock insuffisant " +
-                    "(INSUFFICIENT_STOCK)",
+                description =
+                    "Réservation non active (BOOKING_NOT_ACTIVE) ou stock insuffisant " +
+                        "(INSUFFICIENT_STOCK)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],

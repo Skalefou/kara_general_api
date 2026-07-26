@@ -28,7 +28,6 @@ class UpdateProfilePhotoService(
     private val imageProcessing: ImageProcessingPort,
     private val correlationRepository: ImageJobCorrelationRepository,
 ) : UpdateProfilePhotoUseCase {
-
     @Transactional
     override fun updatePhoto(command: UpdateProfilePhotoCommand): UpdateProfilePhotoResult {
         val contentType = command.contentType

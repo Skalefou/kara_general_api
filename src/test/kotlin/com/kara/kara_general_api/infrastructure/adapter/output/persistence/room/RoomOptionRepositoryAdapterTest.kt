@@ -27,7 +27,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class RoomOptionRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -80,7 +79,10 @@ class RoomOptionRepositoryAdapterTest {
         assertTrue(adapter.findByRoomId(roomA).isEmpty())
     }
 
-    private fun insertService(label: String, price: String): UUID {
+    private fun insertService(
+        label: String,
+        price: String,
+    ): UUID {
         val id = UUID.randomUUID()
         val sql =
             """
@@ -99,7 +101,10 @@ class RoomOptionRepositoryAdapterTest {
         return id
     }
 
-    private fun attach(roomId: RoomId, serviceId: UUID) {
+    private fun attach(
+        roomId: RoomId,
+        serviceId: UUID,
+    ) {
         val sql =
             """
             INSERT INTO room_services (id, room_id, service_id, created_at)

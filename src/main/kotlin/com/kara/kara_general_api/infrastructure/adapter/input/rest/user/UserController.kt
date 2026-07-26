@@ -61,10 +61,12 @@ class UserController(
     private val deleteProfilePhotoUseCase: DeleteProfilePhotoUseCase,
     private val imageStorage: ImageStoragePort,
 ) : UserApi {
-
     private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
 
-    override fun deleteAccount(request: DeleteAccountRequest, authentication: Authentication): ResponseEntity<Any> {
+    override fun deleteAccount(
+        request: DeleteAccountRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             DeleteAccountCommand(
                 userId = UserId(UUID.fromString(authentication.name)),
@@ -77,13 +79,14 @@ class UserController(
 
             DeleteAccountResult.InvalidPassword ->
                 ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.UNAUTHORIZED,
-                        "Le mot de passe est incorrect.",
-                    ).apply {
-                        title = "Mot de passe incorrect"
-                        setProperty("code", "INVALID_PASSWORD")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.UNAUTHORIZED,
+                            "Le mot de passe est incorrect.",
+                        ).apply {
+                            title = "Mot de passe incorrect"
+                            setProperty("code", "INVALID_PASSWORD")
+                        },
                 )
 
             DeleteAccountResult.UserNotFound ->
@@ -91,10 +94,15 @@ class UserController(
         }
     }
 
-    override fun updateProfile(request: UpdateProfileRequest, authentication: Authentication): ResponseEntity<Any> =
-        updateProfile(UserId(UUID.fromString(authentication.name)), request)
+    override fun updateProfile(
+        request: UpdateProfileRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any> = updateProfile(UserId(UUID.fromString(authentication.name)), request)
 
-    override fun uploadProfilePhoto(file: MultipartFile, authentication: Authentication): ResponseEntity<Any> {
+    override fun uploadProfilePhoto(
+        file: MultipartFile,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             UpdateProfilePhotoCommand(
                 userId = UserId(UUID.fromString(authentication.name)),
@@ -137,13 +145,14 @@ class UserController(
 
             GetProfilePhotoResult.NoPhoto ->
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucune photo de profil n'a été définie.",
-                    ).apply {
-                        title = "Photo introuvable"
-                        setProperty("code", "PROFILE_PHOTO_NOT_FOUND")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.NOT_FOUND,
+                            "Aucune photo de profil n'a été définie.",
+                        ).apply {
+                            title = "Photo introuvable"
+                            setProperty("code", "PROFILE_PHOTO_NOT_FOUND")
+                        },
                 )
         }
 
@@ -156,7 +165,10 @@ class UserController(
                 userNotFound()
         }
 
-    override fun listAccounts(page: Int, size: Int): ResponseEntity<UserListResponse> {
+    override fun listAccounts(
+        page: Int,
+        size: Int,
+    ): ResponseEntity<UserListResponse> {
         val accountPage = listAllAccountsUseCase.listAllAccounts(ListAllAccountsQuery(page = page, size = size))
         return ResponseEntity.ok(UserListResponse.from(accountPage, ::signedPhotoUrl))
     }
@@ -180,8 +192,10 @@ class UserController(
         }
     }
 
-    override fun updateAccount(id: UUID, request: UpdateProfileRequest): ResponseEntity<Any> =
-        updateProfile(UserId(id), request)
+    override fun updateAccount(
+        id: UUID,
+        request: UpdateProfileRequest,
+    ): ResponseEntity<Any> = updateProfile(UserId(id), request)
 
     override fun reinviteServerAccount(id: UUID): ResponseEntity<Any> =
         when (reinviteServerAccountUseCase.reinvite(ReinviteServerAccountCommand(userId = UserId(id)))) {
@@ -193,13 +207,14 @@ class UserController(
 
             ReinviteServerAccountResult.NotAServer ->
                 ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.CONFLICT,
-                        "Ce compte n'est pas un compte serveur.",
-                    ).apply {
-                        title = "Compte non serveur"
-                        setProperty("code", "NOT_A_SERVER")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.CONFLICT,
+                            "Ce compte n'est pas un compte serveur.",
+                        ).apply {
+                            title = "Compte non serveur"
+                            setProperty("code", "NOT_A_SERVER")
+                        },
                 )
         }
 
@@ -213,17 +228,21 @@ class UserController(
 
             DeactivateAccountResult.AlreadyDeactivated ->
                 ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.CONFLICT,
-                        "Ce compte est déjà désactivé.",
-                    ).apply {
-                        title = "Compte déjà désactivé"
-                        setProperty("code", "ALREADY_DEACTIVATED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.CONFLICT,
+                            "Ce compte est déjà désactivé.",
+                        ).apply {
+                            title = "Compte déjà désactivé"
+                            setProperty("code", "ALREADY_DEACTIVATED")
+                        },
                 )
         }
 
-    private fun updateProfile(userId: UserId, request: UpdateProfileRequest): ResponseEntity<Any> {
+    private fun updateProfile(
+        userId: UserId,
+        request: UpdateProfileRequest,
+    ): ResponseEntity<Any> {
         val command =
             UpdateProfileCommand(
                 userId = userId,
@@ -248,46 +267,50 @@ class UserController(
 
     private fun userNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun compte ne correspond à cet identifiant.",
-            ).apply {
-                title = "Compte introuvable"
-                setProperty("code", "USER_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun compte ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Compte introuvable"
+                    setProperty("code", "USER_NOT_FOUND")
+                },
         )
 
     private fun emailAlreadyUsed(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Cette adresse email est déjà utilisée.",
-            ).apply {
-                title = "Email déjà utilisé"
-                setProperty("code", "EMAIL_ALREADY_USED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Cette adresse email est déjà utilisée.",
+                ).apply {
+                    title = "Email déjà utilisé"
+                    setProperty("code", "EMAIL_ALREADY_USED")
+                },
         )
 
     private fun invalidImageType(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                "Format d'image non supporté. Formats acceptés : JPEG, PNG, WebP, AVIF, HEIC.",
-            ).apply {
-                title = "Format d'image non supporté"
-                setProperty("code", "INVALID_IMAGE_TYPE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                    "Format d'image non supporté. Formats acceptés : JPEG, PNG, WebP, AVIF, HEIC.",
+                ).apply {
+                    title = "Format d'image non supporté"
+                    setProperty("code", "INVALID_IMAGE_TYPE")
+                },
         )
 
     private fun imageTooLarge(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.PAYLOAD_TOO_LARGE,
-                "L'image dépasse la taille maximale autorisée (5 Mo).",
-            ).apply {
-                title = "Image trop volumineuse"
-                setProperty("code", "IMAGE_TOO_LARGE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    "L'image dépasse la taille maximale autorisée (5 Mo).",
+                ).apply {
+                    title = "Image trop volumineuse"
+                    setProperty("code", "IMAGE_TOO_LARGE")
+                },
         )
 
     private fun String.requireNotBlank(field: String): String {

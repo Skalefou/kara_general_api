@@ -23,7 +23,6 @@ import java.util.UUID
 
 @Tag(name = "Produits", description = "Catalogue générique des produits consommables (back-office)")
 interface ProductApi {
-
     @Operation(
         summary = "Créer un produit",
         description = "Ajoute un produit au catalogue générique. Réservé aux administrateurs.",
@@ -44,7 +43,9 @@ interface ProductApi {
         ],
     )
     @PostMapping
-    fun createProduct(@Valid @RequestBody request: CreateProductRequest): ResponseEntity<Any>
+    fun createProduct(
+        @Valid @RequestBody request: CreateProductRequest,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Lister les produits",
@@ -56,7 +57,13 @@ interface ProductApi {
             ApiResponse(
                 responseCode = "200",
                 description = "Catalogue des produits",
-                content = [Content(array = io.swagger.v3.oas.annotations.media.ArraySchema(schema = Schema(implementation = ProductResponse::class)))],
+                content = [
+                    Content(
+                        array =
+                            io.swagger.v3.oas.annotations.media
+                                .ArraySchema(schema = Schema(implementation = ProductResponse::class)),
+                    ),
+                ],
             ),
         ],
     )
@@ -109,5 +116,7 @@ interface ProductApi {
         ],
     )
     @DeleteMapping("/{id}")
-    fun deleteProduct(@PathVariable id: UUID): ResponseEntity<Any>
+    fun deleteProduct(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Any>
 }

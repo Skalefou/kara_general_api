@@ -18,25 +18,30 @@ import org.springframework.web.client.body
 class BanGeocodingAdapter(
     private val geocodingRestClient: RestClient,
 ) : GeocodingPort {
-
     override fun geocode(address: Address): Coordinates? {
         val query = "${address.street} ${address.postalCode} ${address.city}"
         val response =
             try {
-                geocodingRestClient.get()
+                geocodingRestClient
+                    .get()
                     .uri { builder ->
-                        builder.path("/search/")
+                        builder
+                            .path("/search/")
                             .queryParam("q", query)
                             .queryParam("limit", 1)
                             .build()
-                    }
-                    .retrieve()
+                    }.retrieve()
                     .body<BanResponse>()
             } catch (ex: RestClientException) {
                 throw GeocodingException("Le service de géocodage est indisponible", ex)
             }
 
-        val coordinates = response?.features?.firstOrNull()?.geometry?.coordinates ?: return null
+        val coordinates =
+            response
+                ?.features
+                ?.firstOrNull()
+                ?.geometry
+                ?.coordinates ?: return null
         if (coordinates.size < 2) return null
         return Coordinates(latitude = coordinates[1], longitude = coordinates[0])
     }

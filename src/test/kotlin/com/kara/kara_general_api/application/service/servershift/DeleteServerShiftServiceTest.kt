@@ -10,7 +10,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class DeleteServerShiftServiceTest {
-
     private val serverShiftRepository = mockk<ServerShiftRepository>()
     private val sut = DeleteServerShiftService(serverShiftRepository)
 

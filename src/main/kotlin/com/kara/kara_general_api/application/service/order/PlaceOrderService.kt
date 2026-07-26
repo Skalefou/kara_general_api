@@ -39,7 +39,6 @@ class PlaceOrderService(
     private val serverShiftRepository: ServerShiftRepository,
     private val orderPlacedEventPublisher: OrderPlacedEventPublisher,
 ) : PlaceOrderUseCase {
-
     @Transactional
     override fun placeOrder(command: PlaceOrderCommand): PlaceOrderResult {
         val booking =

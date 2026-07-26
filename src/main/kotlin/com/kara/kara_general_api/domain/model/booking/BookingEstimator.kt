@@ -18,7 +18,6 @@ import java.time.Instant
  * et [BookingEstimate.pricePerPerson]) sont ensuite arrondis à 2 décimales en HALF_UP.
  */
 object BookingEstimator {
-
     fun estimate(
         room: Room,
         roomOptions: List<RoomOption>,

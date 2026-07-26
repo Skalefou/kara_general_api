@@ -10,7 +10,9 @@ import java.util.UUID
  * `SHR-<shareId>` (part de cagnotte) — ce qui le rend stable et directement résoluble.
  */
 @JvmInline
-value class InvoiceId(val value: String) {
+value class InvoiceId(
+    val value: String,
+) {
     /** UUID de la source (paiement ou part), extrait du préfixe. Valide uniquement pour un id bien formé. */
     fun sourceUuid(): UUID = UUID.fromString(value.substringAfter('-'))
 
@@ -42,7 +44,11 @@ value class InvoiceId(val value: String) {
 
 /** Source résolue d'un reçu : un paiement « payer tout » ou une part de cagnotte. */
 sealed interface InvoiceSource {
-    data class Reservation(val paymentId: PaymentId) : InvoiceSource
+    data class Reservation(
+        val paymentId: PaymentId,
+    ) : InvoiceSource
 
-    data class Cagnotte(val shareId: PoolShareId) : InvoiceSource
+    data class Cagnotte(
+        val shareId: PoolShareId,
+    ) : InvoiceSource
 }

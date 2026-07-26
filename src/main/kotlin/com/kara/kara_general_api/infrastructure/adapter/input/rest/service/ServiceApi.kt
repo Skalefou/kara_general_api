@@ -23,7 +23,6 @@ import java.util.UUID
 
 @Tag(name = "Services", description = "Catalogue global des services réutilisables (back-office)")
 interface ServiceApi {
-
     @Operation(
         summary = "Créer un service",
         description = "Ajoute un service au catalogue global. Réservé aux administrateurs.",
@@ -44,7 +43,9 @@ interface ServiceApi {
         ],
     )
     @PostMapping
-    fun createService(@Valid @RequestBody request: CreateServiceRequest): ResponseEntity<Any>
+    fun createService(
+        @Valid @RequestBody request: CreateServiceRequest,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Lister les services",
@@ -56,7 +57,13 @@ interface ServiceApi {
             ApiResponse(
                 responseCode = "200",
                 description = "Catalogue des services",
-                content = [Content(array = io.swagger.v3.oas.annotations.media.ArraySchema(schema = Schema(implementation = ServiceResponse::class)))],
+                content = [
+                    Content(
+                        array =
+                            io.swagger.v3.oas.annotations.media
+                                .ArraySchema(schema = Schema(implementation = ServiceResponse::class)),
+                    ),
+                ],
             ),
         ],
     )
@@ -109,5 +116,7 @@ interface ServiceApi {
         ],
     )
     @DeleteMapping("/{id}")
-    fun deleteService(@PathVariable id: UUID): ResponseEntity<Any>
+    fun deleteService(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Any>
 }

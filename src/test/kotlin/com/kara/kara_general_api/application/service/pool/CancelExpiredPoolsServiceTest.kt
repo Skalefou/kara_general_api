@@ -10,6 +10,7 @@ import com.kara.kara_general_api.domain.model.payment.PoolShareId
 import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
 import com.kara.kara_general_api.domain.model.payment.PoolStatus
 import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.port.output.BookingExtensionRepository
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
@@ -20,11 +21,9 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
-import com.kara.kara_general_api.domain.port.output.BookingExtensionRepository
 import kotlin.test.assertEquals
 
 class CancelExpiredPoolsServiceTest {
-
     private val poolRepository = mockk<PoolRepository>(relaxed = true)
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
@@ -54,11 +53,34 @@ class CancelExpiredPoolsServiceTest {
 
     @Test
     fun `releases holds, expires the pool, cancels the booking and notifies`() {
-        val pool = Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, PoolStatus.OPEN, Instant.now().minusSeconds(1), "g", Instant.now())
+        val pool =
+            Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, PoolStatus.OPEN, Instant.now().minusSeconds(1), "g", Instant.now())
         val shares =
             listOf(
-                PoolShare(PoolShareId(UUID.randomUUID()), poolId, "A", null, BigDecimal("50.00"), PoolShareStatus.AUTHORIZED, "pi_a", null, null, false),
-                PoolShare(PoolShareId(UUID.randomUUID()), poolId, "B", null, BigDecimal("50.00"), PoolShareStatus.PENDING, null, null, null, false),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    poolId,
+                    "A",
+                    null,
+                    BigDecimal("50.00"),
+                    PoolShareStatus.AUTHORIZED,
+                    "pi_a",
+                    null,
+                    null,
+                    false,
+                ),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    poolId,
+                    "B",
+                    null,
+                    BigDecimal("50.00"),
+                    PoolShareStatus.PENDING,
+                    null,
+                    null,
+                    null,
+                    false,
+                ),
             )
         every { poolRepository.findExpiredOpen(any()) } returns listOf(pool)
         every { poolShareRepository.findByPoolId(poolId) } returns shares

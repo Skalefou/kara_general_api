@@ -12,7 +12,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PoolTest {
-
     private fun pool(deadline: Instant = Instant.now().plusSeconds(3600)) =
         Pool.create(
             bookingId = BookingId(UUID.randomUUID()),

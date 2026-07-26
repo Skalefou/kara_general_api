@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class EmailTest {
-
     @Test
     fun `should create email when format is valid`() {
         val email = Email("client@kara.app")

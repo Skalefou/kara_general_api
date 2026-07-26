@@ -22,5 +22,4 @@ fun Booking.ticketCode(): String {
 }
 
 /** Code de billet exposé au client : présent uniquement lorsque la réservation est CONFIRMED, sinon null. */
-fun Booking.ticketCodeOrNull(): String? =
-    if (status == BookingStatus.CONFIRMED) ticketCode() else null
+fun Booking.ticketCodeOrNull(): String? = if (status == BookingStatus.CONFIRMED) ticketCode() else null

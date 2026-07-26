@@ -5,12 +5,12 @@ import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.chat.Conversation
 import com.kara.kara_general_api.domain.model.chat.ConversationId
-import com.kara.kara_general_api.domain.model.room.Currency
-import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.chat.MESSAGE_STATUS_SENT
 import com.kara.kara_general_api.domain.model.chat.Message
 import com.kara.kara_general_api.domain.model.chat.MessageId
 import com.kara.kara_general_api.domain.model.chat.MessageReaction
+import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.UserRole
@@ -42,7 +42,6 @@ import java.time.LocalDate
 import java.util.UUID
 
 class ChatServiceTest {
-
     private val chatRepository = mockk<ChatRepository>(relaxUnitFun = true)
     private val userRepository = mockk<UserRepository>()
     private val bookingRepository = mockk<BookingRepository>()
@@ -53,7 +52,11 @@ class ChatServiceTest {
     private val otherId = UserId(UUID.randomUUID())
     private val conversationId = ConversationId(UUID.randomUUID())
 
-    private fun user(id: UserId, first: String, role: UserRole = UserRole.CLIENT): User =
+    private fun user(
+        id: UserId,
+        first: String,
+        role: UserRole = UserRole.CLIENT,
+    ): User =
         User(
             id = id,
             email = Email("${first.lowercase()}@example.com"),
@@ -186,7 +189,11 @@ class ChatServiceTest {
         val result = sut.createConversation(CreateConversationCommand(meId, setOf(otherId)))
 
         val success = assertInstanceOf(CreateConversationResult.Success::class.java, result)
-        assertEquals(conversationId.value.toString(), success.conversation.id.value.toString())
+        assertEquals(
+            conversationId.value.toString(),
+            success.conversation.id.value
+                .toString(),
+        )
         verify(exactly = 0) { chatRepository.createConversation(any(), any()) }
     }
 
@@ -240,7 +247,10 @@ class ChatServiceTest {
         verify(exactly = 0) { chatRepository.saveMessage(any()) }
     }
 
-    private fun bookingEndingAt(bookingId: BookingId, endAt: Instant): Booking =
+    private fun bookingEndingAt(
+        bookingId: BookingId,
+        endAt: Instant,
+    ): Booking =
         Booking(
             id = bookingId,
             roomId = RoomId(UUID.randomUUID()),

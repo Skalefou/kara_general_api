@@ -26,7 +26,6 @@ private const val USER_ID = "11111111-2222-3333-4444-555555555555"
 @WebMvcTest(PaymentController::class)
 @Import(SecurityConfig::class)
 class PaymentControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -105,36 +104,38 @@ class PaymentControllerTest {
     fun `should return 200 when the webhook is handled without authentication`() {
         every { handleStripeWebhookUseCase.handle(any()) } returns StripeWebhookResult.Handled
 
-        mockMvc.perform(
-            post("/api/v1/stripe/webhook")
-                .header("Stripe-Signature", "sig")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"),
-        ).andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/stripe/webhook")
+                    .header("Stripe-Signature", "sig")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"),
+            ).andExpect(status().isOk)
     }
 
     @Test
     fun `should return 200 when the webhook event is ignored`() {
         every { handleStripeWebhookUseCase.handle(any()) } returns StripeWebhookResult.Ignored
 
-        mockMvc.perform(
-            post("/api/v1/stripe/webhook")
-                .header("Stripe-Signature", "sig")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"),
-        ).andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/stripe/webhook")
+                    .header("Stripe-Signature", "sig")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"),
+            ).andExpect(status().isOk)
     }
 
     @Test
     fun `should return 400 when the webhook signature is invalid`() {
         every { handleStripeWebhookUseCase.handle(any()) } returns StripeWebhookResult.InvalidSignature
 
-        mockMvc.perform(
-            post("/api/v1/stripe/webhook")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/stripe/webhook")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{}"),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("STRIPE_INVALID_SIGNATURE"))
     }
 }

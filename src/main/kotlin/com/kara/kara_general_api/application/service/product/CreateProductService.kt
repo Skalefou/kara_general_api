@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service as SpringService
 class CreateProductService(
     private val productRepository: ProductRepository,
 ) : CreateProductUseCase {
-
     override fun createProduct(command: CreateProductCommand): Product {
         val product =
             Product(

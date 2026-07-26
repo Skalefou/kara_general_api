@@ -40,7 +40,6 @@ class StripeWebhookService(
     private val poolSettlementService: PoolSettlementService,
     private val applyBookingExtensionService: ApplyBookingExtensionService,
 ) : HandleStripeWebhookUseCase {
-
     @Transactional
     override fun handle(command: StripeWebhookCommand): StripeWebhookResult {
         val signature = command.signature ?: return StripeWebhookResult.InvalidSignature

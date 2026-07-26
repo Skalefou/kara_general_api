@@ -16,7 +16,6 @@ import java.util.UUID
 class RoomStockRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : RoomStockRepository {
-
     override fun findByRoomId(roomId: RoomId): List<RoomStockEntry> {
         val sql =
             """
@@ -59,20 +58,29 @@ class RoomStockRepositoryAdapter(
         )
     }
 
-    override fun findQuantity(roomId: RoomId, productId: ProductId): Int? {
+    override fun findQuantity(
+        roomId: RoomId,
+        productId: ProductId,
+    ): Int? {
         val sql =
             """
             SELECT quantity
             FROM room_products
             WHERE room_id = :roomId AND product_id = :productId
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            mapOf("roomId" to roomId.value, "productId" to productId.value),
-        ) { rs, _ -> rs.getInt("quantity") }.firstOrNull()
+        return jdbc
+            .query(
+                sql,
+                mapOf("roomId" to roomId.value, "productId" to productId.value),
+            ) { rs, _ -> rs.getInt("quantity") }
+            .firstOrNull()
     }
 
-    override fun tryDecrement(roomId: RoomId, productId: ProductId, quantity: Int): Boolean {
+    override fun tryDecrement(
+        roomId: RoomId,
+        productId: ProductId,
+        quantity: Int,
+    ): Boolean {
         val sql =
             """
             UPDATE room_products
@@ -93,7 +101,10 @@ class RoomStockRepositoryAdapter(
         return rows > 0
     }
 
-    override fun deleteByRoomIdAndProductId(roomId: RoomId, productId: ProductId): Boolean {
+    override fun deleteByRoomIdAndProductId(
+        roomId: RoomId,
+        productId: ProductId,
+    ): Boolean {
         val sql = "DELETE FROM room_products WHERE room_id = :roomId AND product_id = :productId"
         val rows =
             jdbc.update(

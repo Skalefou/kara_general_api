@@ -20,7 +20,6 @@ class SendBookingEndRemindersService(
     private val bookingEndReminderRepository: BookingEndReminderRepository,
     private val notificationService: NotificationService,
 ) : SendBookingEndRemindersUseCase {
-
     override fun sendDueReminders(now: Instant): Int {
         var sent = 0
         for (kind in BookingEndReminderKind.entries) {
@@ -32,11 +31,12 @@ class SendBookingEndRemindersService(
                     token = token,
                     title = title(kind),
                     body = body(kind, target),
-                    data = mapOf(
-                        "bookingId" to target.bookingId.value.toString(),
-                        "kind" to kind.name,
-                        "minutesBefore" to kind.minutesBefore.toString(),
-                    ),
+                    data =
+                        mapOf(
+                            "bookingId" to target.bookingId.value.toString(),
+                            "kind" to kind.name,
+                            "minutesBefore" to kind.minutesBefore.toString(),
+                        ),
                 )
                 bookingEndReminderRepository.markSent(target.bookingId, kind)
                 sent++
@@ -51,7 +51,10 @@ class SendBookingEndRemindersService(
             BookingEndReminderKind.TWO_MINUTES -> "Fin imminente"
         }
 
-    private fun body(kind: BookingEndReminderKind, target: BookingEndReminderTarget): String =
+    private fun body(
+        kind: BookingEndReminderKind,
+        target: BookingEndReminderTarget,
+    ): String =
         when (kind) {
             BookingEndReminderKind.TEN_MINUTES ->
                 "Il vous reste environ 10 minutes dans ${target.roomName}. Pensez à vous préparer à partir."

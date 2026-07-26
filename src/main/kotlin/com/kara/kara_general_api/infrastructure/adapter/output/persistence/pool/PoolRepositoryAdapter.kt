@@ -25,7 +25,6 @@ class PoolRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: PoolRowMapper,
 ) : PoolRepository {
-
     override fun save(pool: Pool): Pool {
         val sql =
             """
@@ -74,12 +73,18 @@ class PoolRepositoryAdapter(
         return jdbc.query(sql, mapOf("token" to token), rowMapper).firstOrNull()
     }
 
-    override fun updateStatus(id: PoolId, status: PoolStatus) {
+    override fun updateStatus(
+        id: PoolId,
+        status: PoolStatus,
+    ) {
         val sql = "UPDATE pools SET status = :status WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
     }
 
-    override fun updateGlobalLinkToken(id: PoolId, token: String) {
+    override fun updateGlobalLinkToken(
+        id: PoolId,
+        token: String,
+    ) {
         val sql = "UPDATE pools SET global_link_token = :token WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "token" to token))
     }

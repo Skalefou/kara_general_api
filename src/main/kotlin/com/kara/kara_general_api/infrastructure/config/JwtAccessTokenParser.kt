@@ -13,13 +13,17 @@ import java.security.interfaces.RSAPublicKey
 class JwtAccessTokenParser(
     private val jwtPublicKey: RSAPublicKey,
 ) {
-    data class AuthenticatedUser(val userId: String, val role: String)
+    data class AuthenticatedUser(
+        val userId: String,
+        val role: String,
+    )
 
     /** Vérifie la signature et l'expiration ; renvoie null si le jeton est invalide. */
     fun parse(token: String): AuthenticatedUser? =
         try {
             val claims =
-                Jwts.parser()
+                Jwts
+                    .parser()
                     .verifyWith(jwtPublicKey)
                     .build()
                     .parseSignedClaims(token)

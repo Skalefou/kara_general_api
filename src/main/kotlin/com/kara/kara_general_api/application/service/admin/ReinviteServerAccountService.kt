@@ -25,7 +25,6 @@ class ReinviteServerAccountService(
     private val passwordGenerator: PasswordGenerator,
     private val emailService: EmailService,
 ) : ReinviteServerAccountUseCase {
-
     @Transactional
     override fun reinvite(command: ReinviteServerAccountCommand): ReinviteServerAccountResult {
         val user = userRepository.findById(command.userId) ?: return ReinviteServerAccountResult.UserNotFound

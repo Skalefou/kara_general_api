@@ -29,12 +29,12 @@ import java.util.UUID
 
 @Tag(name = "Réservations", description = "Réservations et estimations tarifaires")
 interface BookingApi {
-
     @Operation(
         summary = "Estimer le prix d'une réservation",
-        description = "Calcul en lecture seule, sans aucune persistance. Accessible aux invités et aux clients. " +
-            "Le prix de base vaut prix/personne/heure × nombre de personnes × nombre d'heures ; " +
-            "les options sont des forfaits fixes qui s'ajoutent au total.",
+        description =
+            "Calcul en lecture seule, sans aucune persistance. Accessible aux invités et aux clients. " +
+                "Le prix de base vaut prix/personne/heure × nombre de personnes × nombre d'heures ; " +
+                "les options sont des forfaits fixes qui s'ajoutent au total.",
     )
     @ApiResponses(
         value = [
@@ -45,9 +45,10 @@ interface BookingApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
-                    "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
-                    "(UNKNOWN_ROOM_OPTION)",
+                description =
+                    "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
+                        "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
+                        "(UNKNOWN_ROOM_OPTION)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(
@@ -58,13 +59,16 @@ interface BookingApi {
         ],
     )
     @PostMapping("/estimate")
-    fun estimate(@Valid @RequestBody request: EstimateBookingRequest): ResponseEntity<Any>
+    fun estimate(
+        @Valid @RequestBody request: EstimateBookingRequest,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Créer une réservation",
-        description = "Crée une réservation persistée en statut PENDING pour le client authentifié. " +
-            "Le prix total est figé par le même calcul que l'estimation. Le créneau est rejeté (409) " +
-            "s'il chevauche une réservation existante (PENDING ou CONFIRMED) sur la même salle.",
+        description =
+            "Crée une réservation persistée en statut PENDING pour le client authentifié. " +
+                "Le prix total est figé par le même calcul que l'estimation. Le créneau est rejeté (409) " +
+                "s'il chevauche une réservation existante (PENDING ou CONFIRMED) sur la même salle.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -76,9 +80,10 @@ interface BookingApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
-                    "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
-                    "(UNKNOWN_ROOM_OPTION)",
+                description =
+                    "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
+                        "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
+                        "(UNKNOWN_ROOM_OPTION)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(
@@ -101,9 +106,10 @@ interface BookingApi {
 
     @Operation(
         summary = "Consulter mes réservations (serveur)",
-        description = "Retourne les réservations (hors annulées) dont la salle et le créneau chevauchent " +
-            "l'agenda du serveur authentifié. Récap essentiel, sans données personnelles du client. " +
-            "Réservé au rôle SERVER.",
+        description =
+            "Retourne les réservations (hors annulées) dont la salle et le créneau chevauchent " +
+                "l'agenda du serveur authentifié. Récap essentiel, sans données personnelles du client. " +
+                "Réservé au rôle SERVER.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -120,8 +126,9 @@ interface BookingApi {
 
     @Operation(
         summary = "Consulter toutes les réservations (admin)",
-        description = "Retourne toutes les réservations de la plateforme, enrichies du nom de la salle et " +
-            "du nom du client, ordonnées par date décroissante. Réservé au rôle ADMIN.",
+        description =
+            "Retourne toutes les réservations de la plateforme, enrichies du nom de la salle et " +
+                "du nom du client, ordonnées par date décroissante. Réservé au rôle ADMIN.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -138,9 +145,10 @@ interface BookingApi {
 
     @Operation(
         summary = "Détail d'une réservation (+ billet)",
-        description = "Détail complet d'une réservation pour son propriétaire, incluant le code de billet " +
-            "(ticketCode) rendu en QR par le front. ticketCode est non-null uniquement lorsque la réservation " +
-            "est CONFIRMED.",
+        description =
+            "Détail complet d'une réservation pour son propriétaire, incluant le code de billet " +
+                "(ticketCode) rendu en QR par le front. ticketCode est non-null uniquement lorsque la réservation " +
+                "est CONFIRMED.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -170,9 +178,10 @@ interface BookingApi {
 
     @Operation(
         summary = "Ouvrir le chat d'une réservation",
-        description = "Crée ou retourne la conversation rattachée à la réservation. Accessible au client de " +
-            "la réservation, aux serveurs qui y sont rattachés (via leur agenda) et aux administrateurs. " +
-            "La réponse indique la date de fermeture du chat (fin de la réservation + 30 min).",
+        description =
+            "Crée ou retourne la conversation rattachée à la réservation. Accessible au client de " +
+                "la réservation, aux serveurs qui y sont rattachés (via leur agenda) et aux administrateurs. " +
+                "La réponse indique la date de fermeture du chat (fin de la réservation + 30 min).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -202,8 +211,9 @@ interface BookingApi {
 
     @Operation(
         summary = "Déclencher une alerte d'urgence",
-        description = "Signale une urgence sur une réservation : diffuse une alerte temps réel (STOMP) à " +
-            "chaque serveur rattaché à la réservation. Accessible au client de la réservation et aux admins.",
+        description =
+            "Signale une urgence sur une réservation : diffuse une alerte temps réel (STOMP) à " +
+                "chaque serveur rattaché à la réservation. Accessible au client de la réservation et aux admins.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -229,10 +239,11 @@ interface BookingApi {
 
     @Operation(
         summary = "Annuler une réservation",
-        description = "Annule une réservation appartenant au client. Selon l'état : PENDING payer-tout → aucune " +
-            "capture à libérer ; cagnotte ouverte → levée de toutes les autorisations Stripe (zéro prélèvement) ; " +
-            "CONFIRMED → remboursement Stripe intégral. Réponse : résumé avec le statut CANCELLED et l'indicateur " +
-            "refunded.",
+        description =
+            "Annule une réservation appartenant au client. Selon l'état : PENDING payer-tout → aucune " +
+                "capture à libérer ; cagnotte ouverte → levée de toutes les autorisations Stripe (zéro prélèvement) ; " +
+                "CONFIRMED → remboursement Stripe intégral. Réponse : résumé avec le statut CANCELLED et l'indicateur " +
+                "refunded.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -254,8 +265,9 @@ interface BookingApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "Réservation déjà annulée (BOOKING_ALREADY_CANCELLED) ou déjà commencée " +
-                    "(BOOKING_ALREADY_STARTED)",
+                description =
+                    "Réservation déjà annulée (BOOKING_ALREADY_CANCELLED) ou déjà commencée " +
+                        "(BOOKING_ALREADY_STARTED)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],

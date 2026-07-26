@@ -16,7 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FirebaseAuthAdapterTest {
-
     private val firebaseAuth = mockk<FirebaseAuth>()
     private val sut = FirebaseAuthAdapter(firebaseAuth)
 

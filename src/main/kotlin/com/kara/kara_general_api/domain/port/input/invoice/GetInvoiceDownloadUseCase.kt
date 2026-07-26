@@ -5,7 +5,9 @@ import com.kara.kara_general_api.domain.model.user.UserId
 
 sealed interface GetInvoiceDownloadResult {
     /** URL signée courte durée vers le PDF du reçu (généré paresseusement s'il n'existe pas encore). */
-    data class Found(val downloadUrl: String) : GetInvoiceDownloadResult
+    data class Found(
+        val downloadUrl: String,
+    ) : GetInvoiceDownloadResult
 
     /** Identifiant inconnu, ou source non réglée (paiement non PAID / part non CAPTURED). */
     data object NotFound : GetInvoiceDownloadResult
@@ -15,5 +17,8 @@ sealed interface GetInvoiceDownloadResult {
 }
 
 interface GetInvoiceDownloadUseCase {
-    fun getDownloadUrl(invoiceId: InvoiceId, requesterId: UserId): GetInvoiceDownloadResult
+    fun getDownloadUrl(
+        invoiceId: InvoiceId,
+        requesterId: UserId,
+    ): GetInvoiceDownloadResult
 }

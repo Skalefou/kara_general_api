@@ -26,7 +26,6 @@ class RabbitImageJobPublisher(
     @Value("\${GCS_BUCKET_PUBLIC}") private val publicBucket: String,
     @Value("\${GCS_BUCKET_PRIVATE}") private val privateBucket: String,
 ) : ImageProcessingPort {
-
     override fun enqueue(job: ImageProcessingJob) {
         rabbitTemplate.convertAndSend(RabbitConfig.JOBS_QUEUE, toMessage(job))
     }

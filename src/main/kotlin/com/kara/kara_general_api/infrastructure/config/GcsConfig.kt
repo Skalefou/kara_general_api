@@ -19,12 +19,12 @@ import java.util.Base64
 class GcsConfig(
     @Value("\${FIREBASE_CREDENTIALS_BASE64}") private val credentialsBase64: String,
 ) {
-
     @Bean
     fun storage(): Storage {
         val credentialsJson = Base64.getDecoder().decode(credentialsBase64)
         val credentials = GoogleCredentials.fromStream(ByteArrayInputStream(credentialsJson))
-        return StorageOptions.newBuilder()
+        return StorageOptions
+            .newBuilder()
             .setCredentials(credentials)
             .build()
             .service

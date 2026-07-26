@@ -11,7 +11,6 @@ import org.springframework.mail.javamail.JavaMailSender
 import java.util.Properties
 
 class SmtpEmailAdapterTest {
-
     private val mailSender = mockk<JavaMailSender>()
     private val sut = SmtpEmailAdapter(mailSender, "no-reply@kara.app")
 

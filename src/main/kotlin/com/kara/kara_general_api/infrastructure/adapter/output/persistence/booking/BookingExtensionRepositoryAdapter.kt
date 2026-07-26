@@ -21,7 +21,6 @@ class BookingExtensionRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: BookingExtensionRowMapper,
 ) : BookingExtensionRepository {
-
     override fun save(extension: BookingExtension): BookingExtension {
         val sql =
             """
@@ -66,7 +65,10 @@ class BookingExtensionRepositoryAdapter(
         return jdbc.query(sql, mapOf("bookingId" to bookingId.value), rowMapper).firstOrNull()
     }
 
-    override fun updateStatus(id: BookingExtensionId, status: BookingExtensionStatus) {
+    override fun updateStatus(
+        id: BookingExtensionId,
+        status: BookingExtensionStatus,
+    ) {
         val sql = "UPDATE booking_extensions SET status = :status WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
     }
@@ -88,14 +90,15 @@ class BookingExtensionRepositoryAdapter(
               AND e.status = 'PENDING'
               AND e.expires_at > :now
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            MapSqlParameterSource()
-                .addValue("roomId", roomId.value)
-                .addValue("excluding", excluding.value)
-                .addValue("after", Timestamp.from(after))
-                .addValue("now", Timestamp.from(now)),
-        ) { rs, _ -> rs.getTimestamp("next_start")?.toInstant() }
+        return jdbc
+            .query(
+                sql,
+                MapSqlParameterSource()
+                    .addValue("roomId", roomId.value)
+                    .addValue("excluding", excluding.value)
+                    .addValue("after", Timestamp.from(after))
+                    .addValue("now", Timestamp.from(now)),
+            ) { rs, _ -> rs.getTimestamp("next_start")?.toInstant() }
             .firstOrNull()
     }
 

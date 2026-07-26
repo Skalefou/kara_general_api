@@ -31,7 +31,6 @@ import java.net.URI
 @Configuration
 @Profile("!test")
 class RabbitConfig {
-
     companion object {
         const val JOBS_QUEUE = "image-jobs"
         const val RESULTS_QUEUE = "image-results"
@@ -49,7 +48,8 @@ class RabbitConfig {
 
     @Bean
     fun imageJobsQueue(): Queue =
-        QueueBuilder.durable(JOBS_QUEUE)
+        QueueBuilder
+            .durable(JOBS_QUEUE)
             .deadLetterExchange(DLX_EXCHANGE)
             .deadLetterRoutingKey(JOBS_QUEUE)
             .build()
@@ -64,6 +64,5 @@ class RabbitConfig {
     fun imageJobsDlq(): Queue = QueueBuilder.durable(DLQ_QUEUE).build()
 
     @Bean
-    fun imageJobsDlqBinding(): Binding =
-        BindingBuilder.bind(imageJobsDlq()).to(imageJobsDlx()).with(JOBS_QUEUE)
+    fun imageJobsDlqBinding(): Binding = BindingBuilder.bind(imageJobsDlq()).to(imageJobsDlx()).with(JOBS_QUEUE)
 }

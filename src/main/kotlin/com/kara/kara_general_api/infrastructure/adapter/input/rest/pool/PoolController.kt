@@ -63,13 +63,15 @@ class PoolController(
     private val listUserPoolsUseCase: ListUserPoolsUseCase,
     private val selfJoinPoolShareUseCase: SelfJoinPoolShareUseCase,
 ) : PoolApi {
-
     override fun listPools(authentication: Authentication): ResponseEntity<Any> =
         ResponseEntity.ok(
             listUserPoolsUseCase.listForUser(callerId(authentication)).map { PoolSummaryResponse.from(it) },
         )
 
-    override fun createPool(request: CreatePoolRequest, authentication: Authentication): ResponseEntity<Any> {
+    override fun createPool(
+        request: CreatePoolRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             CreatePoolCommand(
                 bookingId = BookingId(request.bookingId),
@@ -114,14 +116,20 @@ class PoolController(
         }
     }
 
-    override fun getPool(id: UUID, authentication: Authentication): ResponseEntity<Any> =
-        toResponse(getPoolUseCase.getById(PoolId(id), callerId(authentication)))
+    override fun getPool(
+        id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> = toResponse(getPoolUseCase.getById(PoolId(id), callerId(authentication)))
 
-    override fun getPoolByBooking(bookingId: UUID, authentication: Authentication): ResponseEntity<Any> =
-        toResponse(getPoolUseCase.getByBookingId(BookingId(bookingId), callerId(authentication)))
+    override fun getPoolByBooking(
+        bookingId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> = toResponse(getPoolUseCase.getByBookingId(BookingId(bookingId), callerId(authentication)))
 
-    override fun getPoolByExtension(extensionId: UUID, authentication: Authentication): ResponseEntity<Any> =
-        toResponse(getPoolUseCase.getByExtensionId(BookingExtensionId(extensionId), callerId(authentication)))
+    override fun getPoolByExtension(
+        extensionId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> = toResponse(getPoolUseCase.getByExtensionId(BookingExtensionId(extensionId), callerId(authentication)))
 
     private fun toResponse(result: GetPoolResult): ResponseEntity<Any> =
         when (result) {
@@ -130,11 +138,9 @@ class PoolController(
             GetPoolResult.NotOwner -> notOwner()
         }
 
-    override fun joinRecap(globalToken: String): ResponseEntity<Any> =
-        toRecapResponse(getPoolRecapUseCase.getByGlobalToken(globalToken))
+    override fun joinRecap(globalToken: String): ResponseEntity<Any> = toRecapResponse(getPoolRecapUseCase.getByGlobalToken(globalToken))
 
-    override fun shareRecap(uniqueToken: String): ResponseEntity<Any> =
-        toRecapResponse(getPoolRecapUseCase.getByShareToken(uniqueToken))
+    override fun shareRecap(uniqueToken: String): ResponseEntity<Any> = toRecapResponse(getPoolRecapUseCase.getByShareToken(uniqueToken))
 
     private fun toRecapResponse(result: GetPoolRecapResult): ResponseEntity<Any> =
         when (result) {
@@ -142,7 +148,11 @@ class PoolController(
             GetPoolRecapResult.NotFound -> poolNotFound()
         }
 
-    override fun authorizeShare(poolId: UUID, shareId: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun authorizeShare(
+        poolId: UUID,
+        shareId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             AuthorizePoolShareCommand(
                 poolId = PoolId(poolId),
@@ -194,7 +204,11 @@ class PoolController(
             SelfJoinPoolShareResult.AlreadyJoined ->
                 problem(HttpStatus.CONFLICT, "Vous détenez déjà une part dans cette cagnotte.", "POOL_ALREADY_JOINED")
             SelfJoinPoolShareResult.RemainderLocked ->
-                problem(HttpStatus.CONFLICT, "Le reliquat du créateur est déjà réglé : auto-inscription impossible.", "POOL_REMAINDER_LOCKED")
+                problem(
+                    HttpStatus.CONFLICT,
+                    "Le reliquat du créateur est déjà réglé : auto-inscription impossible.",
+                    "POOL_REMAINDER_LOCKED",
+                )
             SelfJoinPoolShareResult.NoCreatorRemainder ->
                 problem(HttpStatus.CONFLICT, "Aucun reliquat créateur disponible pour financer cette part.", "POOL_NO_CREATOR_REMAINDER")
             SelfJoinPoolShareResult.InsufficientRemainder ->
@@ -254,9 +268,17 @@ class PoolController(
             UpdatePoolShareResult.ShareAlreadyPaid ->
                 problem(HttpStatus.CONFLICT, "Cette part est déjà réglée et ne peut plus être modifiée.", "POOL_SHARE_ALREADY_PAID")
             UpdatePoolShareResult.CannotEditCreatorShare ->
-                problem(HttpStatus.CONFLICT, "Le reliquat du créateur ne peut pas être modifié directement.", "POOL_CANNOT_EDIT_CREATOR_SHARE")
+                problem(
+                    HttpStatus.CONFLICT,
+                    "Le reliquat du créateur ne peut pas être modifié directement.",
+                    "POOL_CANNOT_EDIT_CREATOR_SHARE",
+                )
             UpdatePoolShareResult.CreatorShareLocked ->
-                problem(HttpStatus.CONFLICT, "Le reliquat du créateur est déjà réglé : rééquilibrage impossible.", "POOL_CREATOR_SHARE_LOCKED")
+                problem(
+                    HttpStatus.CONFLICT,
+                    "Le reliquat du créateur est déjà réglé : rééquilibrage impossible.",
+                    "POOL_CREATOR_SHARE_LOCKED",
+                )
             UpdatePoolShareResult.InsufficientRemainder ->
                 problem(HttpStatus.CONFLICT, "Le rééquilibrage rendrait le reliquat du créateur négatif.", "POOL_INSUFFICIENT_REMAINDER")
             UpdatePoolShareResult.InvalidAmount ->
@@ -264,7 +286,10 @@ class PoolController(
         }
     }
 
-    override fun regenerateLink(poolId: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun regenerateLink(
+        poolId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command = RegeneratePoolLinkCommand(poolId = PoolId(poolId), requesterId = callerId(authentication))
         return when (val result = regeneratePoolLinkUseCase.regenerate(command)) {
             is RegeneratePoolLinkResult.Regenerated ->
@@ -275,7 +300,11 @@ class PoolController(
         }
     }
 
-    override fun remindShare(poolId: UUID, shareId: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun remindShare(
+        poolId: UUID,
+        shareId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             RemindPoolShareCommand(
                 poolId = PoolId(poolId),
@@ -296,8 +325,7 @@ class PoolController(
 
     private fun callerId(authentication: Authentication): UserId = UserId(UUID.fromString(authentication.name))
 
-    private fun poolNotFound(): ResponseEntity<Any> =
-        problem(HttpStatus.NOT_FOUND, "Aucune cagnotte ne correspond.", "POOL_NOT_FOUND")
+    private fun poolNotFound(): ResponseEntity<Any> = problem(HttpStatus.NOT_FOUND, "Aucune cagnotte ne correspond.", "POOL_NOT_FOUND")
 
     private fun shareNotFound(): ResponseEntity<Any> =
         problem(HttpStatus.NOT_FOUND, "Aucune part ne correspond à cette cagnotte.", "POOL_SHARE_NOT_FOUND")
@@ -305,13 +333,19 @@ class PoolController(
     private fun notOwner(): ResponseEntity<Any> =
         problem(HttpStatus.FORBIDDEN, "Cette cagnotte n'appartient pas à votre compte.", "POOL_NOT_OWNER")
 
-    private fun poolClosed(): ResponseEntity<Any> =
-        problem(HttpStatus.CONFLICT, "La cagnotte n'est plus ouverte.", "POOL_CLOSED")
+    private fun poolClosed(): ResponseEntity<Any> = problem(HttpStatus.CONFLICT, "La cagnotte n'est plus ouverte.", "POOL_CLOSED")
 
-    private fun problem(status: HttpStatus, detail: String, code: String): ResponseEntity<Any> =
-        ResponseEntity.status(status).body(problemDetail(status, detail, code))
+    private fun problem(
+        status: HttpStatus,
+        detail: String,
+        code: String,
+    ): ResponseEntity<Any> = ResponseEntity.status(status).body(problemDetail(status, detail, code))
 
-    private fun problemDetail(status: HttpStatus, detail: String, code: String): ProblemDetail =
+    private fun problemDetail(
+        status: HttpStatus,
+        detail: String,
+        code: String,
+    ): ProblemDetail =
         ProblemDetail.forStatusAndDetail(status, detail).apply {
             title = code.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
             setProperty("code", code)

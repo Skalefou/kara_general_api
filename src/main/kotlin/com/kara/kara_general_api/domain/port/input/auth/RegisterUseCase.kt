@@ -19,9 +19,13 @@ data class RegisterCommand(
 )
 
 sealed interface RegisterResult {
-    data class Success(val user: User) : RegisterResult
+    data class Success(
+        val user: User,
+    ) : RegisterResult
 
     data object EmailAlreadyUsed : RegisterResult
 
-    data class InvalidPassword(val reasons: List<String>) : RegisterResult
+    data class InvalidPassword(
+        val reasons: List<String>,
+    ) : RegisterResult
 }

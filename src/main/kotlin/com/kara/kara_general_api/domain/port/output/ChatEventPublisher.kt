@@ -9,7 +9,10 @@ import com.kara.kara_general_api.domain.model.chat.TypingEvent
  * tout du broker de messages.
  */
 interface ChatEventPublisher {
-    fun publishMessage(conversationId: ConversationId, message: MessageView)
+    fun publishMessage(
+        conversationId: ConversationId,
+        message: MessageView,
+    )
 
     fun publishTyping(event: TypingEvent)
 }

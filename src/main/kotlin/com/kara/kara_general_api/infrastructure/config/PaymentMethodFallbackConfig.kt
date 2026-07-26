@@ -17,7 +17,6 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class PaymentMethodFallbackConfig {
-
     @Bean
     @ConditionalOnMissingBean(PaymentMethodPort::class)
     fun fallbackPaymentMethodPort(): PaymentMethodPort =

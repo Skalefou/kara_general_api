@@ -14,7 +14,6 @@ class DeleteProfilePhotoService(
     private val userRepository: UserRepository,
     private val imageStorage: ImageStoragePort,
 ) : DeleteProfilePhotoUseCase {
-
     @Transactional
     override fun deletePhoto(userId: UserId): DeleteProfilePhotoResult {
         val user = userRepository.findById(userId) ?: return DeleteProfilePhotoResult.UserNotFound

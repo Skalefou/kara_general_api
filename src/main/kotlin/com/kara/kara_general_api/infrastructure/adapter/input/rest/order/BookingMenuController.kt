@@ -20,7 +20,6 @@ import java.util.UUID
 class BookingMenuController(
     private val getBookingMenuUseCase: GetBookingMenuUseCase,
 ) : BookingMenuApi {
-
     @GetMapping
     override fun getAvailableProducts(
         bookingId: UUID,
@@ -41,23 +40,25 @@ class BookingMenuController(
 
     private fun bookingNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune réservation ne correspond à cet identifiant.",
-            ).apply {
-                title = "Réservation introuvable"
-                setProperty("code", "BOOKING_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune réservation ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Réservation introuvable"
+                    setProperty("code", "BOOKING_NOT_FOUND")
+                },
         )
 
     private fun bookingNotOwner(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Cette réservation n'appartient pas à l'utilisateur courant.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "BOOKING_NOT_OWNER")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Cette réservation n'appartient pas à l'utilisateur courant.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "BOOKING_NOT_OWNER")
+                },
         )
 }

@@ -15,4 +15,7 @@ interface GeocodingPort {
 }
 
 /** Erreur technique : le service de géocodage est injoignable ou a répondu en erreur. */
-class GeocodingException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+class GeocodingException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)

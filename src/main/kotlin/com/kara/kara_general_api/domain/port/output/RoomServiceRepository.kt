@@ -9,13 +9,19 @@ import com.kara.kara_general_api.domain.model.service.ServiceId
  */
 interface RoomServiceRepository {
     /** Crée les liaisons de la salle vers les services fournis (les doublons sont ignorés). */
-    fun addLinks(roomId: RoomId, serviceIds: List<ServiceId>)
+    fun addLinks(
+        roomId: RoomId,
+        serviceIds: List<ServiceId>,
+    )
 
     /**
      * Remplace l'ensemble des liaisons de la salle par celles fournies : supprime toutes les
      * liaisons existantes de la salle, puis crée celles de [serviceIds] (liste vide = tout détacher).
      */
-    fun replaceLinks(roomId: RoomId, serviceIds: List<ServiceId>)
+    fun replaceLinks(
+        roomId: RoomId,
+        serviceIds: List<ServiceId>,
+    )
 
     /** Supprime toutes les liaisons de la salle. Retourne le nombre de liaisons supprimées. */
     fun deleteByRoomId(roomId: RoomId): Int

@@ -22,7 +22,6 @@ class UpdateProfileService(
     private val emailVerificationCodeRepository: EmailVerificationCodeRepository,
     private val emailService: EmailService,
 ) : UpdateProfileUseCase {
-
     @Transactional
     override fun updateProfile(command: UpdateProfileCommand): UpdateProfileResult {
         val user = userRepository.findById(command.userId) ?: return UpdateProfileResult.UserNotFound

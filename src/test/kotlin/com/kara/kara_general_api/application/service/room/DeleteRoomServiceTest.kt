@@ -10,7 +10,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class DeleteRoomServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val sut = DeleteRoomService(roomRepository)
 

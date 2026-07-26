@@ -26,7 +26,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class LoginServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val passwordHasher = mockk<PasswordHasher>()
     private val tokenService = mockk<TokenService>()

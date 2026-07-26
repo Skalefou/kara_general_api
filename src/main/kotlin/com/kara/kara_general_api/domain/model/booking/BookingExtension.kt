@@ -62,7 +62,9 @@ data class BookingExtension(
 
         fun settlementDeadline(previousEndAt: Instant): Instant = previousEndAt.minus(SETTLEMENT_MARGIN)
 
-        private fun sharedPotWindow(previousEndAt: Instant, now: Instant): Duration =
-            Duration.between(now, settlementDeadline(previousEndAt)).coerceAtLeast(Duration.ZERO)
+        private fun sharedPotWindow(
+            previousEndAt: Instant,
+            now: Instant,
+        ): Duration = Duration.between(now, settlementDeadline(previousEndAt)).coerceAtLeast(Duration.ZERO)
     }
 }

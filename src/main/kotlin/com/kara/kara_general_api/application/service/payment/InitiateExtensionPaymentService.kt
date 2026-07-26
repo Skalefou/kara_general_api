@@ -20,7 +20,6 @@ class InitiateExtensionPaymentService(
     private val paymentGateway: PaymentGateway,
     private val paymentRepository: PaymentRepository,
 ) : InitiateExtensionPaymentUseCase {
-
     @Transactional
     override fun initiate(command: InitiateExtensionPaymentCommand): InitiateExtensionPaymentResult {
         val extension =

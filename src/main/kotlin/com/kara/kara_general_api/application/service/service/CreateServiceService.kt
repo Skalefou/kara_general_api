@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service as SpringService
 class CreateServiceService(
     private val serviceRepository: ServiceRepository,
 ) : CreateServiceUseCase {
-
     override fun createService(command: CreateServiceCommand): Service {
         val service =
             Service(

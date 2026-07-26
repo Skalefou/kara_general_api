@@ -29,7 +29,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class ServiceRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -54,7 +53,10 @@ class ServiceRepositoryAdapterTest {
         jdbc.update("DELETE FROM services", emptyMap<String, Any>())
     }
 
-    private fun service(label: String, price: String): Service =
+    private fun service(
+        label: String,
+        price: String,
+    ): Service =
         Service(
             id = ServiceId(UUID.randomUUID()),
             label = label,

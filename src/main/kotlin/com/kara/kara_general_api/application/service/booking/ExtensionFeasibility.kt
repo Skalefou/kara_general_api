@@ -13,8 +13,11 @@ class ExtensionFeasibility(
     private val bookingRepository: BookingRepository,
     private val bookingExtensionRepository: BookingExtensionRepository,
 ) {
-
-    fun maxAdditionalMinutes(booking: Booking, room: Room, now: Instant): Int {
+    fun maxAdditionalMinutes(
+        booking: Booking,
+        room: Room,
+        now: Instant,
+    ): Int {
         val nextBookingStart =
             bookingRepository.findNextStartAfter(booking.roomId, booking.endAt, booking.id, now)
         val nextExtensionStart =

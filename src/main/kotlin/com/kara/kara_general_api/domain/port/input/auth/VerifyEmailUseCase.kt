@@ -14,7 +14,10 @@ data class VerifyEmailCommand(
 )
 
 sealed interface VerifyEmailResult {
-    data class Success(val accessToken: AccessToken, val refreshToken: RefreshToken) : VerifyEmailResult
+    data class Success(
+        val accessToken: AccessToken,
+        val refreshToken: RefreshToken,
+    ) : VerifyEmailResult
 
     data object UserNotFound : VerifyEmailResult
 

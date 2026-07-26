@@ -24,7 +24,6 @@ private const val USER_ID = "550e8400-e29b-41d4-a716-446655440000"
 @WebMvcTest(FcmTokenController::class)
 @Import(SecurityConfig::class)
 class FcmTokenControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -36,11 +35,12 @@ class FcmTokenControllerTest {
     fun `should return 204 when the token is registered`() {
         every { registerFcmTokenUseCase.registerFcmToken(UserId(java.util.UUID.fromString(USER_ID)), "device-token") } just Runs
 
-        mockMvc.perform(
-            post("/api/v1/users/me/fcm-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"token": "device-token"}"""),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                post("/api/v1/users/me/fcm-token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"token": "device-token"}"""),
+            ).andExpect(status().isNoContent)
 
         verify(exactly = 1) {
             registerFcmTokenUseCase.registerFcmToken(UserId(java.util.UUID.fromString(USER_ID)), "device-token")
@@ -49,22 +49,23 @@ class FcmTokenControllerTest {
 
     @Test
     fun `should return 401 when not authenticated`() {
-        mockMvc.perform(
-            post("/api/v1/users/me/fcm-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"token": "device-token"}"""),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/users/me/fcm-token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"token": "device-token"}"""),
+            ).andExpect(status().isUnauthorized)
     }
 
     @Test
     @WithMockUser(username = USER_ID)
     fun `should return 400 when the token is blank`() {
-        mockMvc.perform(
-            post("/api/v1/users/me/fcm-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"token": ""}"""),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/users/me/fcm-token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"token": ""}"""),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
     }
 }

@@ -30,7 +30,6 @@ class CreateExtensionPoolService(
     private val linkTokenGenerator: LinkTokenGenerator,
     private val emailService: EmailService,
 ) : CreateExtensionPoolUseCase {
-
     @Transactional
     override fun createForExtension(command: CreateExtensionPoolCommand): CreateExtensionPoolResult {
         val extension =
@@ -81,7 +80,8 @@ class CreateExtensionPoolService(
         poolShareRepository.saveAll(shares)
 
         val roomName =
-            bookingRepository.findById(extension.bookingId)
+            bookingRepository
+                .findById(extension.bookingId)
                 ?.let { roomRepository.findById(it.roomId)?.name }
                 ?: "votre réservation"
         shares

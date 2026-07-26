@@ -11,7 +11,10 @@ import java.util.UUID
 
 @Component
 class RoomOptionRowMapper : RowMapper<RoomOption> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): RoomOption =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): RoomOption =
         RoomOption(
             id = RoomOptionId(rs.getObject("id", UUID::class.java)),
             roomId = RoomId(rs.getObject("room_id", UUID::class.java)),

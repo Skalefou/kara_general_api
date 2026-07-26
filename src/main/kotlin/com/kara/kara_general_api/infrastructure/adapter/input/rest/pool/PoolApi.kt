@@ -30,16 +30,17 @@ import java.util.UUID
 
 @Tag(
     name = "Cagnottes",
-    description = "Cagnotte partagée (règlement Stripe en autorisation à capture manuelle) : la carte de " +
-        "chaque participant n'est prélevée que lorsque toutes les parts ont été payées, sinon la cagnotte " +
-        "est annulée et personne n'est prélevé.",
+    description =
+        "Cagnotte partagée (règlement Stripe en autorisation à capture manuelle) : la carte de " +
+            "chaque participant n'est prélevée que lorsque toutes les parts ont été payées, sinon la cagnotte " +
+            "est annulée et personne n'est prélevé.",
 )
 interface PoolApi {
-
     @Operation(
         summary = "Créer une cagnotte",
-        description = "Ouvre une cagnotte pour une réservation PENDING en mode sharedPot appartenant au client. " +
-            "La somme des parts (reliquat du créateur inclus) doit égaler le prix total de la réservation.",
+        description =
+            "Ouvre une cagnotte pour une réservation PENDING en mode sharedPot appartenant au client. " +
+                "La somme des parts (reliquat du créateur inclus) doit égaler le prix total de la réservation.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -51,17 +52,19 @@ interface PoolApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Somme des parts != prix total (POOL_SHARES_MISMATCH) ou parts invalides " +
-                    "(POOL_INVALID_SHARES)",
+                description =
+                    "Somme des parts != prix total (POOL_SHARES_MISMATCH) ou parts invalides " +
+                        "(POOL_INVALID_SHARES)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(responseCode = "403", description = "Réservation appartenant à un autre client (POOL_NOT_OWNER)"),
             ApiResponse(responseCode = "404", description = "Réservation introuvable (POOL_BOOKING_NOT_FOUND)"),
             ApiResponse(
                 responseCode = "409",
-                description = "Réservation non PENDING (POOL_BOOKING_NOT_PENDING), non sharedPot " +
-                    "(POOL_BOOKING_NOT_SHARED_POT), cagnotte déjà existante (POOL_ALREADY_EXISTS) ou réservation " +
-                    "trop proche (POOL_RESERVATION_TOO_CLOSE)",
+                description =
+                    "Réservation non PENDING (POOL_BOOKING_NOT_PENDING), non sharedPot " +
+                        "(POOL_BOOKING_NOT_SHARED_POT), cagnotte déjà existante (POOL_ALREADY_EXISTS) ou réservation " +
+                        "trop proche (POOL_RESERVATION_TOO_CLOSE)",
             ),
         ],
     )
@@ -73,8 +76,9 @@ interface PoolApi {
 
     @Operation(
         summary = "Lister mes cagnottes",
-        description = "Cagnottes de l'utilisateur authentifié (« Mes événements ») : celles qu'il a créées OU " +
-            "dont il détient une part. Résumés triés par échéance décroissante.",
+        description =
+            "Cagnottes de l'utilisateur authentifié (« Mes événements ») : celles qu'il a créées OU " +
+                "dont il détient une part. Résumés triés par échéance décroissante.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -105,7 +109,10 @@ interface PoolApi {
         ],
     )
     @GetMapping("/{id}")
-    fun getPool(@PathVariable id: UUID, authentication: Authentication): ResponseEntity<Any>
+    fun getPool(
+        @PathVariable id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Statut d'une cagnotte par réservation",
@@ -122,7 +129,10 @@ interface PoolApi {
         ],
     )
     @GetMapping("/by-booking/{bookingId}")
-    fun getPoolByBooking(@PathVariable bookingId: UUID, authentication: Authentication): ResponseEntity<Any>
+    fun getPoolByBooking(
+        @PathVariable bookingId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Cagnotte d'une extension de réservation",
@@ -141,12 +151,16 @@ interface PoolApi {
         ],
     )
     @GetMapping("/by-extension/{extensionId}")
-    fun getPoolByExtension(@PathVariable extensionId: UUID, authentication: Authentication): ResponseEntity<Any>
+    fun getPoolByExtension(
+        @PathVariable extensionId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Récapitulatif public via le lien global",
-        description = "Lecture publique (sans authentification) : résumé de la réservation, progression de la " +
-            "cagnotte et message de débit différé. Le paiement, lui, requiert une authentification.",
+        description =
+            "Lecture publique (sans authentification) : résumé de la réservation, progression de la " +
+                "cagnotte et message de débit différé. Le paiement, lui, requiert une authentification.",
     )
     @ApiResponses(
         value = [
@@ -158,7 +172,9 @@ interface PoolApi {
         ],
     )
     @GetMapping("/join/{globalToken}")
-    fun joinRecap(@PathVariable globalToken: String): ResponseEntity<Any>
+    fun joinRecap(
+        @PathVariable globalToken: String,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Récapitulatif public via le lien d'une part",
@@ -174,13 +190,16 @@ interface PoolApi {
         ],
     )
     @GetMapping("/share/{uniqueToken}")
-    fun shareRecap(@PathVariable uniqueToken: String): ResponseEntity<Any>
+    fun shareRecap(
+        @PathVariable uniqueToken: String,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Autoriser (payer) une part",
-        description = "Crée un PaymentIntent Stripe en capture manuelle pour bloquer le montant de la part " +
-            "(aucun prélèvement immédiat) et retourne les secrets du PaymentSheet. La capture n'a lieu qu'une " +
-            "fois toute la cagnotte complète.",
+        description =
+            "Crée un PaymentIntent Stripe en capture manuelle pour bloquer le montant de la part " +
+                "(aucun prélèvement immédiat) et retourne les secrets du PaymentSheet. La capture n'a lieu qu'une " +
+                "fois toute la cagnotte complète.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -192,8 +211,9 @@ interface PoolApi {
             ApiResponse(responseCode = "404", description = "POOL_NOT_FOUND / POOL_SHARE_NOT_FOUND / POOL_PAYER_NOT_FOUND"),
             ApiResponse(
                 responseCode = "409",
-                description = "Cagnotte fermée (POOL_CLOSED), expirée (POOL_EXPIRED) ou part déjà traitée " +
-                    "(POOL_SHARE_ALREADY_PROCESSED)",
+                description =
+                    "Cagnotte fermée (POOL_CLOSED), expirée (POOL_EXPIRED) ou part déjà traitée " +
+                        "(POOL_SHARE_ALREADY_PROCESSED)",
             ),
         ],
     )
@@ -206,10 +226,11 @@ interface PoolApi {
 
     @Operation(
         summary = "Rejoindre une cagnotte (auto-inscription via le lien global)",
-        description = "Un utilisateur authentifié crée sa propre part via le lien global : le montant (plafonné " +
-            "par le reliquat du créateur) est prélevé sur ce reliquat, puis un PaymentIntent Stripe en capture " +
-            "manuelle est créé. Nom et email de la part sont dérivés du compte. Retourne les secrets du " +
-            "PaymentSheet. Une seule part par personne.",
+        description =
+            "Un utilisateur authentifié crée sa propre part via le lien global : le montant (plafonné " +
+                "par le reliquat du créateur) est prélevé sur ce reliquat, puis un PaymentIntent Stripe en capture " +
+                "manuelle est créé. Nom et email de la part sont dérivés du compte. Retourne les secrets du " +
+                "PaymentSheet. Une seule part par personne.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -220,12 +241,16 @@ interface PoolApi {
             ),
             ApiResponse(responseCode = "400", description = "Montant invalide (POOL_INVALID_AMOUNT)"),
             ApiResponse(responseCode = "401", description = "Requête non authentifiée"),
-            ApiResponse(responseCode = "404", description = "Cagnotte introuvable (POOL_NOT_FOUND) ou payeur introuvable (POOL_PAYER_NOT_FOUND)"),
+            ApiResponse(
+                responseCode = "404",
+                description = "Cagnotte introuvable (POOL_NOT_FOUND) ou payeur introuvable (POOL_PAYER_NOT_FOUND)",
+            ),
             ApiResponse(
                 responseCode = "409",
-                description = "Cagnotte fermée (POOL_CLOSED), expirée (POOL_EXPIRED), déjà rejointe " +
-                    "(POOL_ALREADY_JOINED), reliquat verrouillé (POOL_REMAINDER_LOCKED), absent " +
-                    "(POOL_NO_CREATOR_REMAINDER) ou insuffisant (POOL_INSUFFICIENT_REMAINDER)",
+                description =
+                    "Cagnotte fermée (POOL_CLOSED), expirée (POOL_EXPIRED), déjà rejointe " +
+                        "(POOL_ALREADY_JOINED), reliquat verrouillé (POOL_REMAINDER_LOCKED), absent " +
+                        "(POOL_NO_CREATOR_REMAINDER) ou insuffisant (POOL_INSUFFICIENT_REMAINDER)",
             ),
         ],
     )
@@ -238,8 +263,9 @@ interface PoolApi {
 
     @Operation(
         summary = "Ajouter un participant (invitation par email)",
-        description = "Le créateur ajoute une part par email ; le montant est prélevé sur son reliquat. Un lien " +
-            "unique est généré et une invitation est envoyée.",
+        description =
+            "Le créateur ajoute une part par email ; le montant est prélevé sur son reliquat. Un lien " +
+                "unique est généré et une invitation est envoyée.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -253,8 +279,9 @@ interface PoolApi {
             ApiResponse(responseCode = "404", description = "POOL_NOT_FOUND"),
             ApiResponse(
                 responseCode = "409",
-                description = "Cagnotte fermée (POOL_CLOSED), pas de reliquat créateur (POOL_NO_CREATOR_REMAINDER) " +
-                    "ou reliquat insuffisant (POOL_INSUFFICIENT_REMAINDER)",
+                description =
+                    "Cagnotte fermée (POOL_CLOSED), pas de reliquat créateur (POOL_NO_CREATOR_REMAINDER) " +
+                        "ou reliquat insuffisant (POOL_INSUFFICIENT_REMAINDER)",
             ),
         ],
     )
@@ -281,9 +308,10 @@ interface PoolApi {
             ApiResponse(responseCode = "404", description = "POOL_NOT_FOUND / POOL_SHARE_NOT_FOUND"),
             ApiResponse(
                 responseCode = "409",
-                description = "Cagnotte fermée (POOL_CLOSED), part déjà payée (POOL_SHARE_ALREADY_PAID), reliquat " +
-                    "créateur (POOL_CANNOT_EDIT_CREATOR_SHARE), reliquat verrouillé (POOL_CREATOR_SHARE_LOCKED) ou " +
-                    "insuffisant (POOL_INSUFFICIENT_REMAINDER)",
+                description =
+                    "Cagnotte fermée (POOL_CLOSED), part déjà payée (POOL_SHARE_ALREADY_PAID), reliquat " +
+                        "créateur (POOL_CANNOT_EDIT_CREATOR_SHARE), reliquat verrouillé (POOL_CREATOR_SHARE_LOCKED) ou " +
+                        "insuffisant (POOL_INSUFFICIENT_REMAINDER)",
             ),
         ],
     )
@@ -311,7 +339,10 @@ interface PoolApi {
         ],
     )
     @PostMapping("/{poolId}/regenerate-link")
-    fun regenerateLink(@PathVariable poolId: UUID, authentication: Authentication): ResponseEntity<Any>
+    fun regenerateLink(
+        @PathVariable poolId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Relancer un participant",

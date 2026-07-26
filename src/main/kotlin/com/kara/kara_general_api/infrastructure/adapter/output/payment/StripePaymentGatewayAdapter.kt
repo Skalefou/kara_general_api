@@ -36,11 +36,11 @@ class StripePaymentGatewayAdapter(
     // serveur : la clé éphémère doit être scellée sur cette version, sinon la PaymentSheet la rejette.
     @Value("\${kara.stripe.mobile-api-version}") private val mobileApiVersion: String,
 ) : PaymentGateway {
-
     override fun ensureCustomer(user: User): String {
         user.stripeCustomerId?.let { return it }
         val params =
-            CustomerCreateParams.builder()
+            CustomerCreateParams
+                .builder()
                 .setEmail(user.email.value)
                 .setName("${user.firstName} ${user.lastName}")
                 .build()
@@ -51,14 +51,19 @@ class StripePaymentGatewayAdapter(
         // La version d'API doit être celle du SDK mobile (flutter_stripe) et posée DIRECTEMENT sur les params :
         // EphemeralKey.create valide params.getStripeVersion() et ignore RequestOptions.unsafeSetStripeVersionOverride.
         val params =
-            EphemeralKeyCreateParams.builder()
+            EphemeralKeyCreateParams
+                .builder()
                 .setCustomer(customerId)
                 .setStripeVersion(mobileApiVersion)
                 .build()
         return EphemeralKey.create(params).secret
     }
 
-    override fun createPaymentIntent(amount: BigDecimal, currency: Currency, customerId: String): PaymentIntentResult {
+    override fun createPaymentIntent(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentResult {
         val params =
             basePaymentIntentParams(amount, currency, customerId).build()
         val intent = PaymentIntent.create(params)
@@ -99,16 +104,23 @@ class StripePaymentGatewayAdapter(
         customerId: String,
     ): PaymentIntentCreateParams.Builder {
         val amountMinorUnits = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
-        return PaymentIntentCreateParams.builder()
+        return PaymentIntentCreateParams
+            .builder()
             .setAmount(amountMinorUnits)
             .setCurrency(currency.name.lowercase())
             .setCustomer(customerId)
             .setAutomaticPaymentMethods(
-                PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build(),
+                PaymentIntentCreateParams.AutomaticPaymentMethods
+                    .builder()
+                    .setEnabled(true)
+                    .build(),
             )
     }
 
-    override fun verifyAndParseWebhook(payload: String, signature: String): StripeWebhookEvent? =
+    override fun verifyAndParseWebhook(
+        payload: String,
+        signature: String,
+    ): StripeWebhookEvent? =
         try {
             val event = Webhook.constructEvent(payload, signature, webhookSecret)
             StripeWebhookEvent(type = event.type, paymentIntentId = extractPaymentIntentId(event))

@@ -14,7 +14,9 @@ data class SetRoomStockCommand(
 )
 
 sealed interface SetRoomStockResult {
-    data class Success(val entry: RoomStockEntry) : SetRoomStockResult
+    data class Success(
+        val entry: RoomStockEntry,
+    ) : SetRoomStockResult
 
     data object RoomNotFound : SetRoomStockResult
 

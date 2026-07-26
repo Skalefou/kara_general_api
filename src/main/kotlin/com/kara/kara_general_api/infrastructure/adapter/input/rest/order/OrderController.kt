@@ -21,7 +21,6 @@ import java.util.UUID
 class OrderController(
     private val placeOrderUseCase: PlaceOrderUseCase,
 ) : OrderApi {
-
     override fun placeOrder(
         bookingId: UUID,
         request: PlaceOrderRequest,
@@ -48,67 +47,73 @@ class OrderController(
 
     private fun bookingNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune réservation ne correspond à cet identifiant.",
-            ).apply {
-                title = "Réservation introuvable"
-                setProperty("code", "BOOKING_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune réservation ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Réservation introuvable"
+                    setProperty("code", "BOOKING_NOT_FOUND")
+                },
         )
 
     private fun productNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun produit ne correspond à cet identifiant.",
-            ).apply {
-                title = "Produit introuvable"
-                setProperty("code", "PRODUCT_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun produit ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Produit introuvable"
+                    setProperty("code", "PRODUCT_NOT_FOUND")
+                },
         )
 
     private fun bookingNotOwner(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Cette réservation n'appartient pas à l'utilisateur courant.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "BOOKING_NOT_OWNER")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Cette réservation n'appartient pas à l'utilisateur courant.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "BOOKING_NOT_OWNER")
+                },
         )
 
     private fun bookingNotActive(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "La réservation n'est pas active : une commande n'est possible que pendant le créneau confirmé.",
-            ).apply {
-                title = "Réservation non active"
-                setProperty("code", "BOOKING_NOT_ACTIVE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "La réservation n'est pas active : une commande n'est possible que pendant le créneau confirmé.",
+                ).apply {
+                    title = "Réservation non active"
+                    setProperty("code", "BOOKING_NOT_ACTIVE")
+                },
         )
 
     private fun insufficientStock(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Le stock de la salle est insuffisant pour la quantité demandée.",
-            ).apply {
-                title = "Stock insuffisant"
-                setProperty("code", "INSUFFICIENT_STOCK")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Le stock de la salle est insuffisant pour la quantité demandée.",
+                ).apply {
+                    title = "Stock insuffisant"
+                    setProperty("code", "INSUFFICIENT_STOCK")
+                },
         )
 
     private fun paymentMethodRequired(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.PAYMENT_REQUIRED,
-                "Le paiement des commandes n'est pas encore disponible : Stripe reste à intégrer.",
-            ).apply {
-                title = "Stripe à intégrer"
-                setProperty("code", "PAYMENT_METHOD_REQUIRED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.PAYMENT_REQUIRED,
+                    "Le paiement des commandes n'est pas encore disponible : Stripe reste à intégrer.",
+                ).apply {
+                    title = "Stripe à intégrer"
+                    setProperty("code", "PAYMENT_METHOD_REQUIRED")
+                },
         )
 }

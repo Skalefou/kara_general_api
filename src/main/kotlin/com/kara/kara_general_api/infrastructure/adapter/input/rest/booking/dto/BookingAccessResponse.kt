@@ -18,8 +18,10 @@ data class BookingAccessResponse(
     val checkedInByName: String?,
 ) {
     companion object {
-        fun granted(view: BookingAccessView, checkedInAt: Instant): BookingAccessResponse =
-            from(view).copy(granted = true, checkedInAt = checkedInAt)
+        fun granted(
+            view: BookingAccessView,
+            checkedInAt: Instant,
+        ): BookingAccessResponse = from(view).copy(granted = true, checkedInAt = checkedInAt)
 
         fun alreadyCheckedIn(
             view: BookingAccessView,

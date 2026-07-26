@@ -17,7 +17,6 @@ class PoolShareRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: PoolShareRowMapper,
 ) : PoolShareRepository {
-
     override fun save(share: PoolShare): PoolShare {
         jdbc.update(UPSERT_SQL, params(share))
         return share

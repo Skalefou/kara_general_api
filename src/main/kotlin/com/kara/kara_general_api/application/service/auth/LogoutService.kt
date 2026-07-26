@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service
 class LogoutService(
     private val refreshTokenRepository: RefreshTokenRepository,
 ) : LogoutUseCase {
-
     override fun logout(command: LogoutCommand) {
         refreshTokenRepository.revoke(command.refreshToken)
     }

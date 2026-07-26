@@ -29,7 +29,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class PlaceOrderServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val productRepository = mockk<ProductRepository>(relaxed = true)
     private val roomStockRepository = mockk<RoomStockRepository>(relaxed = true)

@@ -17,7 +17,6 @@ class EstimateBookingService(
     private val roomRepository: RoomRepository,
     private val roomOptionRepository: RoomOptionRepository,
 ) : EstimateBookingUseCase {
-
     override fun estimate(command: EstimateBookingCommand): EstimateBookingResult {
         val room = roomRepository.findById(command.roomId) ?: return EstimateBookingResult.RoomNotFound
         val options = roomOptionRepository.findByRoomId(command.roomId)

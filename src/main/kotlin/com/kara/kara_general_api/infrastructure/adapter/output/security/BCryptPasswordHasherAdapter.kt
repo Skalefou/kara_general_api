@@ -9,9 +9,10 @@ import org.springframework.stereotype.Component
 class BCryptPasswordHasherAdapter(
     private val passwordEncoder: PasswordEncoder,
 ) : PasswordHasher {
-    override fun hash(plainPassword: String): HashedPassword =
-        HashedPassword(requireNotNull(passwordEncoder.encode(plainPassword)))
+    override fun hash(plainPassword: String): HashedPassword = HashedPassword(requireNotNull(passwordEncoder.encode(plainPassword)))
 
-    override fun matches(plainPassword: String, hashedPassword: HashedPassword): Boolean =
-        passwordEncoder.matches(plainPassword, hashedPassword.value)
+    override fun matches(
+        plainPassword: String,
+        hashedPassword: HashedPassword,
+    ): Boolean = passwordEncoder.matches(plainPassword, hashedPassword.value)
 }

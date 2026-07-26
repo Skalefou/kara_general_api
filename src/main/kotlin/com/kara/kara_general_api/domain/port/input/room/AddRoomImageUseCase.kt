@@ -29,7 +29,9 @@ sealed interface AddRoomImageResult {
      * L'original a été accepté et le traitement des variantes est lancé de façon asynchrone.
      * [imageId] permet au client de suivre le statut ; l'image est en PROCESSING jusqu'au retour du worker.
      */
-    data class Accepted(val imageId: UUID) : AddRoomImageResult
+    data class Accepted(
+        val imageId: UUID,
+    ) : AddRoomImageResult
 
     data object RoomNotFound : AddRoomImageResult
 

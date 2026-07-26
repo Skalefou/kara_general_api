@@ -30,7 +30,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class InvoiceRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -127,7 +126,11 @@ class InvoiceRepositoryAdapterTest {
         assertNull(adapter.findCagnotteDetail(authorizedShareId))
     }
 
-    private fun insertUser(id: UserId, firstName: String, lastName: String) {
+    private fun insertUser(
+        id: UserId,
+        firstName: String,
+        lastName: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number,
@@ -145,7 +148,10 @@ class InvoiceRepositoryAdapterTest {
         )
     }
 
-    private fun insertRoom(id: UUID, name: String) {
+    private fun insertRoom(
+        id: UUID,
+        name: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO rooms (id, name, description, street, city, postal_code, country,
@@ -158,7 +164,11 @@ class InvoiceRepositoryAdapterTest {
         )
     }
 
-    private fun insertBooking(id: UUID, roomId: UUID, userId: UserId) {
+    private fun insertBooking(
+        id: UUID,
+        roomId: UUID,
+        userId: UserId,
+    ) {
         jdbc.update(
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
@@ -170,7 +180,14 @@ class InvoiceRepositoryAdapterTest {
         )
     }
 
-    private fun insertPayment(id: PaymentId, bookingId: UUID, userId: UserId, status: String, amount: String, createdAt: String) {
+    private fun insertPayment(
+        id: PaymentId,
+        bookingId: UUID,
+        userId: UserId,
+        status: String,
+        amount: String,
+        createdAt: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO payments (id, booking_id, user_id, amount, currency, status,
@@ -189,7 +206,10 @@ class InvoiceRepositoryAdapterTest {
         )
     }
 
-    private fun insertPool(id: UUID, bookingId: UUID) {
+    private fun insertPool(
+        id: UUID,
+        bookingId: UUID,
+    ) {
         jdbc.update(
             """
             INSERT INTO pools (id, booking_id, target_amount, currency, status, deadline, global_link_token, created_at)
@@ -199,7 +219,14 @@ class InvoiceRepositoryAdapterTest {
         )
     }
 
-    private fun insertShare(id: PoolShareId, poolId: UUID, payerUserId: UserId, status: String, amount: String, createdAt: String) {
+    private fun insertShare(
+        id: PoolShareId,
+        poolId: UUID,
+        payerUserId: UserId,
+        status: String,
+        amount: String,
+        createdAt: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO pool_shares (id, pool_id, participant_name, email, amount, status,

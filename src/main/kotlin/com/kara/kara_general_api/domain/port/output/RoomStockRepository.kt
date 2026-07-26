@@ -16,14 +16,24 @@ interface RoomStockRepository {
      * Quantité disponible d'un produit dans le stock d'une salle, ou `null` si le produit n'y est pas
      * référencé (jamais mis en stock pour cette salle). Une valeur 0 signifie « référencé mais épuisé ».
      */
-    fun findQuantity(roomId: RoomId, productId: ProductId): Int?
+    fun findQuantity(
+        roomId: RoomId,
+        productId: ProductId,
+    ): Int?
 
     /**
      * Décrémente la quantité d'un produit de façon atomique : la ligne n'est mise à jour que si le
      * stock restant couvre [quantity]. Retourne false si le stock est insuffisant ou le produit absent.
      */
-    fun tryDecrement(roomId: RoomId, productId: ProductId, quantity: Int): Boolean
+    fun tryDecrement(
+        roomId: RoomId,
+        productId: ProductId,
+        quantity: Int,
+    ): Boolean
 
     /** Retire un produit du stock d'une salle. Retourne true si une ligne a été supprimée. */
-    fun deleteByRoomIdAndProductId(roomId: RoomId, productId: ProductId): Boolean
+    fun deleteByRoomIdAndProductId(
+        roomId: RoomId,
+        productId: ProductId,
+    ): Boolean
 }

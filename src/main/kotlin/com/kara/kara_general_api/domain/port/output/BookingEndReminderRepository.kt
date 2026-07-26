@@ -21,7 +21,10 @@ interface BookingEndReminderRepository {
     ): List<BookingEndReminderTarget>
 
     /** Marque le rappel [kind] comme envoyé pour la réservation [bookingId] (idempotent). */
-    fun markSent(bookingId: BookingId, kind: BookingEndReminderKind)
+    fun markSent(
+        bookingId: BookingId,
+        kind: BookingEndReminderKind,
+    )
 
     fun deleteByBookingId(bookingId: BookingId)
 }

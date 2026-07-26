@@ -16,13 +16,13 @@ private val ACCESS_TOKEN_TTL: Duration = Duration.ofMinutes(15)
 class JwtTokenAdapter(
     private val jwtPrivateKey: RSAPrivateKey,
 ) : TokenService {
-
     override fun generateAccessToken(user: User): AccessToken {
         val now = Instant.now()
         val expiresAt = now.plus(ACCESS_TOKEN_TTL)
 
         val token =
-            Jwts.builder()
+            Jwts
+                .builder()
                 .subject(user.id.value.toString())
                 .claim("email", user.email.value)
                 .claim("role", user.role.name)

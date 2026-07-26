@@ -20,11 +20,11 @@ class DeleteAccountService(
     private val emailVerificationCodeRepository: EmailVerificationCodeRepository,
     private val emailService: EmailService,
 ) : DeleteAccountUseCase {
-
     @Transactional
     override fun deleteAccount(command: DeleteAccountCommand): DeleteAccountResult {
-        val user = userRepository.findById(command.userId)
-            ?: return DeleteAccountResult.UserNotFound
+        val user =
+            userRepository.findById(command.userId)
+                ?: return DeleteAccountResult.UserNotFound
 
         if (!passwordHasher.matches(command.password, user.hashedPassword)) {
             return DeleteAccountResult.InvalidPassword

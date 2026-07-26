@@ -38,7 +38,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class ValidateBookingAccessServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
@@ -75,20 +74,24 @@ class ValidateBookingAccessServiceTest {
             timeZone = ZoneId.of("UTC"),
         )
 
-    private fun user(id: UserId, first: String, last: String, role: UserRole) =
-        User(
-            id = id,
-            email = Email("${first.lowercase()}@example.com"),
-            hashedPassword = HashedPassword("hashed"),
-            firstName = first,
-            lastName = last,
-            phoneNumber = PhoneNumber("+33612345678"),
-            birthDate = LocalDate.of(1990, 1, 15),
-            role = role,
-            firebaseUid = "uid-$first",
-            createdAt = Instant.now(),
-            emailVerified = true,
-        )
+    private fun user(
+        id: UserId,
+        first: String,
+        last: String,
+        role: UserRole,
+    ) = User(
+        id = id,
+        email = Email("${first.lowercase()}@example.com"),
+        hashedPassword = HashedPassword("hashed"),
+        firstName = first,
+        lastName = last,
+        phoneNumber = PhoneNumber("+33612345678"),
+        birthDate = LocalDate.of(1990, 1, 15),
+        role = role,
+        firebaseUid = "uid-$first",
+        createdAt = Instant.now(),
+        emailVerified = true,
+    )
 
     private fun booking(
         status: BookingStatus = BookingStatus.CONFIRMED,
@@ -109,8 +112,10 @@ class ValidateBookingAccessServiceTest {
         expiresAt = Instant.now().minus(Duration.ofDays(1)),
     )
 
-    private fun command(userId: UserId = serverId, isAdmin: Boolean = false) =
-        ValidateBookingAccessCommand(bookingId = bookingId, currentUserId = userId, isAdmin = isAdmin)
+    private fun command(
+        userId: UserId = serverId,
+        isAdmin: Boolean = false,
+    ) = ValidateBookingAccessCommand(bookingId = bookingId, currentUserId = userId, isAdmin = isAdmin)
 
     private fun stubAssignedAndLookups() {
         every { checkInRepository.findByBookingId(bookingId) } returns null

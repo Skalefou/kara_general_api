@@ -19,14 +19,15 @@ class ResetPasswordService(
     private val passwordHasher: PasswordHasher,
     private val firebaseAuthGateway: FirebaseAuthGateway,
 ) : ResetPasswordUseCase {
-
     @Transactional
     override fun resetPassword(command: ResetPasswordCommand): ResetPasswordResult {
-        val user = userRepository.findByEmail(command.email)
-            ?: return ResetPasswordResult.UserNotFound
+        val user =
+            userRepository.findByEmail(command.email)
+                ?: return ResetPasswordResult.UserNotFound
 
-        val storedCode = passwordResetCodeRepository.find(command.email)
-            ?: return ResetPasswordResult.CodeExpiredOrMissing
+        val storedCode =
+            passwordResetCodeRepository.find(command.email)
+                ?: return ResetPasswordResult.CodeExpiredOrMissing
 
         if (storedCode != command.code) {
             return ResetPasswordResult.InvalidCode

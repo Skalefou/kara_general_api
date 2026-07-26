@@ -32,7 +32,6 @@ private const val PAYMENT_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 @WebMvcTest(InvoiceController::class)
 @Import(SecurityConfig::class)
 class InvoiceControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -67,7 +66,8 @@ class InvoiceControllerTest {
     fun `should return 200 with the list of invoices`() {
         every { listInvoicesUseCase.listInvoices(any()) } returns listOf(sampleInvoice())
 
-        mockMvc.perform(get("/api/v1/invoices"))
+        mockMvc
+            .perform(get("/api/v1/invoices"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].invoiceId").value(invoiceId.value))
             .andExpect(jsonPath("$[0].type").value("RESERVATION"))
@@ -82,7 +82,8 @@ class InvoiceControllerTest {
     fun `should return 200 with an empty array when there is no invoice`() {
         every { listInvoicesUseCase.listInvoices(any()) } returns emptyList()
 
-        mockMvc.perform(get("/api/v1/invoices"))
+        mockMvc
+            .perform(get("/api/v1/invoices"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isEmpty)
     }
@@ -93,7 +94,8 @@ class InvoiceControllerTest {
         every { getInvoiceDownloadUseCase.getDownloadUrl(any(), any()) } returns
             GetInvoiceDownloadResult.Found("https://signed/url")
 
-        mockMvc.perform(get("/api/v1/invoices/${invoiceId.value}"))
+        mockMvc
+            .perform(get("/api/v1/invoices/${invoiceId.value}"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.downloadUrl").value("https://signed/url"))
     }
@@ -103,7 +105,8 @@ class InvoiceControllerTest {
     fun `should return 403 when the invoice belongs to another user`() {
         every { getInvoiceDownloadUseCase.getDownloadUrl(any(), any()) } returns GetInvoiceDownloadResult.NotOwner
 
-        mockMvc.perform(get("/api/v1/invoices/${invoiceId.value}"))
+        mockMvc
+            .perform(get("/api/v1/invoices/${invoiceId.value}"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("INVOICE_NOT_OWNER"))
     }
@@ -113,7 +116,8 @@ class InvoiceControllerTest {
     fun `should return 404 when the invoice is unknown`() {
         every { getInvoiceDownloadUseCase.getDownloadUrl(any(), any()) } returns GetInvoiceDownloadResult.NotFound
 
-        mockMvc.perform(get("/api/v1/invoices/PAY-unknown"))
+        mockMvc
+            .perform(get("/api/v1/invoices/PAY-unknown"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("INVOICE_NOT_FOUND"))
     }

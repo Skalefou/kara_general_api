@@ -21,7 +21,6 @@ class InvoiceController(
     private val listInvoicesUseCase: ListInvoicesUseCase,
     private val getInvoiceDownloadUseCase: GetInvoiceDownloadUseCase,
 ) : InvoiceApi {
-
     override fun listInvoices(authentication: Authentication): ResponseEntity<Any> {
         val userId = UserId(UUID.fromString(authentication.name))
         val items = listInvoicesUseCase.listInvoices(userId).map(InvoiceListItem::from)
@@ -43,23 +42,25 @@ class InvoiceController(
 
     private fun invoiceNotOwner(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Ce reçu n'appartient pas à l'utilisateur courant.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "INVOICE_NOT_OWNER")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Ce reçu n'appartient pas à l'utilisateur courant.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "INVOICE_NOT_OWNER")
+                },
         )
 
     private fun invoiceNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun reçu ne correspond à cet identifiant.",
-            ).apply {
-                title = "Reçu introuvable"
-                setProperty("code", "INVOICE_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun reçu ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Reçu introuvable"
+                    setProperty("code", "INVOICE_NOT_FOUND")
+                },
         )
 }

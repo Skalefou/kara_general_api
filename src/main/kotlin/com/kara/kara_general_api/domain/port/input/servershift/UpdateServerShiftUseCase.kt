@@ -20,7 +20,9 @@ data class UpdateServerShiftCommand(
 )
 
 sealed interface UpdateServerShiftResult {
-    data class Success(val shift: ServerShift) : UpdateServerShiftResult
+    data class Success(
+        val shift: ServerShift,
+    ) : UpdateServerShiftResult
 
     data object NotFound : UpdateServerShiftResult
 

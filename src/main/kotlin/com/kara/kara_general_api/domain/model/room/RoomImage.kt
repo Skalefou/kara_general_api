@@ -3,7 +3,9 @@ package com.kara.kara_general_api.domain.model.room
 import java.util.UUID
 
 @JvmInline
-value class RoomImageId(val value: UUID) {
+value class RoomImageId(
+    val value: UUID,
+) {
     companion object {
         fun generate(): RoomImageId = RoomImageId(UUID.randomUUID())
     }

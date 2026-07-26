@@ -13,7 +13,9 @@ data class ExtendBookingCommand(
 )
 
 sealed interface ExtendBookingResult {
-    data class Created(val extension: BookingExtension) : ExtendBookingResult
+    data class Created(
+        val extension: BookingExtension,
+    ) : ExtendBookingResult
 
     data object BookingNotFound : ExtendBookingResult
 
@@ -27,7 +29,9 @@ sealed interface ExtendBookingResult {
 
     data object RoomNotFound : ExtendBookingResult
 
-    data class SlotUnavailable(val maxAdditionalMinutes: Int) : ExtendBookingResult
+    data class SlotUnavailable(
+        val maxAdditionalMinutes: Int,
+    ) : ExtendBookingResult
 
     data object SettlementWindowTooShort : ExtendBookingResult
 }

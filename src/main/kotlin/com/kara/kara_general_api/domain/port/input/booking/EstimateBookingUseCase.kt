@@ -15,18 +15,24 @@ data class EstimateBookingCommand(
 )
 
 sealed interface EstimateBookingResult {
-    data class Success(val estimate: BookingEstimate) : EstimateBookingResult
+    data class Success(
+        val estimate: BookingEstimate,
+    ) : EstimateBookingResult
 
     data object RoomNotFound : EstimateBookingResult
 
     data object TooFewPeople : EstimateBookingResult
 
-    data class CapacityExceeded(val maxCapacity: Int) : EstimateBookingResult
+    data class CapacityExceeded(
+        val maxCapacity: Int,
+    ) : EstimateBookingResult
 
     data object InvalidTimeSlot : EstimateBookingResult
 
     /** Au moins un identifiant d'option ne correspond à aucune option de la salle. */
-    data class UnknownOptions(val optionIds: List<UUID>) : EstimateBookingResult
+    data class UnknownOptions(
+        val optionIds: List<UUID>,
+    ) : EstimateBookingResult
 }
 
 interface EstimateBookingUseCase {

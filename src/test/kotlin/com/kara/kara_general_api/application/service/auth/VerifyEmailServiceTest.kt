@@ -25,7 +25,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class VerifyEmailServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val emailVerificationCodeRepository = mockk<EmailVerificationCodeRepository>()
     private val tokenService = mockk<TokenService>()

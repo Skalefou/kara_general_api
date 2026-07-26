@@ -27,7 +27,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class UpdateRoomServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val geocodingPort = mockk<GeocodingPort>()
     private val serviceRepository = mockk<ServiceRepository>()
@@ -187,7 +186,10 @@ class UpdateRoomServiceTest {
         every { serviceRepository.existsById(serviceId) } returns true
         every { roomServiceRepository.replaceLinks(any(), any()) } just runs
 
-        val result = sut.updateRoom(command.copy(street = null, city = null, postalCode = null, country = null, serviceIds = listOf(serviceId)))
+        val result =
+            sut.updateRoom(
+                command.copy(street = null, city = null, postalCode = null, country = null, serviceIds = listOf(serviceId)),
+            )
 
         val success = assertIs<UpdateRoomResult.Success>(result)
         verify { roomServiceRepository.replaceLinks(success.room.id, listOf(serviceId)) }

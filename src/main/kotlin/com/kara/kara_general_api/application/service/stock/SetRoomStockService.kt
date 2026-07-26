@@ -19,7 +19,6 @@ class SetRoomStockService(
     private val roomStockRepository: RoomStockRepository,
     private val serverShiftRepository: ServerShiftRepository,
 ) : SetRoomStockUseCase {
-
     @Transactional
     override fun setRoomStock(command: SetRoomStockCommand): SetRoomStockResult {
         roomRepository.findById(command.roomId) ?: return SetRoomStockResult.RoomNotFound

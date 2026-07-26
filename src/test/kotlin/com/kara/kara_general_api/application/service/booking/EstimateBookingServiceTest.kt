@@ -21,7 +21,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class EstimateBookingServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val roomOptionRepository = mockk<RoomOptionRepository>()
     private val sut = EstimateBookingService(roomRepository, roomOptionRepository)
@@ -80,7 +79,10 @@ class EstimateBookingServiceTest {
         assertEquals(BigDecimal("40.00"), success.estimate.pricePerPerson)
     }
 
-    private fun command(optionIds: List<RoomOptionId>, numberOfPeople: Int = 4): EstimateBookingCommand =
+    private fun command(
+        optionIds: List<RoomOptionId>,
+        numberOfPeople: Int = 4,
+    ): EstimateBookingCommand =
         EstimateBookingCommand(
             roomId = roomId,
             startAt = start,

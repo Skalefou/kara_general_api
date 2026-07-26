@@ -26,7 +26,6 @@ import kotlin.test.assertTrue
 private const val STAFF_PASSWORD = "Str0ng!P@sswordStr0ng!P@sswordXY"
 
 class CreateServerAccountServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>()
     private val passwordHasher = mockk<PasswordHasher>()

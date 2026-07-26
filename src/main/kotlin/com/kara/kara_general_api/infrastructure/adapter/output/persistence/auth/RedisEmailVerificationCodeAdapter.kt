@@ -10,8 +10,11 @@ import java.time.Duration
 class RedisEmailVerificationCodeAdapter(
     private val redisTemplate: StringRedisTemplate,
 ) : EmailVerificationCodeRepository {
-
-    override fun save(email: Email, code: String, ttl: Duration) {
+    override fun save(
+        email: Email,
+        code: String,
+        ttl: Duration,
+    ) {
         redisTemplate.opsForValue().set(key(email), code, ttl)
     }
 

@@ -27,14 +27,18 @@ data class UpdateRoomCommand(
 )
 
 sealed interface UpdateRoomResult {
-    data class Success(val room: Room) : UpdateRoomResult
+    data class Success(
+        val room: Room,
+    ) : UpdateRoomResult
 
     data object NotFound : UpdateRoomResult
 
     data object AddressNotFound : UpdateRoomResult
 
     /** Un des services référencés n'existe pas dans le catalogue global. */
-    data class UnknownService(val serviceId: ServiceId) : UpdateRoomResult
+    data class UnknownService(
+        val serviceId: ServiceId,
+    ) : UpdateRoomResult
 }
 
 interface UpdateRoomUseCase {

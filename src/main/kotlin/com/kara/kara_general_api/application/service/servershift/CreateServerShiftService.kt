@@ -22,7 +22,6 @@ class CreateServerShiftService(
     private val roomRepository: RoomRepository,
     private val serverShiftRepository: ServerShiftRepository,
 ) : CreateServerShiftUseCase {
-
     @Transactional
     override fun createServerShift(command: CreateServerShiftCommand): CreateServerShiftResult {
         val server = userRepository.findById(command.serverId) ?: return CreateServerShiftResult.ServerNotFound

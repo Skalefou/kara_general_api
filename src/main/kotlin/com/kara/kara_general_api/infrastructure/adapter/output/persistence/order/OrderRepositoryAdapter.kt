@@ -13,7 +13,6 @@ class OrderRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: OrderRowMapper,
 ) : OrderRepository {
-
     override fun save(order: Order): Order {
         val sql =
             """

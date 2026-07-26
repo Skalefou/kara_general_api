@@ -34,7 +34,6 @@ class CreatePoolService(
     private val linkTokenGenerator: LinkTokenGenerator,
     private val emailService: EmailService,
 ) : CreatePoolUseCase {
-
     @Transactional
     override fun create(command: CreatePoolCommand): CreatePoolResult {
         val booking = bookingRepository.findById(command.bookingId) ?: return CreatePoolResult.BookingNotFound

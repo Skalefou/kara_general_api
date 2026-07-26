@@ -24,7 +24,6 @@ class BookingRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: BookingRowMapper,
 ) : BookingRepository {
-
     override fun save(booking: Booking): Booking {
         val sql =
             """
@@ -60,7 +59,10 @@ class BookingRepositoryAdapter(
         return booking
     }
 
-    private fun saveOptions(bookingId: BookingId, optionIds: List<RoomOptionId>) {
+    private fun saveOptions(
+        bookingId: BookingId,
+        optionIds: List<RoomOptionId>,
+    ) {
         if (optionIds.isEmpty()) return
         // ON CONFLICT sur UNIQUE(booking_id, option_id) : ré-enregistrer une option déjà figée est idempotent.
         val sql =
@@ -70,12 +72,14 @@ class BookingRepositoryAdapter(
             ON CONFLICT ON CONSTRAINT uq_booking_options_booking_option DO NOTHING
             """.trimIndent()
         val batch =
-            optionIds.distinct().map { optionId ->
-                MapSqlParameterSource()
-                    .addValue("id", UUID.randomUUID())
-                    .addValue("bookingId", bookingId.value)
-                    .addValue("optionId", optionId.value)
-            }.toTypedArray()
+            optionIds
+                .distinct()
+                .map { optionId ->
+                    MapSqlParameterSource()
+                        .addValue("id", UUID.randomUUID())
+                        .addValue("bookingId", bookingId.value)
+                        .addValue("optionId", optionId.value)
+                }.toTypedArray()
         jdbc.batchUpdate(sql, batch)
     }
 
@@ -103,7 +107,11 @@ class BookingRepositoryAdapter(
         }
     }
 
-    override fun existsOverlapping(roomId: RoomId, startAt: Instant, endAt: Instant): Boolean {
+    override fun existsOverlapping(
+        roomId: RoomId,
+        startAt: Instant,
+        endAt: Instant,
+    ): Boolean {
         // Chevauchement de créneaux : deux intervalles [a,b) et [c,d) se chevauchent ssi a < d ET b > c.
         // Bloquent le créneau : les réservations CONFIRMED et les PENDING non expirées (fenêtre de
         // paiement encore ouverte). Une PENDING expirée libère immédiatement le créneau.
@@ -159,7 +167,10 @@ class BookingRepositoryAdapter(
         return jdbc.query(sql, emptyMap<String, Any>(), rowMapper)
     }
 
-    override fun updateStatus(id: BookingId, status: BookingStatus) {
+    override fun updateStatus(
+        id: BookingId,
+        status: BookingStatus,
+    ) {
         val sql = "UPDATE bookings SET status = :status WHERE id = :id"
         jdbc.update(sql, mapOf("id" to id.value, "status" to status.name))
     }
@@ -179,18 +190,23 @@ class BookingRepositoryAdapter(
               AND (status = 'CONFIRMED' OR (status = 'PENDING' AND expires_at > :now))
               AND start_at >= :after
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            MapSqlParameterSource()
-                .addValue("roomId", roomId.value)
-                .addValue("excluding", excluding.value)
-                .addValue("after", Timestamp.from(after))
-                .addValue("now", Timestamp.from(now)),
-        ) { rs, _ -> rs.getTimestamp("next_start")?.toInstant() }
+        return jdbc
+            .query(
+                sql,
+                MapSqlParameterSource()
+                    .addValue("roomId", roomId.value)
+                    .addValue("excluding", excluding.value)
+                    .addValue("after", Timestamp.from(after))
+                    .addValue("now", Timestamp.from(now)),
+            ) { rs, _ -> rs.getTimestamp("next_start")?.toInstant() }
             .firstOrNull()
     }
 
-    override fun updateEndAt(id: BookingId, endAt: Instant, totalPrice: BigDecimal) {
+    override fun updateEndAt(
+        id: BookingId,
+        endAt: Instant,
+        totalPrice: BigDecimal,
+    ) {
         val sql = "UPDATE bookings SET end_at = :endAt, total_price = :totalPrice WHERE id = :id"
         jdbc.update(
             sql,

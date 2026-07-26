@@ -23,7 +23,6 @@ class ListUserPoolsService(
     private val bookingRepository: BookingRepository,
     private val roomRepository: RoomRepository,
 ) : ListUserPoolsUseCase {
-
     @Transactional(readOnly = true)
     override fun listForUser(userId: UserId): List<PoolSummaryView> =
         poolRepository.findByUserInvolvement(userId).mapNotNull { pool ->

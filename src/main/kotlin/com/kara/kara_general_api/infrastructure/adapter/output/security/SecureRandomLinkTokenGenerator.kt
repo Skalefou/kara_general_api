@@ -10,7 +10,6 @@ private const val TOKEN_BYTES = 32
 /** Génère des tokens de lien opaques (256 bits, encodés en Base64 URL-safe sans padding). */
 @Component
 class SecureRandomLinkTokenGenerator : LinkTokenGenerator {
-
     private val random = SecureRandom()
     private val encoder = Base64.getUrlEncoder().withoutPadding()
 

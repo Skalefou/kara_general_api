@@ -18,7 +18,6 @@ class UpdateServerShiftService(
     private val roomRepository: RoomRepository,
     private val serverShiftRepository: ServerShiftRepository,
 ) : UpdateServerShiftUseCase {
-
     @Transactional
     override fun updateServerShift(command: UpdateServerShiftCommand): UpdateServerShiftResult {
         val existing = serverShiftRepository.findById(command.id) ?: return UpdateServerShiftResult.NotFound

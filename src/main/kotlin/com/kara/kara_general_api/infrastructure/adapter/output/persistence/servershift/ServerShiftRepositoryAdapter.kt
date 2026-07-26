@@ -18,7 +18,6 @@ class ServerShiftRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: ServerShiftRowMapper,
 ) : ServerShiftRepository {
-
     override fun save(shift: ServerShift): ServerShift {
         val sql =
             """
@@ -54,7 +53,12 @@ class ServerShiftRepositoryAdapter(
         return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
     }
 
-    override fun findAll(serverId: UserId?, roomId: RoomId?, from: Instant?, to: Instant?): List<ServerShift> {
+    override fun findAll(
+        serverId: UserId?,
+        roomId: RoomId?,
+        from: Instant?,
+        to: Instant?,
+    ): List<ServerShift> {
         // Filtres optionnels : chaque critère null est neutralisé par `(:param IS NULL OR ...)`.
         // Fenêtre temporelle : chevauchement du créneau [start_at, end_at) avec [from, to).
         val sql =
@@ -112,7 +116,11 @@ class ServerShiftRepositoryAdapter(
         return jdbc.update(sql, mapOf("id" to id.value)) > 0
     }
 
-    override fun findServerIdsAssignedTo(roomId: RoomId, startAt: Instant, endAt: Instant): Set<UserId> {
+    override fun findServerIdsAssignedTo(
+        roomId: RoomId,
+        startAt: Instant,
+        endAt: Instant,
+    ): Set<UserId> {
         // Serveurs dont un créneau de la même salle chevauche [startAt, endAt) (a<d ET b>c).
         val sql =
             """
@@ -122,12 +130,14 @@ class ServerShiftRepositoryAdapter(
               AND start_at < :endAt
               AND end_at > :startAt
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            MapSqlParameterSource()
-                .addValue("roomId", roomId.value)
-                .addValue("startAt", Timestamp.from(startAt))
-                .addValue("endAt", Timestamp.from(endAt)),
-        ) { rs, _ -> UserId(rs.getObject("server_id", java.util.UUID::class.java)) }.toSet()
+        return jdbc
+            .query(
+                sql,
+                MapSqlParameterSource()
+                    .addValue("roomId", roomId.value)
+                    .addValue("startAt", Timestamp.from(startAt))
+                    .addValue("endAt", Timestamp.from(endAt)),
+            ) { rs, _ -> UserId(rs.getObject("server_id", java.util.UUID::class.java)) }
+            .toSet()
     }
 }

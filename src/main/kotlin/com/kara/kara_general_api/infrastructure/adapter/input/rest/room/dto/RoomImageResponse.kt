@@ -23,7 +23,10 @@ data class RoomImageResponse(
     val errorCode: String? = null,
 ) {
     companion object {
-        fun from(image: RoomImage, publicUrl: (String) -> String): RoomImageResponse =
+        fun from(
+            image: RoomImage,
+            publicUrl: (String) -> String,
+        ): RoomImageResponse =
             RoomImageResponse(
                 id = image.id.value,
                 status = image.status.name,

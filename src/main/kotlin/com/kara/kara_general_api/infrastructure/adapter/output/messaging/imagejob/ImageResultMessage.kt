@@ -50,7 +50,6 @@ enum class ImageErrorCode {
     ;
 
     companion object {
-        fun fromWire(code: String?): ImageErrorCode =
-            entries.firstOrNull { it.name.equals(code?.trim(), ignoreCase = true) } ?: INTERNAL
+        fun fromWire(code: String?): ImageErrorCode = entries.firstOrNull { it.name.equals(code?.trim(), ignoreCase = true) } ?: INTERNAL
     }
 }

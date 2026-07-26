@@ -20,7 +20,6 @@ import java.util.UUID
 class ChatWebSocketController(
     private val notifyTypingUseCase: NotifyTypingUseCase,
 ) {
-
     @MessageMapping("/conversations/{id}/typing")
     fun typing(
         @DestinationVariable id: String,

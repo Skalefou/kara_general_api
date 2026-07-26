@@ -23,8 +23,9 @@ data class UserResponse(
     @field:Schema(description = "Indique si l'email a été vérifié")
     val emailVerified: Boolean,
     @field:Schema(
-        description = "URL signée courte durée vers la variante `full` de la photo de profil " +
-            "(null tant que le traitement n'est pas terminé ou si absente)",
+        description =
+            "URL signée courte durée vers la variante `full` de la photo de profil " +
+                "(null tant que le traitement n'est pas terminé ou si absente)",
     )
     val photoUrl: String?,
 ) {
@@ -34,7 +35,10 @@ data class UserResponse(
          * Omis (null) dans les contextes qui n'exposent pas la photo (ex. réponses d'authentification) ou tant
          * que les variantes ne sont pas prêtes.
          */
-        fun from(user: User, photoUrl: ((String) -> String)? = null): UserResponse =
+        fun from(
+            user: User,
+            photoUrl: ((String) -> String)? = null,
+        ): UserResponse =
             UserResponse(
                 id = user.id.value,
                 email = user.email.value,

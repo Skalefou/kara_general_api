@@ -25,8 +25,10 @@ data class PoolShare(
 
     /** Associe l'autorisation Stripe (PaymentIntent à capture manuelle) et son payeur. La part reste PENDING
      *  jusqu'à confirmation du blocage des fonds par le webhook `amount_capturable_updated`. */
-    fun withAuthorizationIntent(intentId: String, payerUserId: UserId): PoolShare =
-        copy(stripePaymentIntentId = intentId, payerUserId = payerUserId)
+    fun withAuthorizationIntent(
+        intentId: String,
+        payerUserId: UserId,
+    ): PoolShare = copy(stripePaymentIntentId = intentId, payerUserId = payerUserId)
 
     fun markAuthorized(): PoolShare = copy(status = PoolShareStatus.AUTHORIZED)
 

@@ -12,7 +12,6 @@ class GetBookingMenuService(
     private val bookingRepository: BookingRepository,
     private val roomStockRepository: RoomStockRepository,
 ) : GetBookingMenuUseCase {
-
     override fun getBookingMenu(command: GetBookingMenuCommand): GetBookingMenuResult {
         val booking = bookingRepository.findById(command.bookingId) ?: return GetBookingMenuResult.BookingNotFound
         if (booking.userId != command.currentUserId) return GetBookingMenuResult.NotOwner

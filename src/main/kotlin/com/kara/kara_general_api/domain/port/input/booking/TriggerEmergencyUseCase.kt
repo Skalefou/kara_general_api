@@ -11,7 +11,9 @@ data class TriggerEmergencyCommand(
 
 sealed interface TriggerEmergencyResult {
     /** [notifiedServers] = nombre de serveurs rattachés notifiés (peut être 0 si aucun n'est affecté). */
-    data class Success(val notifiedServers: Int) : TriggerEmergencyResult
+    data class Success(
+        val notifiedServers: Int,
+    ) : TriggerEmergencyResult
 
     data object BookingNotFound : TriggerEmergencyResult
 

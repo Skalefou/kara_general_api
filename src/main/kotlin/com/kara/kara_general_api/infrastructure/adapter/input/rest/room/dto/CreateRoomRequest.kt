@@ -49,8 +49,9 @@ data class CreateRoomRequest(
     @field:Schema(description = "Présence de la climatisation", example = "false")
     val thereAirConditioning: Boolean,
     @field:Schema(
-        description = "Identifiants des services du catalogue global à attacher à la salle. " +
-            "Optionnel : par défaut aucune liaison n'est créée.",
+        description =
+            "Identifiants des services du catalogue global à attacher à la salle. " +
+                "Optionnel : par défaut aucune liaison n'est créée.",
     )
     val serviceIds: List<UUID> = emptyList(),
 )

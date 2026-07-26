@@ -8,7 +8,10 @@ data class RefreshTokenCommand(
 )
 
 sealed interface RefreshTokenResult {
-    data class Success(val accessToken: AccessToken, val refreshToken: RefreshToken) : RefreshTokenResult
+    data class Success(
+        val accessToken: AccessToken,
+        val refreshToken: RefreshToken,
+    ) : RefreshTokenResult
 
     data object InvalidToken : RefreshTokenResult
 }

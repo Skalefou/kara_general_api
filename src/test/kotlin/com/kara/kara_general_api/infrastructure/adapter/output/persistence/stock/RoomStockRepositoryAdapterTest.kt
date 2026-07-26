@@ -26,7 +26,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class RoomStockRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -65,7 +64,10 @@ class RoomStockRepositoryAdapterTest {
         )
     }
 
-    private fun insertProduct(name: String, price: String): ProductId {
+    private fun insertProduct(
+        name: String,
+        price: String,
+    ): ProductId {
         val id = ProductId(UUID.randomUUID())
         jdbc.update(
             """

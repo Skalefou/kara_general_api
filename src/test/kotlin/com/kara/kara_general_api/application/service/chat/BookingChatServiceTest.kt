@@ -24,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class BookingChatServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val serverShiftRepository = mockk<ServerShiftRepository>()
     private val chatRepository = mockk<ChatRepository>(relaxUnitFun = true)
@@ -53,8 +52,10 @@ class BookingChatServiceTest {
             expiresAt = Instant.now(),
         )
 
-    private fun command(userId: UserId, isAdmin: Boolean = false) =
-        OpenBookingConversationCommand(bookingId = bookingId, currentUserId = userId, isAdmin = isAdmin)
+    private fun command(
+        userId: UserId,
+        isAdmin: Boolean = false,
+    ) = OpenBookingConversationCommand(bookingId = bookingId, currentUserId = userId, isAdmin = isAdmin)
 
     @Test
     fun `should return BookingNotFound when the booking does not exist`() {

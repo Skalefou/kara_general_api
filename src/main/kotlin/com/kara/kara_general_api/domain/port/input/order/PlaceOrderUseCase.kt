@@ -14,7 +14,9 @@ data class PlaceOrderCommand(
 
 sealed interface PlaceOrderResult {
     /** Commande enregistrée et stock décrémenté. */
-    data class Success(val order: Order) : PlaceOrderResult
+    data class Success(
+        val order: Order,
+    ) : PlaceOrderResult
 
     data object BookingNotFound : PlaceOrderResult
 

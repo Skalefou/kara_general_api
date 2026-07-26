@@ -17,7 +17,6 @@ class GetRoomStockService(
     private val roomStockRepository: RoomStockRepository,
     private val serverShiftRepository: ServerShiftRepository,
 ) : GetRoomStockUseCase {
-
     override fun getRoomStock(command: GetRoomStockCommand): GetRoomStockResult {
         roomRepository.findById(command.roomId) ?: return GetRoomStockResult.RoomNotFound
         if (!isOnDutyOrAdmin(command.roomId, command.currentUserId, command.isAdmin, serverShiftRepository)) {

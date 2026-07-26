@@ -28,7 +28,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class PoolShareRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -76,8 +75,17 @@ class PoolShareRepositoryAdapterTest {
         payer: UserId? = null,
         isCreator: Boolean = false,
     ) = PoolShare(
-        com.kara.kara_general_api.domain.model.payment.PoolShareId(UUID.randomUUID()),
-        poolId, name, email, BigDecimal(amount), status, intent, token, payer, isCreator,
+        com.kara.kara_general_api.domain.model.payment
+            .PoolShareId(UUID.randomUUID()),
+        poolId,
+        name,
+        email,
+        BigDecimal(amount),
+        status,
+        intent,
+        token,
+        payer,
+        isCreator,
     )
 
     @Test
@@ -152,7 +160,11 @@ class PoolShareRepositoryAdapterTest {
         )
     }
 
-    private fun insertBooking(id: UUID, roomId: UUID, userId: UUID) {
+    private fun insertBooking(
+        id: UUID,
+        roomId: UUID,
+        userId: UUID,
+    ) {
         jdbc.update(
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
@@ -164,7 +176,10 @@ class PoolShareRepositoryAdapterTest {
         )
     }
 
-    private fun insertPool(id: UUID, bookingId: UUID) {
+    private fun insertPool(
+        id: UUID,
+        bookingId: UUID,
+    ) {
         jdbc.update(
             """
             INSERT INTO pools (id, booking_id, target_amount, currency, status, deadline,

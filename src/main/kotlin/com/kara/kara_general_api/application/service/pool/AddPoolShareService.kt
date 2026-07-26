@@ -30,7 +30,6 @@ class AddPoolShareService(
     private val linkTokenGenerator: LinkTokenGenerator,
     private val emailService: EmailService,
 ) : AddPoolShareUseCase {
-
     @Transactional
     override fun addShare(command: AddPoolShareCommand): AddPoolShareResult {
         val pool = poolRepository.findById(command.poolId) ?: return AddPoolShareResult.PoolNotFound

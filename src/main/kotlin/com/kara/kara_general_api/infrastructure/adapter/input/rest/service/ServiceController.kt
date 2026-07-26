@@ -27,7 +27,6 @@ class ServiceController(
     private val updateServiceUseCase: UpdateServiceUseCase,
     private val deleteServiceUseCase: DeleteServiceUseCase,
 ) : ServiceApi {
-
     override fun createService(request: CreateServiceRequest): ResponseEntity<Any> {
         val service =
             createServiceUseCase.createService(
@@ -44,7 +43,10 @@ class ServiceController(
     override fun listServices(): ResponseEntity<Any> =
         ResponseEntity.ok(listServicesUseCase.listServices().map { ServiceResponse.from(it) })
 
-    override fun updateService(id: UUID, request: UpdateServiceRequest): ResponseEntity<Any> {
+    override fun updateService(
+        id: UUID,
+        request: UpdateServiceRequest,
+    ): ResponseEntity<Any> {
         val command =
             UpdateServiceCommand(
                 id = ServiceId(id),
@@ -67,12 +69,13 @@ class ServiceController(
 
     private fun serviceNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun service ne correspond à cet identifiant.",
-            ).apply {
-                title = "Service introuvable"
-                setProperty("code", "SERVICE_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun service ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Service introuvable"
+                    setProperty("code", "SERVICE_NOT_FOUND")
+                },
         )
 }

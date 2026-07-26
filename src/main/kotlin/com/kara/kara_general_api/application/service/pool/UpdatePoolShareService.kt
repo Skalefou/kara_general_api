@@ -23,7 +23,6 @@ class UpdatePoolShareService(
     private val poolShareRepository: PoolShareRepository,
     private val bookingRepository: BookingRepository,
 ) : UpdatePoolShareUseCase {
-
     @Transactional
     override fun updateShare(command: UpdatePoolShareCommand): UpdatePoolShareResult {
         val pool = poolRepository.findById(command.poolId) ?: return UpdatePoolShareResult.PoolNotFound

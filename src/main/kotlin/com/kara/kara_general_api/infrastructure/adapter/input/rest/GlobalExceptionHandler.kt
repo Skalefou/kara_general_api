@@ -10,26 +10,27 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-
     @ExceptionHandler(GeocodingException::class)
     fun handleGeocoding(ex: GeocodingException): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_GATEWAY,
-            "Le service de géolocalisation est momentanément indisponible. Réessayez plus tard.",
-        ).apply {
-            title = "Service de géolocalisation indisponible"
-            setProperty("code", "GEOCODING_UNAVAILABLE")
-        }
+        ProblemDetail
+            .forStatusAndDetail(
+                HttpStatus.BAD_GATEWAY,
+                "Le service de géolocalisation est momentanément indisponible. Réessayez plus tard.",
+            ).apply {
+                title = "Service de géolocalisation indisponible"
+                setProperty("code", "GEOCODING_UNAVAILABLE")
+            }
 
     @ExceptionHandler(MaxUploadSizeExceededException::class)
     fun handleMaxUploadSize(ex: MaxUploadSizeExceededException): ProblemDetail =
-        ProblemDetail.forStatusAndDetail(
-            HttpStatus.PAYLOAD_TOO_LARGE,
-            "L'image dépasse la taille maximale autorisée (5 Mo).",
-        ).apply {
-            title = "Image trop volumineuse"
-            setProperty("code", "IMAGE_TOO_LARGE")
-        }
+        ProblemDetail
+            .forStatusAndDetail(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "L'image dépasse la taille maximale autorisée (5 Mo).",
+            ).apply {
+                title = "Image trop volumineuse"
+                setProperty("code", "IMAGE_TOO_LARGE")
+            }
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ProblemDetail =

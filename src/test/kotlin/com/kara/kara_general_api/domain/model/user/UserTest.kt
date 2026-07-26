@@ -14,7 +14,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UserTest {
-
     private val expiresAt = Instant.now().plus(24, ChronoUnit.HOURS)
 
     private fun serverAccount(): User =

@@ -66,7 +66,11 @@ data class Room(
         val localDate = from.atZone(timeZone).toLocalDate()
         val candidate = localDate.atTime(closesAt).atZone(timeZone).toInstant()
         return if (candidate.isBefore(from)) {
-            localDate.plusDays(1).atTime(closesAt).atZone(timeZone).toInstant()
+            localDate
+                .plusDays(1)
+                .atTime(closesAt)
+                .atZone(timeZone)
+                .toInstant()
         } else {
             candidate
         }

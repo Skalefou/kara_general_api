@@ -14,7 +14,6 @@ class ApplyBookingExtensionService(
     private val bookingExtensionRepository: BookingExtensionRepository,
     private val bookingEndReminderRepository: BookingEndReminderRepository,
 ) {
-
     fun apply(extensionId: BookingExtensionId): Boolean {
         val extension = bookingExtensionRepository.findById(extensionId) ?: return false
         return apply(extension)

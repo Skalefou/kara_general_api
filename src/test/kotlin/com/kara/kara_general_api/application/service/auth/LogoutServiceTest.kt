@@ -8,7 +8,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Test
 
 class LogoutServiceTest {
-
     private val refreshTokenRepository = mockk<RefreshTokenRepository>()
     private val sut = LogoutService(refreshTokenRepository)
 

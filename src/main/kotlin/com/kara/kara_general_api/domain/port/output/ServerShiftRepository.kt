@@ -16,7 +16,12 @@ interface ServerShiftRepository {
      * Liste les créneaux, filtrables par serveur et/ou salle et par fenêtre temporelle. Un filtre null
      * n'applique aucune restriction sur ce critère. Ordonné par [ServerShift.startAt] croissant.
      */
-    fun findAll(serverId: UserId?, roomId: RoomId?, from: Instant?, to: Instant?): List<ServerShift>
+    fun findAll(
+        serverId: UserId?,
+        roomId: RoomId?,
+        from: Instant?,
+        to: Instant?,
+    ): List<ServerShift>
 
     /**
      * Vrai s'il existe déjà un créneau du même serveur qui chevauche [startAt, endAt), en excluant
@@ -36,5 +41,9 @@ interface ServerShiftRepository {
      * Identifiants des serveurs rattachés à un créneau [startAt, endAt) dans la salle [roomId] : ceux dont
      * un créneau d'agenda chevauche cet intervalle. Sert à déterminer les serveurs d'une réservation.
      */
-    fun findServerIdsAssignedTo(roomId: RoomId, startAt: Instant, endAt: Instant): Set<UserId>
+    fun findServerIdsAssignedTo(
+        roomId: RoomId,
+        startAt: Instant,
+        endAt: Instant,
+    ): Set<UserId>
 }

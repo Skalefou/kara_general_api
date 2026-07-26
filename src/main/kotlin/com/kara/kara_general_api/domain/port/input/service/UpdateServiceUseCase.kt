@@ -18,7 +18,9 @@ data class UpdateServiceCommand(
 )
 
 sealed interface UpdateServiceResult {
-    data class Success(val service: Service) : UpdateServiceResult
+    data class Success(
+        val service: Service,
+    ) : UpdateServiceResult
 
     data object NotFound : UpdateServiceResult
 }

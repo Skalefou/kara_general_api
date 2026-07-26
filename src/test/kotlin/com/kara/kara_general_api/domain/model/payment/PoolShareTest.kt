@@ -12,7 +12,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PoolShareTest {
-
     private val poolId = PoolId(UUID.randomUUID())
 
     private fun share() =

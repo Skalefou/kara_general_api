@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class SelfJoinPoolShareServiceIntegrationTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -157,13 +156,18 @@ class SelfJoinPoolShareServiceIntegrationTest {
         )!!
 
     private fun shareOfPayer(payerId: UUID): Map<String, Any?>? =
-        jdbc.queryForList(
-            "SELECT amount, status, stripe_payment_intent_id, participant_name FROM pool_shares " +
-                "WHERE pool_id = :poolId AND payer_user_id = :payerId",
-            mapOf("poolId" to poolId, "payerId" to payerId),
-        ).firstOrNull()
+        jdbc
+            .queryForList(
+                "SELECT amount, status, stripe_payment_intent_id, participant_name FROM pool_shares " +
+                    "WHERE pool_id = :poolId AND payer_user_id = :payerId",
+                mapOf("poolId" to poolId, "payerId" to payerId),
+            ).firstOrNull()
 
-    private fun insertUser(id: UUID, firstName: String, lastName: String) {
+    private fun insertUser(
+        id: UUID,
+        firstName: String,
+        lastName: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number,
@@ -194,7 +198,11 @@ class SelfJoinPoolShareServiceIntegrationTest {
         )
     }
 
-    private fun insertBooking(id: UUID, roomId: UUID, userId: UUID) {
+    private fun insertBooking(
+        id: UUID,
+        roomId: UUID,
+        userId: UUID,
+    ) {
         jdbc.update(
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,
@@ -206,7 +214,11 @@ class SelfJoinPoolShareServiceIntegrationTest {
         )
     }
 
-    private fun insertPool(id: UUID, bookingId: UUID, token: String) {
+    private fun insertPool(
+        id: UUID,
+        bookingId: UUID,
+        token: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO pools (id, booking_id, target_amount, currency, status, deadline,
@@ -217,7 +229,10 @@ class SelfJoinPoolShareServiceIntegrationTest {
         )
     }
 
-    private fun insertCreatorShare(poolId: UUID, amount: String) {
+    private fun insertCreatorShare(
+        poolId: UUID,
+        amount: String,
+    ) {
         jdbc.update(
             """
             INSERT INTO pool_shares (id, pool_id, participant_name, email, amount, status,

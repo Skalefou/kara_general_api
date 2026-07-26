@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service
 class ListServerShiftsService(
     private val serverShiftRepository: ServerShiftRepository,
 ) : ListServerShiftsUseCase {
-
     override fun listServerShifts(query: ListServerShiftsQuery): List<ServerShift> =
         serverShiftRepository.findAll(
             serverId = query.serverId,

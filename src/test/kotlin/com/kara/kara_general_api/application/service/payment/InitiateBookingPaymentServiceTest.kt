@@ -31,7 +31,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class InitiateBookingPaymentServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val userRepository = mockk<UserRepository>()
     private val paymentGateway = mockk<PaymentGateway>()
@@ -45,21 +44,20 @@ class InitiateBookingPaymentServiceTest {
         status: BookingStatus = BookingStatus.PENDING,
         owner: UserId = userId,
         expiresAt: Instant = Instant.now().plusSeconds(900),
-    ) =
-        Booking(
-            id = bookingId,
-            roomId = RoomId(UUID.randomUUID()),
-            userId = owner,
-            startAt = Instant.parse("2026-08-01T18:00:00Z"),
-            endAt = Instant.parse("2026-08-01T21:30:00Z"),
-            numberOfPeople = 8,
-            selectedOptionIds = emptyList(),
-            totalPrice = BigDecimal("435.00"),
-            currency = Currency.EUR,
-            status = status,
-            createdAt = Instant.now(),
-            expiresAt = expiresAt,
-        )
+    ) = Booking(
+        id = bookingId,
+        roomId = RoomId(UUID.randomUUID()),
+        userId = owner,
+        startAt = Instant.parse("2026-08-01T18:00:00Z"),
+        endAt = Instant.parse("2026-08-01T21:30:00Z"),
+        numberOfPeople = 8,
+        selectedOptionIds = emptyList(),
+        totalPrice = BigDecimal("435.00"),
+        currency = Currency.EUR,
+        status = status,
+        createdAt = Instant.now(),
+        expiresAt = expiresAt,
+    )
 
     private fun user(stripeCustomerId: String? = null) =
         User(

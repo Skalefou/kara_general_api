@@ -32,7 +32,6 @@ import java.util.UUID
 
 @Tag(name = "Utilisateur", description = "Gestion du compte utilisateur")
 interface UserApi {
-
     @Operation(
         summary = "Supprimer son compte",
         description = "Anonymise toutes les données personnelles (RGPD Art. 17). Requiert la confirmation du mot de passe.",
@@ -61,9 +60,10 @@ interface UserApi {
 
     @Operation(
         summary = "Modifier son profil",
-        description = "Met à jour les champs fournis du profil (les autres restent inchangés). " +
-            "En cas de changement d'email, l'email repasse en non vérifié et un code de vérification " +
-            "est envoyé à la nouvelle adresse.",
+        description =
+            "Met à jour les champs fournis du profil (les autres restent inchangés). " +
+                "En cas de changement d'email, l'email repasse en non vérifié et un code de vérification " +
+                "est envoyé à la nouvelle adresse.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -93,10 +93,11 @@ interface UserApi {
 
     @Operation(
         summary = "Téléverser sa photo de profil",
-        description = "Image privée (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max). L'original est stocké dans le " +
-            "bucket privé puis redimensionné en variantes (thumbnail, full) par un worker externe, de façon " +
-            "asynchrone. La réponse est immédiate (202, statut PROCESSING) ; les URL signées par variante " +
-            "apparaissent une fois la photo READY (voir GET /me/photo).",
+        description =
+            "Image privée (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max). L'original est stocké dans le " +
+                "bucket privé puis redimensionné en variantes (thumbnail, full) par un worker externe, de façon " +
+                "asynchrone. La réponse est immédiate (202, statut PROCESSING) ; les URL signées par variante " +
+                "apparaissent une fois la photo READY (voir GET /me/photo).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -176,8 +177,9 @@ interface UserApi {
 
     @Operation(
         summary = "Créer un compte serveur",
-        description = "Réservé aux administrateurs. Génère un mot de passe temporaire (32 caractères, valable 24h) " +
-            "et envoie une invitation par email.",
+        description =
+            "Réservé aux administrateurs. Génère un mot de passe temporaire (32 caractères, valable 24h) " +
+                "et envoie une invitation par email.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -231,8 +233,9 @@ interface UserApi {
 
     @Operation(
         summary = "Réinviter un compte serveur",
-        description = "Réservé aux administrateurs. Génère un nouveau mot de passe temporaire, invalide l'ancien " +
-            "et renvoie une invitation par email.",
+        description =
+            "Réservé aux administrateurs. Génère un nouveau mot de passe temporaire, invalide l'ancien " +
+                "et renvoie une invitation par email.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

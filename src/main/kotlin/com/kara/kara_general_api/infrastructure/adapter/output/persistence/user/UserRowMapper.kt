@@ -14,7 +14,10 @@ import java.util.UUID
 
 @Component
 class UserRowMapper : RowMapper<User> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): User =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): User =
         User(
             id = UserId(rs.getObject("id", UUID::class.java)),
             email = Email(rs.getString("email")),

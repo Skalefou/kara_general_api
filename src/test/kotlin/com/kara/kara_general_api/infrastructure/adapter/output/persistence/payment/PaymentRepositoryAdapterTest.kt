@@ -30,7 +30,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class PaymentRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -65,17 +64,21 @@ class PaymentRepositoryAdapterTest {
         insertBooking(bookingId, roomId, userId)
     }
 
-    private fun payment(intentId: String = "pi_1", status: PaymentStatus = PaymentStatus.PENDING) =
-        Payment(
-            id = com.kara.kara_general_api.domain.model.payment.PaymentId(UUID.randomUUID()),
-            bookingId = bookingId,
-            userId = userId,
-            amount = BigDecimal("435.00"),
-            currency = Currency.EUR,
-            status = status,
-            stripePaymentIntentId = intentId,
-            createdAt = Instant.now(),
-        )
+    private fun payment(
+        intentId: String = "pi_1",
+        status: PaymentStatus = PaymentStatus.PENDING,
+    ) = Payment(
+        id =
+            com.kara.kara_general_api.domain.model.payment
+                .PaymentId(UUID.randomUUID()),
+        bookingId = bookingId,
+        userId = userId,
+        amount = BigDecimal("435.00"),
+        currency = Currency.EUR,
+        status = status,
+        stripePaymentIntentId = intentId,
+        createdAt = Instant.now(),
+    )
 
     @Test
     fun `save then findById returns the payment`() {
@@ -161,7 +164,11 @@ class PaymentRepositoryAdapterTest {
         jdbc.update(sql, mapOf("id" to id.value))
     }
 
-    private fun insertBooking(id: BookingId, roomId: RoomId, userId: UserId) {
+    private fun insertBooking(
+        id: BookingId,
+        roomId: RoomId,
+        userId: UserId,
+    ) {
         val sql =
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,

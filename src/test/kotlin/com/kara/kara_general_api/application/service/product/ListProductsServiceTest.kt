@@ -12,7 +12,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ListProductsServiceTest {
-
     private val productRepository = mockk<ProductRepository>()
     private val sut = ListProductsService(productRepository)
 

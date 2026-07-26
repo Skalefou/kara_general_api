@@ -5,8 +5,8 @@ import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
-import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
 import com.kara.kara_general_api.domain.model.user.displayName
+import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
@@ -22,7 +22,6 @@ class ListAllBookingsService(
     private val roomRepository: RoomRepository,
     private val userRepository: UserRepository,
 ) : ListAllBookingsUseCase {
-
     override fun listAllBookings(): List<AdminBooking> {
         val roomCache = mutableMapOf<RoomId, Room?>()
         val userCache = mutableMapOf<UserId, User?>()

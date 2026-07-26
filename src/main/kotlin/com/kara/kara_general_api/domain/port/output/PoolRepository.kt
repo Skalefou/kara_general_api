@@ -21,9 +21,15 @@ interface PoolRepository {
     /** Retrouve la cagnotte par son token de lien global (recap public « rejoindre la cagnotte »). */
     fun findByGlobalLinkToken(token: String): Pool?
 
-    fun updateStatus(id: PoolId, status: PoolStatus)
+    fun updateStatus(
+        id: PoolId,
+        status: PoolStatus,
+    )
 
-    fun updateGlobalLinkToken(id: PoolId, token: String)
+    fun updateGlobalLinkToken(
+        id: PoolId,
+        token: String,
+    )
 
     /** Cagnottes OPEN dont le délai est échu ([deadline] <= [now]) — balayage d'expiration. */
     fun findExpiredOpen(now: Instant): List<Pool>

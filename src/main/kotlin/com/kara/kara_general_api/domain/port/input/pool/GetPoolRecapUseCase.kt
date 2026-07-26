@@ -1,7 +1,9 @@
 package com.kara.kara_general_api.domain.port.input.pool
 
 sealed interface GetPoolRecapResult {
-    data class Found(val view: PoolRecapView) : GetPoolRecapResult
+    data class Found(
+        val view: PoolRecapView,
+    ) : GetPoolRecapResult
 
     data object NotFound : GetPoolRecapResult
 }

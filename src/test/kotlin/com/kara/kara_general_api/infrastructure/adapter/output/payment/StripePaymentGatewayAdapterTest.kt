@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class StripePaymentGatewayAdapterTest {
-
     private val mobileApiVersion = "2020-08-27"
 
     private val adapter =

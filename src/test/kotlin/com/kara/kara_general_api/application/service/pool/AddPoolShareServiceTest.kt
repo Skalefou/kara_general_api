@@ -32,7 +32,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class AddPoolShareServiceTest {
-
     private val poolRepository = mockk<PoolRepository>()
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>()
@@ -56,8 +55,10 @@ class AddPoolShareServiceTest {
     private fun pool(status: PoolStatus = PoolStatus.OPEN) =
         Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, status, Instant.now().plusSeconds(3600), "g", Instant.now())
 
-    private fun creatorShare(amount: String = "100.00", status: PoolShareStatus = PoolShareStatus.PENDING) =
-        PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Créateur", null, BigDecimal(amount), status, null, null, creatorId, true)
+    private fun creatorShare(
+        amount: String = "100.00",
+        status: PoolShareStatus = PoolShareStatus.PENDING,
+    ) = PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Créateur", null, BigDecimal(amount), status, null, null, creatorId, true)
 
     private fun stubBookingOwnedBy(owner: UserId) {
         val booking = mockk<Booking>()
@@ -66,8 +67,7 @@ class AddPoolShareServiceTest {
         every { bookingRepository.findById(bookingId) } returns booking
     }
 
-    private fun command(amount: String = "40.00") =
-        AddPoolShareCommand(poolId, creatorId, "Bob", "bob@example.com", BigDecimal(amount))
+    private fun command(amount: String = "40.00") = AddPoolShareCommand(poolId, creatorId, "Bob", "bob@example.com", BigDecimal(amount))
 
     @Test
     fun `returns NotOwner when the caller does not own the booking`() {

@@ -29,7 +29,9 @@ sealed interface UpdateProfilePhotoResult {
      * L'original a été accepté ; les variantes (thumbnail/full) sont générées de façon asynchrone.
      * La photo reste en PROCESSING jusqu'au retour du worker. [imageId] permet d'en suivre le statut.
      */
-    data class Accepted(val imageId: UUID) : UpdateProfilePhotoResult
+    data class Accepted(
+        val imageId: UUID,
+    ) : UpdateProfilePhotoResult
 
     data object UserNotFound : UpdateProfilePhotoResult
 

@@ -16,7 +16,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class RemoveRoomStockServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val roomStockRepository = mockk<RoomStockRepository>()
     private val serverShiftRepository = mockk<ServerShiftRepository>()

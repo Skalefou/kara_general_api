@@ -1,11 +1,11 @@
 package com.kara.kara_general_api.application.service.pool
 
 import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
+import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolShare
 import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
 import com.kara.kara_general_api.domain.model.payment.PoolStatus
-import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.port.input.payment.StripeWebhookResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
@@ -35,7 +35,6 @@ class PoolSettlementService(
     private val poolNotifier: PoolNotifier,
     private val applyBookingExtensionService: ApplyBookingExtensionService,
 ) {
-
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
@@ -97,14 +96,20 @@ class PoolSettlementService(
     }
 
     /** Complète ssi toutes les parts sont autorisées/capturées ET leur somme égale exactement la cible. */
-    private fun isComplete(pool: Pool, shares: List<PoolShare>): Boolean {
+    private fun isComplete(
+        pool: Pool,
+        shares: List<PoolShare>,
+    ): Boolean {
         if (shares.isEmpty()) return false
         if (!shares.all { it.isSettleable() }) return false
         val sum = shares.fold(BigDecimal.ZERO) { acc, s -> acc + s.amount }
         return sum.compareTo(pool.targetAmount) == 0
     }
 
-    private fun settle(pool: Pool, shares: List<PoolShare>) {
+    private fun settle(
+        pool: Pool,
+        shares: List<PoolShare>,
+    ) {
         poolRepository.updateStatus(pool.id, PoolStatus.AUTHORIZED_COMPLETE)
         shares
             .filter { it.status == PoolShareStatus.AUTHORIZED }

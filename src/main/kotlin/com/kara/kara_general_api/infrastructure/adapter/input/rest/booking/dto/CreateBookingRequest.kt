@@ -24,8 +24,9 @@ data class CreateBookingRequest(
     @field:Schema(description = "Identifiants des options tarifées retenues", example = "[]")
     val optionIds: List<UUID> = emptyList(),
     @field:Schema(
-        description = "Mode de règlement : PAY_ALL (paiement unique, fenêtre 15 min) ou SHARED_POT (cagnotte " +
-            "partagée, délai gouverné par la cagnotte). Par défaut PAY_ALL.",
+        description =
+            "Mode de règlement : PAY_ALL (paiement unique, fenêtre 15 min) ou SHARED_POT (cagnotte " +
+                "partagée, délai gouverné par la cagnotte). Par défaut PAY_ALL.",
         example = "PAY_ALL",
     )
     val paymentMode: PaymentMode = PaymentMode.PAY_ALL,

@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.pool
 
+import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
 import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
@@ -22,11 +23,9 @@ import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
-import com.kara.kara_general_api.application.service.booking.ApplyBookingExtensionService
 import kotlin.test.assertEquals
 
 class PoolSettlementServiceTest {
-
     private val poolRepository = mockk<PoolRepository>(relaxed = true)
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
@@ -49,10 +48,22 @@ class PoolSettlementServiceTest {
     private fun pool(status: PoolStatus = PoolStatus.OPEN) =
         Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, status, Instant.now().plusSeconds(3600), "g", Instant.now())
 
-    private fun share(intent: String, status: PoolShareStatus, amount: String = "50.00") =
-        PoolShare(
-            PoolShareId(UUID.randomUUID()), poolId, "P", null, BigDecimal(amount), status, intent, null, null, false,
-        )
+    private fun share(
+        intent: String,
+        status: PoolShareStatus,
+        amount: String = "50.00",
+    ) = PoolShare(
+        PoolShareId(UUID.randomUUID()),
+        poolId,
+        "P",
+        null,
+        BigDecimal(amount),
+        status,
+        intent,
+        null,
+        null,
+        false,
+    )
 
     @Test
     fun `ignores an unknown payment intent`() {
@@ -126,7 +137,18 @@ class PoolSettlementServiceTest {
         val authorized = share("pi_a", PoolShareStatus.AUTHORIZED)
         val pendingWithIntent = share("pi_b", PoolShareStatus.PENDING)
         val pendingNoIntent =
-            PoolShare(PoolShareId(UUID.randomUUID()), poolId, "P", null, BigDecimal("50.00"), PoolShareStatus.PENDING, null, null, null, false)
+            PoolShare(
+                PoolShareId(UUID.randomUUID()),
+                poolId,
+                "P",
+                null,
+                BigDecimal("50.00"),
+                PoolShareStatus.PENDING,
+                null,
+                null,
+                null,
+                false,
+            )
         val captured = share("pi_c", PoolShareStatus.CAPTURED)
 
         sut.cancelShareHolds(listOf(authorized, pendingWithIntent, pendingNoIntent, captured))

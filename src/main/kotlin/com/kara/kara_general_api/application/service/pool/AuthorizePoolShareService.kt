@@ -25,7 +25,6 @@ class AuthorizePoolShareService(
     private val userRepository: UserRepository,
     private val paymentGateway: PaymentGateway,
 ) : AuthorizePoolShareUseCase {
-
     @Transactional
     override fun authorize(command: AuthorizePoolShareCommand): AuthorizePoolShareResult {
         val pool = poolRepository.findById(command.poolId) ?: return AuthorizePoolShareResult.PoolNotFound

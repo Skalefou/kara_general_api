@@ -23,7 +23,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class RegisterServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>()
     private val passwordHasher = mockk<PasswordHasher>()

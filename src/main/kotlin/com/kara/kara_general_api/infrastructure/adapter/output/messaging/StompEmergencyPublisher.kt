@@ -16,8 +16,10 @@ import java.time.format.DateTimeFormatter
 class StompEmergencyPublisher(
     private val messagingTemplate: SimpMessagingTemplate,
 ) : EmergencyEventPublisher {
-
-    override fun publishEmergency(serverId: UserId, alert: EmergencyAlert) {
+    override fun publishEmergency(
+        serverId: UserId,
+        alert: EmergencyAlert,
+    ) {
         val dto =
             EmergencyDto(
                 bookingId = alert.bookingId.value.toString(),

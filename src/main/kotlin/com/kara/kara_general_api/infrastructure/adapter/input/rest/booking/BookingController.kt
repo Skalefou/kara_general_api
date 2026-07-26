@@ -52,8 +52,10 @@ class BookingController(
     private val getBookingDetailUseCase: GetBookingDetailUseCase,
     private val cancelBookingUseCase: CancelBookingUseCase,
 ) : BookingApi {
-
-    override fun triggerEmergency(id: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun triggerEmergency(
+        id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             TriggerEmergencyCommand(
                 bookingId = BookingId(id),
@@ -76,7 +78,10 @@ class BookingController(
     override fun listAllBookings(): ResponseEntity<Any> =
         ResponseEntity.ok(listAllBookingsUseCase.listAllBookings().map { AdminBookingResponse.from(it) })
 
-    override fun openBookingConversation(id: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun openBookingConversation(
+        id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             OpenBookingConversationCommand(
                 bookingId = BookingId(id),
@@ -125,57 +130,62 @@ class BookingController(
 
     private fun bookingNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune réservation ne correspond à cet identifiant.",
-            ).apply {
-                title = "Réservation introuvable"
-                setProperty("code", "BOOKING_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune réservation ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Réservation introuvable"
+                    setProperty("code", "BOOKING_NOT_FOUND")
+                },
         )
 
     private fun notAuthorized(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Vous n'êtes pas autorisé à accéder au chat de cette réservation.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "NOT_AUTHORIZED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Vous n'êtes pas autorisé à accéder au chat de cette réservation.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "NOT_AUTHORIZED")
+                },
         )
 
     private fun bookingNotOwner(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Cette réservation n'appartient pas à l'utilisateur courant.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "BOOKING_NOT_OWNER")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Cette réservation n'appartient pas à l'utilisateur courant.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "BOOKING_NOT_OWNER")
+                },
         )
 
     private fun bookingAlreadyCancelled(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Cette réservation est déjà annulée.",
-            ).apply {
-                title = "Réservation déjà annulée"
-                setProperty("code", "BOOKING_ALREADY_CANCELLED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Cette réservation est déjà annulée.",
+                ).apply {
+                    title = "Réservation déjà annulée"
+                    setProperty("code", "BOOKING_ALREADY_CANCELLED")
+                },
         )
 
     private fun bookingAlreadyStarted(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "La réservation a déjà commencé : elle ne peut plus être annulée.",
-            ).apply {
-                title = "Réservation déjà commencée"
-                setProperty("code", "BOOKING_ALREADY_STARTED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "La réservation a déjà commencé : elle ne peut plus être annulée.",
+                ).apply {
+                    title = "Réservation déjà commencée"
+                    setProperty("code", "BOOKING_ALREADY_STARTED")
+                },
         )
 
     override fun createBooking(
@@ -226,68 +236,74 @@ class BookingController(
 
     private fun roomNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune salle ne correspond à cet identifiant.",
-            ).apply {
-                title = "Salle introuvable"
-                setProperty("code", "ROOM_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune salle ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Salle introuvable"
+                    setProperty("code", "ROOM_NOT_FOUND")
+                },
         )
 
     private fun tooFewPeople(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Une réservation nécessite au minimum 2 personnes.",
-            ).apply {
-                title = "Nombre de personnes insuffisant"
-                setProperty("code", "TOO_FEW_PEOPLE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Une réservation nécessite au minimum 2 personnes.",
+                ).apply {
+                    title = "Nombre de personnes insuffisant"
+                    setProperty("code", "TOO_FEW_PEOPLE")
+                },
         )
 
     private fun capacityExceeded(maxCapacity: Int): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Le nombre de personnes dépasse la capacité maximale de la salle ($maxCapacity).",
-            ).apply {
-                title = "Capacité dépassée"
-                setProperty("code", "CAPACITY_EXCEEDED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Le nombre de personnes dépasse la capacité maximale de la salle ($maxCapacity).",
+                ).apply {
+                    title = "Capacité dépassée"
+                    setProperty("code", "CAPACITY_EXCEEDED")
+                },
         )
 
     private fun invalidTimeSlot(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "L'heure de fin doit être strictement postérieure à l'heure de début.",
-            ).apply {
-                title = "Créneau invalide"
-                setProperty("code", "INVALID_TIME_SLOT")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "L'heure de fin doit être strictement postérieure à l'heure de début.",
+                ).apply {
+                    title = "Créneau invalide"
+                    setProperty("code", "INVALID_TIME_SLOT")
+                },
         )
 
     private fun slotUnavailable(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Ce créneau chevauche une réservation existante pour cette salle.",
-            ).apply {
-                title = "Créneau indisponible"
-                setProperty("code", "BOOKING_SLOT_UNAVAILABLE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Ce créneau chevauche une réservation existante pour cette salle.",
+                ).apply {
+                    title = "Créneau indisponible"
+                    setProperty("code", "BOOKING_SLOT_UNAVAILABLE")
+                },
         )
 
     private fun unknownOptions(optionIds: List<UUID>): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Certaines options ne sont pas proposées par cette salle : ${optionIds.joinToString(", ")}.",
-            ).apply {
-                title = "Option invalide"
-                setProperty("code", "UNKNOWN_ROOM_OPTION")
-                setProperty("optionIds", optionIds.map { it.toString() })
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Certaines options ne sont pas proposées par cette salle : ${optionIds.joinToString(", ")}.",
+                ).apply {
+                    title = "Option invalide"
+                    setProperty("code", "UNKNOWN_ROOM_OPTION")
+                    setProperty("optionIds", optionIds.map { it.toString() })
+                },
         )
 }

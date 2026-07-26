@@ -1,10 +1,10 @@
 package com.kara.kara_general_api.application.service.room
 
+import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.input.room.ListRoomsQuery
 import com.kara.kara_general_api.domain.port.input.room.ListRoomsUseCase
 import com.kara.kara_general_api.domain.port.input.room.RoomPage
 import com.kara.kara_general_api.domain.port.input.room.ViewportMode
-import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -17,7 +17,6 @@ class ListRoomsService(
     @param:Value("\${kara.rooms.viewport.cluster-grid-size:8}")
     private val clusterGridSize: Int,
 ) : ListRoomsUseCase {
-
     override fun listRooms(query: ListRoomsQuery): RoomPage {
         val bbox = query.bbox ?: return listAllPaged(query)
 
@@ -30,7 +29,11 @@ class ListRoomsService(
     }
 
     // totalInBbox <= cap : toutes les salles tiennent sous le plafond, aucune troncature.
-    private fun roomsView(query: ListRoomsQuery, bbox: BoundingBox, totalInBbox: Long): RoomPage {
+    private fun roomsView(
+        query: ListRoomsQuery,
+        bbox: BoundingBox,
+        totalInBbox: Long,
+    ): RoomPage {
         val rooms = roomRepository.findInBbox(bbox, viewportMaxResults)
         return RoomPage(
             rooms = rooms,
@@ -45,7 +48,11 @@ class ListRoomsService(
     }
 
     // totalInBbox > cap : on agrège en clusters ; tout est représenté donc truncated = false.
-    private fun clustersView(query: ListRoomsQuery, bbox: BoundingBox, totalInBbox: Long): RoomPage {
+    private fun clustersView(
+        query: ListRoomsQuery,
+        bbox: BoundingBox,
+        totalInBbox: Long,
+    ): RoomPage {
         val clusters = roomRepository.clustersInBbox(bbox, clusterGridSize)
         return RoomPage(
             rooms = emptyList(),

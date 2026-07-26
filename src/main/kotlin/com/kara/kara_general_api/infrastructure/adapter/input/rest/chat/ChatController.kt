@@ -63,19 +63,17 @@ class ChatController(
     private val deleteMessageUseCase: DeleteMessageUseCase,
     private val imageStorage: ImageStoragePort,
 ) {
-
     private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
 
-    private fun currentUserId(authentication: Authentication): UserId =
-        UserId(UUID.fromString(authentication.name))
+    private fun currentUserId(authentication: Authentication): UserId = UserId(UUID.fromString(authentication.name))
 
-    private fun isAdmin(authentication: Authentication): Boolean =
-        authentication.authorities.any { it.authority == "ROLE_ADMIN" }
+    private fun isAdmin(authentication: Authentication): Boolean = authentication.authorities.any { it.authority == "ROLE_ADMIN" }
 
     @GetMapping("/conversations")
     fun listConversations(authentication: Authentication): ResponseEntity<Any> {
         val conversations =
-            listConversationsUseCase.listConversations(currentUserId(authentication))
+            listConversationsUseCase
+                .listConversations(currentUserId(authentication))
                 .map { ConversationDto.from(it, ::signedPhotoUrl) }
         return ResponseEntity.ok(conversations)
     }
@@ -83,7 +81,8 @@ class ChatController(
     @GetMapping("/admin/conversations")
     fun listAllConversations(authentication: Authentication): ResponseEntity<Any> {
         val conversations =
-            listAllConversationsUseCase.listAllConversations(currentUserId(authentication))
+            listAllConversationsUseCase
+                .listAllConversations(currentUserId(authentication))
                 .map { ConversationDto.from(it, ::signedPhotoUrl) }
         return ResponseEntity.ok(conversations)
     }
@@ -221,67 +220,73 @@ class ChatController(
 
     private fun notParticipant(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Vous ne participez pas à cette conversation.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "NOT_A_PARTICIPANT")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Vous ne participez pas à cette conversation.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "NOT_A_PARTICIPANT")
+                },
         )
 
     private fun notAuthor(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Seul l'auteur du message peut le supprimer.",
-            ).apply {
-                title = "Suppression refusée"
-                setProperty("code", "NOT_MESSAGE_AUTHOR")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Seul l'auteur du message peut le supprimer.",
+                ).apply {
+                    title = "Suppression refusée"
+                    setProperty("code", "NOT_MESSAGE_AUTHOR")
+                },
         )
 
     private fun conversationNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune conversation ne correspond à cet identifiant.",
-            ).apply {
-                title = "Conversation introuvable"
-                setProperty("code", "CONVERSATION_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune conversation ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Conversation introuvable"
+                    setProperty("code", "CONVERSATION_NOT_FOUND")
+                },
         )
 
     private fun messageNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun message ne correspond à cet identifiant.",
-            ).apply {
-                title = "Message introuvable"
-                setProperty("code", "MESSAGE_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun message ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Message introuvable"
+                    setProperty("code", "MESSAGE_NOT_FOUND")
+                },
         )
 
     private fun emptyText(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Le message ne peut pas être vide.",
-            ).apply {
-                title = "Message vide"
-                setProperty("code", "EMPTY_MESSAGE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Le message ne peut pas être vide.",
+                ).apply {
+                    title = "Message vide"
+                    setProperty("code", "EMPTY_MESSAGE")
+                },
         )
 
     private fun chatClosed(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Le chat de cette réservation est fermé (30 minutes après la fin de la réservation).",
-            ).apply {
-                title = "Chat fermé"
-                setProperty("code", "CHAT_CLOSED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Le chat de cette réservation est fermé (30 minutes après la fin de la réservation).",
+                ).apply {
+                    title = "Chat fermé"
+                    setProperty("code", "CHAT_CLOSED")
+                },
         )
 }

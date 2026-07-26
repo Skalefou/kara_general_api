@@ -17,7 +17,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ListAllAccountsServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val sut = ListAllAccountsService(userRepository)
 

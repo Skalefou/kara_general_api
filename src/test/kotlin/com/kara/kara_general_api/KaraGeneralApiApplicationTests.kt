@@ -14,7 +14,6 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest
 @ActiveProfiles("test")
 class KaraGeneralApiApplicationTests {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -30,5 +29,4 @@ class KaraGeneralApiApplicationTests {
     @Test
     fun contextLoads() {
     }
-
 }

@@ -9,7 +9,6 @@ import java.time.Instant
 import kotlin.test.assertEquals
 
 class CancelExpiredBookingsServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val sut = CancelExpiredBookingsService(bookingRepository)
 

@@ -7,9 +7,13 @@ import com.kara.kara_general_api.domain.port.output.AccessToken
 import com.kara.kara_general_api.domain.port.output.RefreshToken
 
 sealed interface LoginIdentifier {
-    data class ByEmail(val email: Email) : LoginIdentifier
+    data class ByEmail(
+        val email: Email,
+    ) : LoginIdentifier
 
-    data class ByPhoneNumber(val phoneNumber: PhoneNumber) : LoginIdentifier
+    data class ByPhoneNumber(
+        val phoneNumber: PhoneNumber,
+    ) : LoginIdentifier
 }
 
 data class LoginCommand(

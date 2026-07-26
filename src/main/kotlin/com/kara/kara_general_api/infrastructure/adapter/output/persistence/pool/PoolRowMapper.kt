@@ -13,7 +13,10 @@ import java.util.UUID
 
 @Component
 class PoolRowMapper : RowMapper<Pool> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): Pool =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): Pool =
         Pool(
             id = PoolId(rs.getObject("id", UUID::class.java)),
             bookingId = BookingId(rs.getObject("booking_id", UUID::class.java)),

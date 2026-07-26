@@ -12,7 +12,6 @@ import java.util.Base64
 
 @Configuration
 class JwtKeyConfig {
-
     @Bean
     fun jwtPrivateKey(
         @Value("\${JWT_PRIVATE_KEY}") base64PrivateKey: String,
@@ -30,6 +29,5 @@ class JwtKeyConfig {
     }
 
     @Bean
-    fun jwtAuthenticationFilter(tokenParser: JwtAccessTokenParser): JwtAuthenticationFilter =
-        JwtAuthenticationFilter(tokenParser)
+    fun jwtAuthenticationFilter(tokenParser: JwtAccessTokenParser): JwtAuthenticationFilter = JwtAuthenticationFilter(tokenParser)
 }

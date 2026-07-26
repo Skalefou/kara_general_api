@@ -28,8 +28,10 @@ class OpenPdfInvoiceGenerator(
     @Value("\${kara.invoice.seller.address:1 rue de la Fête, 75001 Paris, France}") private val sellerAddress: String,
     @Value("\${kara.invoice.seller.email:facturation@kara.example}") private val sellerEmail: String,
 ) : InvoicePdfGenerator {
-
-    override fun generate(invoice: Invoice, buyer: InvoiceBuyer): ByteArray {
+    override fun generate(
+        invoice: Invoice,
+        buyer: InvoiceBuyer,
+    ): ByteArray {
         val output = ByteArrayOutputStream()
         val document = Document()
         PdfWriter.getInstance(document, output)
@@ -69,8 +71,7 @@ class OpenPdfInvoiceGenerator(
             InvoiceType.CAGNOTTE -> "Cagnotte (part)"
         }
 
-    private fun formatAmount(invoice: Invoice): String =
-        String.format(Locale.FRANCE, "%.2f", invoice.amount)
+    private fun formatAmount(invoice: Invoice): String = String.format(Locale.FRANCE, "%.2f", invoice.amount)
 
     private companion object {
         val TITLE_FONT: Font = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18f)

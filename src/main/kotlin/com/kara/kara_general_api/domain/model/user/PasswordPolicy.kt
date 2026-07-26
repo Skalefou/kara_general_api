@@ -1,7 +1,6 @@
 package com.kara.kara_general_api.domain.model.user
 
 object PasswordPolicy {
-
     fun validate(
         password: String,
         role: UserRole,

@@ -13,7 +13,6 @@ import java.math.BigDecimal
 import kotlin.test.assertEquals
 
 class CreateServiceServiceTest {
-
     private val serviceRepository = mockk<ServiceRepository>()
     private val sut = CreateServiceService(serviceRepository)
 

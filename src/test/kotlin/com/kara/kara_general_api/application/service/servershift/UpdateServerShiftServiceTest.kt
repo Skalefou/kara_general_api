@@ -23,7 +23,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class UpdateServerShiftServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val serverShiftRepository = mockk<ServerShiftRepository>()
     private val sut = UpdateServerShiftService(roomRepository, serverShiftRepository)
@@ -75,7 +74,10 @@ class UpdateServerShiftServiceTest {
         every { serverShiftRepository.findById(shiftId) } returns existing
         every { roomRepository.findById(newRoom) } returns null
 
-        val result = sut.updateServerShift(UpdateServerShiftCommand(id = shiftId, roomId = newRoom, startAt = null, endAt = null, note = null))
+        val result =
+            sut.updateServerShift(
+                UpdateServerShiftCommand(id = shiftId, roomId = newRoom, startAt = null, endAt = null, note = null),
+            )
 
         assertEquals(UpdateServerShiftResult.RoomNotFound, result)
     }
@@ -84,7 +86,10 @@ class UpdateServerShiftServiceTest {
     fun `should return InvalidTimeSlot when the resulting slot is empty`() {
         every { serverShiftRepository.findById(shiftId) } returns existing
 
-        val result = sut.updateServerShift(UpdateServerShiftCommand(id = shiftId, roomId = null, startAt = null, endAt = start, note = null))
+        val result =
+            sut.updateServerShift(
+                UpdateServerShiftCommand(id = shiftId, roomId = null, startAt = null, endAt = start, note = null),
+            )
 
         assertEquals(UpdateServerShiftResult.InvalidTimeSlot, result)
     }
@@ -95,7 +100,10 @@ class UpdateServerShiftServiceTest {
         every { serverShiftRepository.findById(shiftId) } returns existing
         every { serverShiftRepository.existsOverlappingForServer(serverId, start, newEnd, shiftId) } returns true
 
-        val result = sut.updateServerShift(UpdateServerShiftCommand(id = shiftId, roomId = null, startAt = null, endAt = newEnd, note = null))
+        val result =
+            sut.updateServerShift(
+                UpdateServerShiftCommand(id = shiftId, roomId = null, startAt = null, endAt = newEnd, note = null),
+            )
 
         assertEquals(UpdateServerShiftResult.SlotUnavailable, result)
     }
@@ -107,7 +115,10 @@ class UpdateServerShiftServiceTest {
         val saved = slot<ServerShift>()
         every { serverShiftRepository.save(capture(saved)) } answers { saved.captured }
 
-        val result = sut.updateServerShift(UpdateServerShiftCommand(id = shiftId, roomId = null, startAt = null, endAt = null, note = null, clearNote = true))
+        val result =
+            sut.updateServerShift(
+                UpdateServerShiftCommand(id = shiftId, roomId = null, startAt = null, endAt = null, note = null, clearNote = true),
+            )
 
         val success = assertIs<UpdateServerShiftResult.Success>(result)
         assertEquals(null, success.shift.note)
@@ -124,7 +135,10 @@ class UpdateServerShiftServiceTest {
         val saved = slot<ServerShift>()
         every { serverShiftRepository.save(capture(saved)) } answers { saved.captured }
 
-        val result = sut.updateServerShift(UpdateServerShiftCommand(id = shiftId, roomId = newRoom, startAt = newStart, endAt = newEnd, note = null))
+        val result =
+            sut.updateServerShift(
+                UpdateServerShiftCommand(id = shiftId, roomId = newRoom, startAt = newStart, endAt = newEnd, note = null),
+            )
 
         val success = assertIs<UpdateServerShiftResult.Success>(result)
         assertEquals(newRoom, success.shift.roomId)

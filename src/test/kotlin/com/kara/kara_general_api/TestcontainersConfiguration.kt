@@ -10,12 +10,9 @@ import org.testcontainers.utility.DockerImageName
 
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
-
     @Bean
     @ServiceConnection
-    fun postgresContainer(): PostgreSQLContainer {
-        return PostgreSQLContainer(DockerImageName.parse("postgres:latest"))
-    }
+    fun postgresContainer(): PostgreSQLContainer = PostgreSQLContainer(DockerImageName.parse("postgres:latest"))
 
     /**
      * L'adaptateur RabbitMQ réel ([com.kara.kara_general_api.infrastructure.adapter.output.messaging.imagejob.RabbitImageJobPublisher])

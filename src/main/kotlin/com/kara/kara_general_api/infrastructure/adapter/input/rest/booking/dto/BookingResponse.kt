@@ -32,8 +32,9 @@ data class BookingResponse(
     @field:Schema(description = "Date de création (ISO 8601, UTC)")
     val createdAt: Instant,
     @field:Schema(
-        description = "Échéance de paiement d'une réservation PENDING (ISO 8601, UTC) : passé ce délai " +
-            "la réservation est annulée. Sert au compte à rebours côté front.",
+        description =
+            "Échéance de paiement d'une réservation PENDING (ISO 8601, UTC) : passé ce délai " +
+                "la réservation est annulée. Sert au compte à rebours côté front.",
         example = "2026-07-20T10:15:00Z",
     )
     val expiresAt: Instant,

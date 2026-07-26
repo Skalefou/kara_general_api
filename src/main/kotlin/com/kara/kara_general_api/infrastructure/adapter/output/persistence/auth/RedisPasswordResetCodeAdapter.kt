@@ -10,8 +10,11 @@ import java.time.Duration
 class RedisPasswordResetCodeAdapter(
     private val redisTemplate: StringRedisTemplate,
 ) : PasswordResetCodeRepository {
-
-    override fun save(email: Email, code: String, ttl: Duration) {
+    override fun save(
+        email: Email,
+        code: String,
+        ttl: Duration,
+    ) {
         redisTemplate.opsForValue().set(key(email), code, ttl)
     }
 

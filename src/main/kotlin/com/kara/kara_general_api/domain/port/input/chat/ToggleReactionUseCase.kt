@@ -13,7 +13,9 @@ data class ToggleReactionCommand(
 )
 
 sealed interface ToggleReactionResult {
-    data class Success(val message: MessageView) : ToggleReactionResult
+    data class Success(
+        val message: MessageView,
+    ) : ToggleReactionResult
 
     data object ConversationNotFound : ToggleReactionResult
 

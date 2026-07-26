@@ -18,7 +18,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ListInvoicesServiceTest {
-
     private val invoiceRepository = mockk<InvoiceRepository>()
     private val sut = ListInvoicesService(invoiceRepository)
 
@@ -27,13 +26,23 @@ class ListInvoicesServiceTest {
         val userId = UserId(UUID.randomUUID())
         val reservation =
             Invoice(
-                InvoiceId.reservation(PaymentId(UUID.randomUUID())), InvoiceType.RESERVATION, "Salle A",
-                BigDecimal("100.00"), Currency.EUR, Instant.parse("2026-07-10T10:00:00Z"), BookingId(UUID.randomUUID()),
+                InvoiceId.reservation(PaymentId(UUID.randomUUID())),
+                InvoiceType.RESERVATION,
+                "Salle A",
+                BigDecimal("100.00"),
+                Currency.EUR,
+                Instant.parse("2026-07-10T10:00:00Z"),
+                BookingId(UUID.randomUUID()),
             )
         val cagnotte =
             Invoice(
-                InvoiceId.cagnotte(PoolShareId(UUID.randomUUID())), InvoiceType.CAGNOTTE, "Salle B",
-                BigDecimal("50.00"), Currency.EUR, Instant.parse("2026-07-05T10:00:00Z"), BookingId(UUID.randomUUID()),
+                InvoiceId.cagnotte(PoolShareId(UUID.randomUUID())),
+                InvoiceType.CAGNOTTE,
+                "Salle B",
+                BigDecimal("50.00"),
+                Currency.EUR,
+                Instant.parse("2026-07-05T10:00:00Z"),
+                BookingId(UUID.randomUUID()),
             )
         every { invoiceRepository.findByUser(userId) } returns listOf(reservation, cagnotte)
 

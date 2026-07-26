@@ -27,7 +27,6 @@ class CancelExpiredPoolsService(
     private val poolSettlementService: PoolSettlementService,
     private val poolNotifier: PoolNotifier,
 ) : CancelExpiredPoolsUseCase {
-
     @Transactional
     override fun cancelExpired(now: Instant): Int {
         val expiredPools = poolRepository.findExpiredOpen(now)

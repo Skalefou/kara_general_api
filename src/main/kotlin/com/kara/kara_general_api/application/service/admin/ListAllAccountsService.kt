@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service
 class ListAllAccountsService(
     private val userRepository: UserRepository,
 ) : ListAllAccountsUseCase {
-
     override fun listAllAccounts(query: ListAllAccountsQuery): AccountPage {
         val accounts = userRepository.findAll(page = query.page, size = query.size)
         val totalElements = userRepository.count()

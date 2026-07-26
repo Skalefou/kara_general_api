@@ -24,7 +24,10 @@ data class PoolView(
     val shares: List<PoolShareView>,
 ) {
     companion object {
-        fun of(pool: Pool, shares: List<PoolShare>): PoolView {
+        fun of(
+            pool: Pool,
+            shares: List<PoolShare>,
+        ): PoolView {
             val collected = collectedAmount(shares)
             return PoolView(
                 poolId = pool.id.value,
@@ -92,7 +95,10 @@ data class PoolRecapView(
 internal fun collectedAmount(shares: List<PoolShare>): BigDecimal =
     shares.filter { it.isSettleable() }.fold(BigDecimal.ZERO) { acc, s -> acc + s.amount }
 
-internal fun percentage(collected: BigDecimal, target: BigDecimal): Int =
+internal fun percentage(
+    collected: BigDecimal,
+    target: BigDecimal,
+): Int =
     if (target <= BigDecimal.ZERO) {
         0
     } else {

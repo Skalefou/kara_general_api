@@ -29,7 +29,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class CreateServerShiftServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val roomRepository = mockk<RoomRepository>()
     private val serverShiftRepository = mockk<ServerShiftRepository>()
@@ -69,14 +68,16 @@ class CreateServerShiftServiceTest {
             createdAt = Instant.now(),
         )
 
-    private fun command(startAt: Instant = start, endAt: Instant = end) =
-        CreateServerShiftCommand(
-            serverId = serverId,
-            roomId = roomId,
-            startAt = startAt,
-            endAt = endAt,
-            note = "Accueil",
-        )
+    private fun command(
+        startAt: Instant = start,
+        endAt: Instant = end,
+    ) = CreateServerShiftCommand(
+        serverId = serverId,
+        roomId = roomId,
+        startAt = startAt,
+        endAt = endAt,
+        note = "Accueil",
+    )
 
     @Test
     fun `should return ServerNotFound when the server does not exist`() {

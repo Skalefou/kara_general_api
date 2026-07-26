@@ -59,7 +59,10 @@ data class User(
     fun deactivate(): User = copy(deactivatedAt = Instant.now())
 
     /** Renouvelle l'invitation : nouveau mot de passe temporaire, changement forcé, expiration remise à jour. */
-    fun reinvited(newHashedPassword: HashedPassword, tempPasswordExpiresAt: Instant): User =
+    fun reinvited(
+        newHashedPassword: HashedPassword,
+        tempPasswordExpiresAt: Instant,
+    ): User =
         copy(
             hashedPassword = newHashedPassword,
             mustChangePassword = true,

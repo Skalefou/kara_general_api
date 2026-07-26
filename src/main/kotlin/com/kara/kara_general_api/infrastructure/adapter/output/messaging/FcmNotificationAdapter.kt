@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component
 class FcmNotificationAdapter(
     firebaseApp: FirebaseApp,
 ) : NotificationService {
-
     private val messaging = FirebaseMessaging.getInstance(firebaseApp)
 
     override fun sendPushNotification(
@@ -20,16 +19,18 @@ class FcmNotificationAdapter(
         body: String,
         data: Map<String, String>,
     ) {
-        val message = Message.builder()
-            .setToken(token)
-            .setNotification(
-                Notification.builder()
-                    .setTitle(title)
-                    .setBody(body)
-                    .build(),
-            )
-            .putAllData(data)
-            .build()
+        val message =
+            Message
+                .builder()
+                .setToken(token)
+                .setNotification(
+                    Notification
+                        .builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .build(),
+                ).putAllData(data)
+                .build()
 
         messaging.send(message)
     }

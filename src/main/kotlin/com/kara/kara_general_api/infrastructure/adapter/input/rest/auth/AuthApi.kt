@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestBody
 
 @Tag(name = "Authentification", description = "Opérations liées à l'inscription et à l'authentification des utilisateurs")
 interface AuthApi {
-
     @Operation(
         summary = "Inscrire un nouvel utilisateur",
         description = "Crée un compte utilisateur (PostgreSQL + Firebase) à partir des informations fournies et retourne le profil créé.",
@@ -254,8 +253,9 @@ interface AuthApi {
 
     @Operation(
         summary = "Renouveler l'access token",
-        description = "Échange un refresh token valide contre un nouveau couple access token / refresh token " +
-            "(rotation : l'ancien refresh token est invalidé).",
+        description =
+            "Échange un refresh token valide contre un nouveau couple access token / refresh token " +
+                "(rotation : l'ancien refresh token est invalidé).",
     )
     @ApiResponses(
         value = [
@@ -296,8 +296,9 @@ interface AuthApi {
 
     @Operation(
         summary = "Se déconnecter",
-        description = "Révoque le refresh token fourni. Retourne toujours 204, y compris si le token est déjà " +
-            "invalide ou inconnu (anti-énumération).",
+        description =
+            "Révoque le refresh token fourni. Retourne toujours 204, y compris si le token est déjà " +
+                "invalide ou inconnu (anti-énumération).",
     )
     @ApiResponses(
         value = [
@@ -311,8 +312,9 @@ interface AuthApi {
 
     @Operation(
         summary = "Changer son mot de passe",
-        description = "Remplace le mot de passe de l'utilisateur authentifié après vérification du mot de passe " +
-            "actuel. Utilisé notamment pour le changement forcé à la première connexion d'un compte serveur.",
+        description =
+            "Remplace le mot de passe de l'utilisateur authentifié après vérification du mot de passe " +
+                "actuel. Utilisé notamment pour le changement forcé à la première connexion d'un compte serveur.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

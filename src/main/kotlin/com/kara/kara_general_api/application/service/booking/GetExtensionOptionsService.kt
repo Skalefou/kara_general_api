@@ -23,7 +23,6 @@ class GetExtensionOptionsService(
     private val bookingExtensionRepository: BookingExtensionRepository,
     private val extensionFeasibility: ExtensionFeasibility,
 ) : GetExtensionOptionsUseCase {
-
     @Transactional(readOnly = true)
     override fun getOptions(command: GetExtensionOptionsCommand): GetExtensionOptionsResult {
         val booking =

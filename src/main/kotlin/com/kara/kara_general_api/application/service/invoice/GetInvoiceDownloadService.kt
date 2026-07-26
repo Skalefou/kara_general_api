@@ -26,9 +26,11 @@ class GetInvoiceDownloadService(
     private val pdfGenerator: InvoicePdfGenerator,
     private val objectStorage: ImageStoragePort,
 ) : GetInvoiceDownloadUseCase {
-
     @Transactional(readOnly = true)
-    override fun getDownloadUrl(invoiceId: InvoiceId, requesterId: UserId): GetInvoiceDownloadResult {
+    override fun getDownloadUrl(
+        invoiceId: InvoiceId,
+        requesterId: UserId,
+    ): GetInvoiceDownloadResult {
         val detail = resolve(invoiceId) ?: return GetInvoiceDownloadResult.NotFound
         if (detail.ownerId != requesterId) return GetInvoiceDownloadResult.NotOwner
 

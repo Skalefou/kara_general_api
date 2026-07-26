@@ -8,5 +8,8 @@ import com.kara.kara_general_api.domain.model.invoice.Invoice
  */
 interface InvoicePdfGenerator {
     /** Produit les octets du PDF du [invoice] pour l'[buyer]. */
-    fun generate(invoice: Invoice, buyer: InvoiceBuyer): ByteArray
+    fun generate(
+        invoice: Invoice,
+        buyer: InvoiceBuyer,
+    ): ByteArray
 }

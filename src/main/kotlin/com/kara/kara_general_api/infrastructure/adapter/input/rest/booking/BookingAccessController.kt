@@ -21,7 +21,6 @@ import java.util.UUID
 class BookingAccessController(
     private val validateBookingAccessUseCase: ValidateBookingAccessUseCase,
 ) : BookingAccessApi {
-
     @PostMapping("/{id}/validate-access")
     override fun validateAccess(
         @PathVariable id: UUID,

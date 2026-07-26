@@ -18,7 +18,6 @@ class ListMyShiftsService(
     private val serverShiftRepository: ServerShiftRepository,
     private val roomRepository: RoomRepository,
 ) : ListMyShiftsUseCase {
-
     override fun listMyShifts(serverId: UserId): List<ServerShiftWithRoom> {
         val shifts = serverShiftRepository.findAll(serverId = serverId, roomId = null, from = null, to = null)
         val roomCache = mutableMapOf<RoomId, Room?>()

@@ -18,7 +18,6 @@ class CancelExpiredExtensionsService(
     private val poolShareRepository: PoolShareRepository,
     private val poolSettlementService: PoolSettlementService,
 ) : CancelExpiredExtensionsUseCase {
-
     @Transactional
     override fun cancelExpired(now: Instant): Int {
         val expired = bookingExtensionRepository.findExpiredPending(now)
