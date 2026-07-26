@@ -26,7 +26,9 @@ data class BookingDetailView(
 )
 
 sealed interface GetBookingDetailResult {
-    data class Found(val view: BookingDetailView) : GetBookingDetailResult
+    data class Found(
+        val view: BookingDetailView,
+    ) : GetBookingDetailResult
 
     data object NotFound : GetBookingDetailResult
 
@@ -34,5 +36,8 @@ sealed interface GetBookingDetailResult {
 }
 
 interface GetBookingDetailUseCase {
-    fun getDetail(bookingId: BookingId, requesterId: UserId): GetBookingDetailResult
+    fun getDetail(
+        bookingId: BookingId,
+        requesterId: UserId,
+    ): GetBookingDetailResult
 }

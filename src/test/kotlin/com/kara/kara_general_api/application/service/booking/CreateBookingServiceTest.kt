@@ -25,7 +25,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class CreateBookingServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val roomOptionRepository = mockk<RoomOptionRepository>()
     private val bookingRepository = mockk<BookingRepository>()
@@ -51,15 +50,17 @@ class CreateBookingServiceTest {
             createdAt = Instant.now(),
         )
 
-    private fun command(numberOfPeople: Int = 4, optionIds: List<RoomOptionId> = emptyList()) =
-        CreateBookingCommand(
-            roomId = roomId,
-            userId = userId,
-            startAt = start,
-            endAt = end,
-            numberOfPeople = numberOfPeople,
-            selectedOptionIds = optionIds,
-        )
+    private fun command(
+        numberOfPeople: Int = 4,
+        optionIds: List<RoomOptionId> = emptyList(),
+    ) = CreateBookingCommand(
+        roomId = roomId,
+        userId = userId,
+        startAt = start,
+        endAt = end,
+        numberOfPeople = numberOfPeople,
+        selectedOptionIds = optionIds,
+    )
 
     @Test
     fun `should return RoomNotFound when the room does not exist`() {

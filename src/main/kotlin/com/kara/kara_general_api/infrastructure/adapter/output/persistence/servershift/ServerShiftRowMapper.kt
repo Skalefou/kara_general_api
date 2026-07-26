@@ -11,7 +11,10 @@ import java.util.UUID
 
 @Component
 class ServerShiftRowMapper : RowMapper<ServerShift> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): ServerShift =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): ServerShift =
         ServerShift(
             id = ServerShiftId(rs.getObject("id", UUID::class.java)),
             serverId = UserId(rs.getObject("server_id", UUID::class.java)),

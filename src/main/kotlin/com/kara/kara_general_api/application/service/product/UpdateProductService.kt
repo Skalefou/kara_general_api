@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service as SpringService
 class UpdateProductService(
     private val productRepository: ProductRepository,
 ) : UpdateProductUseCase {
-
     @Transactional
     override fun updateProduct(command: UpdateProductCommand): UpdateProductResult {
         val existing = productRepository.findById(command.id) ?: return UpdateProductResult.NotFound

@@ -12,8 +12,10 @@ import java.util.UUID
 class RoomServiceRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : RoomServiceRepository {
-
-    override fun addLinks(roomId: RoomId, serviceIds: List<ServiceId>) {
+    override fun addLinks(
+        roomId: RoomId,
+        serviceIds: List<ServiceId>,
+    ) {
         if (serviceIds.isEmpty()) return
         // ON CONFLICT sur la contrainte UNIQUE(room_id, service_id) : réattacher un service déjà lié
         // est idempotent et ne lève pas d'erreur.
@@ -24,16 +26,20 @@ class RoomServiceRepositoryAdapter(
             ON CONFLICT ON CONSTRAINT uq_room_services_room_service DO NOTHING
             """.trimIndent()
         val batch =
-            serviceIds.map { serviceId ->
-                MapSqlParameterSource()
-                    .addValue("id", UUID.randomUUID())
-                    .addValue("roomId", roomId.value)
-                    .addValue("serviceId", serviceId.value)
-            }.toTypedArray()
+            serviceIds
+                .map { serviceId ->
+                    MapSqlParameterSource()
+                        .addValue("id", UUID.randomUUID())
+                        .addValue("roomId", roomId.value)
+                        .addValue("serviceId", serviceId.value)
+                }.toTypedArray()
         jdbc.batchUpdate(sql, batch)
     }
 
-    override fun replaceLinks(roomId: RoomId, serviceIds: List<ServiceId>) {
+    override fun replaceLinks(
+        roomId: RoomId,
+        serviceIds: List<ServiceId>,
+    ) {
         deleteByRoomId(roomId)
         addLinks(roomId, serviceIds)
     }

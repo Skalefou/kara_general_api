@@ -12,7 +12,6 @@ import java.util.UUID
 class ImageJobCorrelationRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : ImageJobCorrelationRepository {
-
     override fun save(correlation: ImageJobCorrelation) {
         // ON CONFLICT : robustesse en cas de rejeu applicatif du même job (clé déterministe).
         val sql =
@@ -38,13 +37,14 @@ class ImageJobCorrelationRepositoryAdapter(
             FROM image_jobs
             WHERE job_id = :jobId
             """.trimIndent()
-        return jdbc.query(sql, mapOf("jobId" to jobId)) { rs, _ ->
-            ImageJobCorrelation(
-                jobId = rs.getObject("job_id", UUID::class.java),
-                target = ImageProcessingTarget.valueOf(rs.getString("target")),
-                ownerId = rs.getObject("owner_id", UUID::class.java),
-                imageId = rs.getObject("image_id", UUID::class.java),
-            )
-        }.firstOrNull()
+        return jdbc
+            .query(sql, mapOf("jobId" to jobId)) { rs, _ ->
+                ImageJobCorrelation(
+                    jobId = rs.getObject("job_id", UUID::class.java),
+                    target = ImageProcessingTarget.valueOf(rs.getString("target")),
+                    ownerId = rs.getObject("owner_id", UUID::class.java),
+                    imageId = rs.getObject("image_id", UUID::class.java),
+                )
+            }.firstOrNull()
     }
 }

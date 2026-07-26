@@ -18,7 +18,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class JwtTokenAdapterTest {
-
     private val keyPair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
     private val privateKey = keyPair.private as RSAPrivateKey
     private val publicKey = keyPair.public as RSAPublicKey
@@ -43,7 +42,13 @@ class JwtTokenAdapterTest {
     fun `should generate a RS256 token with user claims and a 15 minute expiry`() {
         val accessToken = sut.generateAccessToken(user)
 
-        val claims = Jwts.parser().verifyWith(publicKey).build().parseSignedClaims(accessToken.value).payload
+        val claims =
+            Jwts
+                .parser()
+                .verifyWith(publicKey)
+                .build()
+                .parseSignedClaims(accessToken.value)
+                .payload
 
         assertEquals(user.id.value.toString(), claims.subject)
         assertEquals(user.email.value, claims["email"])

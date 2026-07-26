@@ -14,7 +14,6 @@ import java.time.Instant
 class CancelExpiredBookingsService(
     private val bookingRepository: BookingRepository,
 ) : CancelExpiredBookingsUseCase {
-
     @Transactional
     override fun cancelExpired(now: Instant): Int = bookingRepository.cancelExpiredPending(now)
 }

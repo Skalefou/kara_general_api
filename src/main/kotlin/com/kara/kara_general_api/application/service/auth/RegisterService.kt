@@ -25,7 +25,6 @@ class RegisterService(
     private val emailVerificationCodeRepository: EmailVerificationCodeRepository,
     private val emailService: EmailService,
 ) : RegisterUseCase {
-
     override fun register(command: RegisterCommand): RegisterResult {
         if (userRepository.existsByEmail(command.email)) {
             return RegisterResult.EmailAlreadyUsed

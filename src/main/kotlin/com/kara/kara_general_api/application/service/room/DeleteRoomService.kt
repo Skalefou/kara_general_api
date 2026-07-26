@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional
 class DeleteRoomService(
     private val roomRepository: RoomRepository,
 ) : DeleteRoomUseCase {
-
     @Transactional
     override fun deleteRoom(id: RoomId): DeleteRoomResult {
         val deleted = roomRepository.deleteById(id)

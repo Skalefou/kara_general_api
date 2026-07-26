@@ -44,7 +44,6 @@ class BookingExtensionController(
     private val initiateExtensionPaymentUseCase: InitiateExtensionPaymentUseCase,
     private val createExtensionPoolUseCase: CreateExtensionPoolUseCase,
 ) : BookingExtensionApi {
-
     @GetMapping("/bookings/{bookingId}/extension-options")
     override fun getExtensionOptions(
         @PathVariable bookingId: UUID,
@@ -102,7 +101,8 @@ class BookingExtensionController(
             )
         return when (val result = extendBookingUseCase.extend(command)) {
             is ExtendBookingResult.Created ->
-                ResponseEntity.status(HttpStatus.CREATED)
+                ResponseEntity
+                    .status(HttpStatus.CREATED)
                     .body(BookingExtensionResponse.from(result.extension))
             ExtendBookingResult.BookingNotFound -> bookingNotFound()
             ExtendBookingResult.NotOwner -> notOwner()
@@ -130,14 +130,15 @@ class BookingExtensionController(
                 )
             is ExtendBookingResult.SlotUnavailable ->
                 ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.CONFLICT,
-                        "La durée demandée n'est pas disponible sur ce créneau.",
-                    ).apply {
-                        title = "Créneau indisponible"
-                        setProperty("code", "EXTENSION_SLOT_UNAVAILABLE")
-                        setProperty("maxAdditionalMinutes", result.maxAdditionalMinutes)
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.CONFLICT,
+                            "La durée demandée n'est pas disponible sur ce créneau.",
+                        ).apply {
+                            title = "Créneau indisponible"
+                            setProperty("code", "EXTENSION_SLOT_UNAVAILABLE")
+                            setProperty("maxAdditionalMinutes", result.maxAdditionalMinutes)
+                        },
                 )
         }
     }
@@ -207,21 +208,21 @@ class BookingExtensionController(
                 problem(HttpStatus.BAD_REQUEST, "Parts invalides.", "POOL_INVALID_SHARES")
             is CreateExtensionPoolResult.SharesMismatch ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        "La somme des parts doit égaler le prix de l'extension.",
-                    ).apply {
-                        title = "Parts incohérentes"
-                        setProperty("code", "POOL_SHARES_MISMATCH")
-                        setProperty("expected", result.expected)
-                        setProperty("actual", result.actual)
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "La somme des parts doit égaler le prix de l'extension.",
+                        ).apply {
+                            title = "Parts incohérentes"
+                            setProperty("code", "POOL_SHARES_MISMATCH")
+                            setProperty("expected", result.expected)
+                            setProperty("actual", result.actual)
+                        },
                 )
         }
     }
 
-    private fun callerId(authentication: Authentication): UserId =
-        UserId(UUID.fromString(authentication.name))
+    private fun callerId(authentication: Authentication): UserId = UserId(UUID.fromString(authentication.name))
 
     private fun bookingNotFound(): ResponseEntity<Any> =
         problem(HttpStatus.NOT_FOUND, "Aucune réservation ne correspond à cet identifiant.", "BOOKING_NOT_FOUND")
@@ -232,7 +233,11 @@ class BookingExtensionController(
     private fun notOwner(): ResponseEntity<Any> =
         problem(HttpStatus.FORBIDDEN, "Cette ressource n'appartient pas à l'utilisateur courant.", "NOT_OWNER")
 
-    private fun problem(status: HttpStatus, detail: String, code: String): ResponseEntity<Any> =
+    private fun problem(
+        status: HttpStatus,
+        detail: String,
+        code: String,
+    ): ResponseEntity<Any> =
         ResponseEntity.status(status).body(
             ProblemDetail.forStatusAndDetail(status, detail).apply {
                 title = status.reasonPhrase

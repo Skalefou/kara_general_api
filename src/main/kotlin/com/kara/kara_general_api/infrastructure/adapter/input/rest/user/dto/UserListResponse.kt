@@ -16,7 +16,10 @@ data class UserListResponse(
     val totalPages: Int,
 ) {
     companion object {
-        fun from(accountPage: AccountPage, photoUrl: (String) -> String): UserListResponse =
+        fun from(
+            accountPage: AccountPage,
+            photoUrl: (String) -> String,
+        ): UserListResponse =
             UserListResponse(
                 users = accountPage.accounts.map { UserResponse.from(it, photoUrl) },
                 page = accountPage.page,

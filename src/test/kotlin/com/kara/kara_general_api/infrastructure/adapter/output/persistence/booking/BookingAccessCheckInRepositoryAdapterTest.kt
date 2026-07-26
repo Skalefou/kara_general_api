@@ -28,7 +28,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class BookingAccessCheckInRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -115,7 +114,10 @@ class BookingAccessCheckInRepositoryAdapterTest {
             Int::class.java,
         ) ?: 0
 
-    private fun insertUser(id: UserId, role: String) {
+    private fun insertUser(
+        id: UserId,
+        role: String,
+    ) {
         val sql =
             """
             INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number,

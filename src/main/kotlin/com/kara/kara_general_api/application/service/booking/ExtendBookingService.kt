@@ -22,7 +22,6 @@ class ExtendBookingService(
     private val bookingExtensionRepository: BookingExtensionRepository,
     private val extensionFeasibility: ExtensionFeasibility,
 ) : ExtendBookingUseCase {
-
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional

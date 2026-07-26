@@ -11,7 +11,6 @@ class RoomOptionRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: RoomOptionRowMapper,
 ) : RoomOptionRepository {
-
     override fun findByRoomId(roomId: RoomId): List<RoomOption> {
         // Catalogue global : les services attachés à la salle via la liaison room_services.
         // On projette chaque service en RoomOption (id = id du service) afin de conserver la forme

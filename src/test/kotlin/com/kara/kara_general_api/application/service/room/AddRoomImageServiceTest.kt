@@ -30,7 +30,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class AddRoomImageServiceTest {
-
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val imageStorage = mockk<ImageStoragePort>(relaxed = true)
     private val imageProcessing = mockk<ImageProcessingPort>(relaxed = true)

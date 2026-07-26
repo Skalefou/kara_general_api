@@ -31,7 +31,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class ChatRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -67,7 +66,12 @@ class ChatRepositoryAdapterTest {
         return conversation
     }
 
-    private fun saveMessage(conversation: Conversation, sender: UserId, text: String, sentAt: Instant): Message =
+    private fun saveMessage(
+        conversation: Conversation,
+        sender: UserId,
+        text: String,
+        sentAt: Instant,
+    ): Message =
         adapter.saveMessage(
             Message(MessageId.generate(), conversation.id, sender, "text", text, null, false, false, sentAt),
         )

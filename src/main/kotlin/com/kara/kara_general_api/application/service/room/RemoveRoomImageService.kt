@@ -14,7 +14,6 @@ class RemoveRoomImageService(
     private val roomRepository: RoomRepository,
     private val imageStorage: ImageStoragePort,
 ) : RemoveRoomImageUseCase {
-
     @Transactional
     override fun removeImage(command: RemoveRoomImageCommand): RemoveRoomImageResult {
         val room = roomRepository.findById(command.roomId) ?: return RemoveRoomImageResult.RoomNotFound

@@ -29,8 +29,10 @@ class RoomStockController(
     private val setRoomStockUseCase: SetRoomStockUseCase,
     private val removeRoomStockUseCase: RemoveRoomStockUseCase,
 ) : RoomStockApi {
-
-    override fun getRoomStock(roomId: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun getRoomStock(
+        roomId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             GetRoomStockCommand(
                 roomId = RoomId(roomId),
@@ -87,11 +89,9 @@ class RoomStockController(
         }
     }
 
-    private fun currentUserId(authentication: Authentication): UserId =
-        UserId(UUID.fromString(authentication.name))
+    private fun currentUserId(authentication: Authentication): UserId = UserId(UUID.fromString(authentication.name))
 
-    private fun isAdmin(authentication: Authentication): Boolean =
-        authentication.authorities.any { it.authority == "ROLE_ADMIN" }
+    private fun isAdmin(authentication: Authentication): Boolean = authentication.authorities.any { it.authority == "ROLE_ADMIN" }
 
     private fun roomNotFound(): ResponseEntity<Any> =
         problem(HttpStatus.NOT_FOUND, "Salle introuvable", "Aucune salle ne correspond à cet identifiant.", "ROOM_NOT_FOUND")
@@ -105,7 +105,12 @@ class RoomStockController(
     private fun notAuthorized(): ResponseEntity<Any> =
         problem(HttpStatus.FORBIDDEN, "Accès refusé", "Vous n'êtes pas de service dans cette salle.", "NOT_AUTHORIZED")
 
-    private fun problem(status: HttpStatus, title: String, detail: String, code: String): ResponseEntity<Any> =
+    private fun problem(
+        status: HttpStatus,
+        title: String,
+        detail: String,
+        code: String,
+    ): ResponseEntity<Any> =
         ResponseEntity.status(status).body(
             ProblemDetail.forStatusAndDetail(status, detail).apply {
                 this.title = title

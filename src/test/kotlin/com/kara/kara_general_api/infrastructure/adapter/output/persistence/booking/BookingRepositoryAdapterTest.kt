@@ -32,7 +32,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class BookingRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 

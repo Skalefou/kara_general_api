@@ -10,7 +10,10 @@ import java.util.UUID
 
 @Component
 class ServiceRowMapper : RowMapper<Service> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): Service =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): Service =
         Service(
             id = ServiceId(rs.getObject("id", UUID::class.java)),
             label = rs.getString("label"),

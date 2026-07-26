@@ -26,7 +26,6 @@ class CreateServerAccountService(
     private val passwordGenerator: PasswordGenerator,
     private val emailService: EmailService,
 ) : CreateServerAccountUseCase {
-
     override fun createServerAccount(command: CreateServerAccountCommand): CreateServerAccountResult {
         if (userRepository.existsByEmail(command.email)) {
             return CreateServerAccountResult.EmailAlreadyUsed

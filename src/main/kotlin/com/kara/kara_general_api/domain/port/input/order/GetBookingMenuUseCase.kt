@@ -11,7 +11,9 @@ data class GetBookingMenuCommand(
 
 sealed interface GetBookingMenuResult {
     /** Produits commandables (en stock, quantité > 0) de la salle de la réservation. */
-    data class Success(val entries: List<RoomStockEntry>) : GetBookingMenuResult
+    data class Success(
+        val entries: List<RoomStockEntry>,
+    ) : GetBookingMenuResult
 
     data object BookingNotFound : GetBookingMenuResult
 

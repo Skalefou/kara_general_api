@@ -17,10 +17,10 @@ class ForgotPasswordService(
     private val passwordResetCodeRepository: PasswordResetCodeRepository,
     private val emailService: EmailService,
 ) : ForgotPasswordUseCase {
-
     override fun requestReset(command: ForgotPasswordCommand): ForgotPasswordResult {
-        val user = userRepository.findByEmail(command.email)
-            ?: return ForgotPasswordResult.Success
+        val user =
+            userRepository.findByEmail(command.email)
+                ?: return ForgotPasswordResult.Success
 
         val code = (100000..999999).random().toString()
         passwordResetCodeRepository.save(user.email, code, PASSWORD_RESET_CODE_TTL)

@@ -14,10 +14,13 @@ import org.springframework.stereotype.Component
 class FirebaseAuthAdapter(
     private val firebaseAuth: FirebaseAuth,
 ) : FirebaseAuthGateway {
-
-    override fun createUser(email: Email, plainPassword: String): FirebaseUserId {
+    override fun createUser(
+        email: Email,
+        plainPassword: String,
+    ): FirebaseUserId {
         val request =
-            UserRecord.CreateRequest()
+            UserRecord
+                .CreateRequest()
                 .setEmail(email.value)
                 .setPassword(plainPassword)
                 .setEmailVerified(false)
@@ -37,16 +40,23 @@ class FirebaseAuthAdapter(
         firebaseAuth.deleteUser(firebaseUserId.value)
     }
 
-    override fun updatePassword(firebaseUserId: FirebaseUserId, plainPassword: String) {
+    override fun updatePassword(
+        firebaseUserId: FirebaseUserId,
+        plainPassword: String,
+    ) {
         firebaseAuth.updateUser(
             UserRecord.UpdateRequest(firebaseUserId.value).setPassword(plainPassword),
         )
     }
 
-    override fun updateEmail(firebaseUserId: FirebaseUserId, email: Email) {
+    override fun updateEmail(
+        firebaseUserId: FirebaseUserId,
+        email: Email,
+    ) {
         try {
             firebaseAuth.updateUser(
-                UserRecord.UpdateRequest(firebaseUserId.value)
+                UserRecord
+                    .UpdateRequest(firebaseUserId.value)
                     .setEmail(email.value)
                     .setEmailVerified(false),
             )

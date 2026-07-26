@@ -11,7 +11,9 @@ data class GetRoomStockCommand(
 )
 
 sealed interface GetRoomStockResult {
-    data class Success(val entries: List<RoomStockEntry>) : GetRoomStockResult
+    data class Success(
+        val entries: List<RoomStockEntry>,
+    ) : GetRoomStockResult
 
     data object RoomNotFound : GetRoomStockResult
 

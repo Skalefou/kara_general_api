@@ -21,26 +21,37 @@ class GetPoolService(
     private val poolShareRepository: PoolShareRepository,
     private val bookingRepository: BookingRepository,
 ) : GetPoolUseCase {
-
     @Transactional(readOnly = true)
-    override fun getById(poolId: PoolId, requesterId: UserId): GetPoolResult {
+    override fun getById(
+        poolId: PoolId,
+        requesterId: UserId,
+    ): GetPoolResult {
         val pool = poolRepository.findById(poolId) ?: return GetPoolResult.NotFound
         return toResult(pool, requesterId)
     }
 
     @Transactional(readOnly = true)
-    override fun getByBookingId(bookingId: BookingId, requesterId: UserId): GetPoolResult {
+    override fun getByBookingId(
+        bookingId: BookingId,
+        requesterId: UserId,
+    ): GetPoolResult {
         val pool = poolRepository.findByBookingId(bookingId) ?: return GetPoolResult.NotFound
         return toResult(pool, requesterId)
     }
 
     @Transactional(readOnly = true)
-    override fun getByExtensionId(extensionId: BookingExtensionId, requesterId: UserId): GetPoolResult {
+    override fun getByExtensionId(
+        extensionId: BookingExtensionId,
+        requesterId: UserId,
+    ): GetPoolResult {
         val pool = poolRepository.findByExtensionId(extensionId) ?: return GetPoolResult.NotFound
         return toResult(pool, requesterId)
     }
 
-    private fun toResult(pool: Pool, requesterId: UserId): GetPoolResult {
+    private fun toResult(
+        pool: Pool,
+        requesterId: UserId,
+    ): GetPoolResult {
         val booking = bookingRepository.findById(pool.bookingId) ?: return GetPoolResult.NotFound
         if (booking.userId != requesterId) return GetPoolResult.NotOwner
         val shares = poolShareRepository.findByPoolId(pool.id)

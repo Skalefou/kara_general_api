@@ -28,7 +28,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 
 class UpdateProfileServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>(relaxed = true)
     private val emailVerificationCodeRepository = mockk<EmailVerificationCodeRepository>(relaxed = true)

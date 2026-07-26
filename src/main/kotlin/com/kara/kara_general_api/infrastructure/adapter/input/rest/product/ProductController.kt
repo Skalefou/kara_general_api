@@ -27,7 +27,6 @@ class ProductController(
     private val updateProductUseCase: UpdateProductUseCase,
     private val deleteProductUseCase: DeleteProductUseCase,
 ) : ProductApi {
-
     override fun createProduct(request: CreateProductRequest): ResponseEntity<Any> {
         val product =
             createProductUseCase.createProduct(
@@ -44,7 +43,10 @@ class ProductController(
     override fun listProducts(): ResponseEntity<Any> =
         ResponseEntity.ok(listProductsUseCase.listProducts().map { ProductResponse.from(it) })
 
-    override fun updateProduct(id: UUID, request: UpdateProductRequest): ResponseEntity<Any> {
+    override fun updateProduct(
+        id: UUID,
+        request: UpdateProductRequest,
+    ): ResponseEntity<Any> {
         val command =
             UpdateProductCommand(
                 id = ProductId(id),
@@ -67,12 +69,13 @@ class ProductController(
 
     private fun productNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun produit ne correspond à cet identifiant.",
-            ).apply {
-                title = "Produit introuvable"
-                setProperty("code", "PRODUCT_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun produit ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Produit introuvable"
+                    setProperty("code", "PRODUCT_NOT_FOUND")
+                },
         )
 }

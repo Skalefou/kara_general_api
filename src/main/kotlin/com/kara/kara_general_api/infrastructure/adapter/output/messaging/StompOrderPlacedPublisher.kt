@@ -16,8 +16,10 @@ import java.time.format.DateTimeFormatter
 class StompOrderPlacedPublisher(
     private val messagingTemplate: SimpMessagingTemplate,
 ) : OrderPlacedEventPublisher {
-
-    override fun publishOrderPlaced(serverId: UserId, alert: OrderPlacedAlert) {
+    override fun publishOrderPlaced(
+        serverId: UserId,
+        alert: OrderPlacedAlert,
+    ) {
         val dto =
             OrderPlacedDto(
                 orderId = alert.orderId.value.toString(),

@@ -15,7 +15,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ListServerShiftsServiceTest {
-
     private val serverShiftRepository = mockk<ServerShiftRepository>()
     private val sut = ListServerShiftsService(serverShiftRepository)
 

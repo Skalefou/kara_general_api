@@ -31,7 +31,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class PoolRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -176,7 +175,10 @@ class PoolRepositoryAdapterTest {
         )
     }
 
-    private fun insertShare(poolId: UUID, payer: UUID) {
+    private fun insertShare(
+        poolId: UUID,
+        payer: UUID,
+    ) {
         jdbc.update(
             """
             INSERT INTO pool_shares (id, pool_id, participant_name, amount, status,
@@ -187,7 +189,11 @@ class PoolRepositoryAdapterTest {
         )
     }
 
-    private fun insertBooking(id: BookingId, roomId: RoomId, userId: UserId) {
+    private fun insertBooking(
+        id: BookingId,
+        roomId: RoomId,
+        userId: UserId,
+    ) {
         jdbc.update(
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,

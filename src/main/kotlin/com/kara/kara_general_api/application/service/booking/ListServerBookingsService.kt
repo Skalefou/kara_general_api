@@ -18,7 +18,6 @@ class ListServerBookingsService(
     private val bookingRepository: BookingRepository,
     private val roomRepository: RoomRepository,
 ) : ListServerBookingsUseCase {
-
     override fun listServerBookings(serverId: UserId): List<ServerBooking> {
         val bookings = bookingRepository.findAssignedToServer(serverId)
         val roomCache = mutableMapOf<RoomId, Room?>()

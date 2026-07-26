@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional
 class ListInvoicesService(
     private val invoiceRepository: InvoiceRepository,
 ) : ListInvoicesUseCase {
-
     @Transactional(readOnly = true)
     override fun listInvoices(userId: UserId): List<Invoice> = invoiceRepository.findByUser(userId)
 }

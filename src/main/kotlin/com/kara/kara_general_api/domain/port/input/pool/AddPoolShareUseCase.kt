@@ -17,7 +17,9 @@ data class AddPoolShareCommand(
 )
 
 sealed interface AddPoolShareResult {
-    data class Added(val view: PoolView) : AddPoolShareResult
+    data class Added(
+        val view: PoolView,
+    ) : AddPoolShareResult
 
     data object PoolNotFound : AddPoolShareResult
 

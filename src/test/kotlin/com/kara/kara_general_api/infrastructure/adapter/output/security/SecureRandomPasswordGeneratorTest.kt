@@ -7,7 +7,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SecureRandomPasswordGeneratorTest {
-
     private val sut = SecureRandomPasswordGenerator()
 
     @Test

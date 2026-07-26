@@ -48,7 +48,6 @@ class CancelBookingService(
     private val notificationService: NotificationService,
     private val emailService: EmailService,
 ) : CancelBookingUseCase {
-
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
@@ -94,7 +93,8 @@ class CancelBookingService(
     }
 
     private fun refundPayAll(booking: Booking) {
-        paymentRepository.findByBookingId(booking.id)
+        paymentRepository
+            .findByBookingId(booking.id)
             .filter { it.status == PaymentStatus.PAID }
             .forEach { payment ->
                 runCatching { paymentGateway.refundPaymentIntent(payment.stripePaymentIntentId) }
@@ -103,7 +103,10 @@ class CancelBookingService(
             }
     }
 
-    private fun notifyOwner(booking: Booking, refunded: Boolean) {
+    private fun notifyOwner(
+        booking: Booking,
+        refunded: Boolean,
+    ) {
         val roomName = roomRepository.findById(booking.roomId)?.name ?: "votre réservation"
         val user = userRepository.findById(booking.userId) ?: return
         runCatching { emailService.sendBookingCancelled(user.email, roomName, booking.startAt, refunded) }

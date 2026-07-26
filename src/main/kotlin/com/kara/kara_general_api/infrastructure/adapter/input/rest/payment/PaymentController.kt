@@ -21,8 +21,10 @@ class PaymentController(
     private val initiateBookingPaymentUseCase: InitiateBookingPaymentUseCase,
     private val handleStripeWebhookUseCase: HandleStripeWebhookUseCase,
 ) : PaymentApi {
-
-    override fun initiatePayment(id: UUID, authentication: Authentication): ResponseEntity<Any> {
+    override fun initiatePayment(
+        id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             InitiateBookingPaymentCommand(
                 bookingId = BookingId(id),
@@ -38,62 +40,70 @@ class PaymentController(
         }
     }
 
-    override fun handleStripeWebhook(payload: String, signature: String?): ResponseEntity<Any> =
+    override fun handleStripeWebhook(
+        payload: String,
+        signature: String?,
+    ): ResponseEntity<Any> =
         when (handleStripeWebhookUseCase.handle(StripeWebhookCommand(payload = payload, signature = signature))) {
             StripeWebhookResult.Handled, StripeWebhookResult.Ignored -> ResponseEntity.ok().build()
             StripeWebhookResult.InvalidSignature ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        "La signature du webhook Stripe est absente ou invalide.",
-                    ).apply {
-                        title = "Signature invalide"
-                        setProperty("code", "STRIPE_INVALID_SIGNATURE")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "La signature du webhook Stripe est absente ou invalide.",
+                        ).apply {
+                            title = "Signature invalide"
+                            setProperty("code", "STRIPE_INVALID_SIGNATURE")
+                        },
                 )
         }
 
     private fun bookingNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune réservation ne correspond à cet identifiant.",
-            ).apply {
-                title = "Réservation introuvable"
-                setProperty("code", "PAYMENT_BOOKING_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune réservation ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Réservation introuvable"
+                    setProperty("code", "PAYMENT_BOOKING_NOT_FOUND")
+                },
         )
 
     private fun notOwner(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.FORBIDDEN,
-                "Cette réservation n'appartient pas à votre compte.",
-            ).apply {
-                title = "Accès refusé"
-                setProperty("code", "PAYMENT_NOT_OWNER")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Cette réservation n'appartient pas à votre compte.",
+                ).apply {
+                    title = "Accès refusé"
+                    setProperty("code", "PAYMENT_NOT_OWNER")
+                },
         )
 
     private fun alreadyPaid(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Cette réservation n'est plus en attente de paiement.",
-            ).apply {
-                title = "Paiement déjà effectué"
-                setProperty("code", "PAYMENT_ALREADY_PAID")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Cette réservation n'est plus en attente de paiement.",
+                ).apply {
+                    title = "Paiement déjà effectué"
+                    setProperty("code", "PAYMENT_ALREADY_PAID")
+                },
         )
 
     private fun bookingExpired(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Le délai de paiement de 15 minutes de cette réservation est écoulé.",
-            ).apply {
-                title = "Réservation expirée"
-                setProperty("code", "BOOKING_EXPIRED")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Le délai de paiement de 15 minutes de cette réservation est écoulé.",
+                ).apply {
+                    title = "Réservation expirée"
+                    setProperty("code", "BOOKING_EXPIRED")
+                },
         )
 }

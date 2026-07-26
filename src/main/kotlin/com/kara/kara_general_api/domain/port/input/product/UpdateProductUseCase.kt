@@ -18,7 +18,9 @@ data class UpdateProductCommand(
 )
 
 sealed interface UpdateProductResult {
-    data class Success(val product: Product) : UpdateProductResult
+    data class Success(
+        val product: Product,
+    ) : UpdateProductResult
 
     data object NotFound : UpdateProductResult
 }

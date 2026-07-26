@@ -18,11 +18,11 @@ import org.springframework.web.bind.annotation.PathVariable
 
 @Tag(name = "Factures", description = "Reçus du client (« Mes factures »)")
 interface InvoiceApi {
-
     @Operation(
         summary = "Lister mes factures",
-        description = "Liste les reçus du client authentifié : union de ses paiements « payer tout » réglés et de " +
-            "ses parts de cagnotte capturées, triée par date d'émission décroissante. Tableau vide si aucun reçu.",
+        description =
+            "Liste les reçus du client authentifié : union de ses paiements « payer tout » réglés et de " +
+                "ses parts de cagnotte capturées, triée par date d'émission décroissante. Tableau vide si aucun reçu.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -39,8 +39,9 @@ interface InvoiceApi {
 
     @Operation(
         summary = "Télécharger une facture",
-        description = "Retourne une URL signée courte durée vers le PDF du reçu. Le PDF est généré " +
-            "paresseusement à la première demande. Réservé au propriétaire du paiement / de la part.",
+        description =
+            "Retourne une URL signée courte durée vers le PDF du reçu. Le PDF est généré " +
+                "paresseusement à la première demande. Réservé au propriétaire du paiement / de la part.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

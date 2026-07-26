@@ -8,7 +8,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class RoomStockItemTest {
-
     private val roomId = RoomId(UUID.randomUUID())
     private val productId = ProductId(UUID.randomUUID())
 

@@ -18,14 +18,14 @@ class UpdateRoomService(
     private val serviceRepository: ServiceRepository,
     private val roomServiceRepository: RoomServiceRepository,
 ) : UpdateRoomUseCase {
-
     // Le géocodage (appel HTTP externe) n'est déclenché que si l'adresse change,
     // et reste hors transaction : les écritures sont le save de la salle et le remplacement des liaisons.
     override fun updateRoom(command: UpdateRoomCommand): UpdateRoomResult {
         val existing = roomRepository.findById(command.id) ?: return UpdateRoomResult.NotFound
 
         // Valide l'existence des services demandés avant toute écriture (service inconnu -> 400).
-        command.serviceIds?.firstOrNull { !serviceRepository.existsById(it) }
+        command.serviceIds
+            ?.firstOrNull { !serviceRepository.existsById(it) }
             ?.let { return UpdateRoomResult.UnknownService(it) }
         val mergedAddress =
             Address(

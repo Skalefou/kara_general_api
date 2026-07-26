@@ -17,17 +17,18 @@ import java.util.Base64
 class FirebaseConfig(
     @Value("\${FIREBASE_CREDENTIALS_BASE64}") private val credentialsBase64: String,
 ) {
-
     @Bean
     fun firebaseApp(): FirebaseApp {
         FirebaseApp.getApps().firstOrNull()?.let { return it }
 
         val credentialsJson = Base64.getDecoder().decode(credentialsBase64)
         val credentials = GoogleCredentials.fromStream(ByteArrayInputStream(credentialsJson))
-        val options = FirebaseOptions.builder()
-            .setCredentials(credentials)
-            .setHttpTransport(ApacheHttpTransport())
-            .build()
+        val options =
+            FirebaseOptions
+                .builder()
+                .setCredentials(credentials)
+                .setHttpTransport(ApacheHttpTransport())
+                .build()
 
         return FirebaseApp.initializeApp(options)
     }

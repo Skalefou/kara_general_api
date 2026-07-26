@@ -25,7 +25,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class DeleteAccountServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val passwordHasher = mockk<PasswordHasher>()
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>(relaxed = true)

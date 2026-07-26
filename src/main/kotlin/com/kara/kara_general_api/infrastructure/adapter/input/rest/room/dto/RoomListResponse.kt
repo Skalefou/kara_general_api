@@ -6,8 +6,9 @@ import io.swagger.v3.oas.annotations.media.Schema
 
 data class RoomListResponse(
     @field:Schema(
-        description = "Mode de rendu du viewport : \"rooms\" (salles unitaires) ou \"clusters\" (agrégats). " +
-            "Présent uniquement en mode filtrage bbox.",
+        description =
+            "Mode de rendu du viewport : \"rooms\" (salles unitaires) ou \"clusters\" (agrégats). " +
+                "Présent uniquement en mode filtrage bbox.",
         nullable = true,
         allowableValues = ["rooms", "clusters"],
     )
@@ -15,8 +16,9 @@ data class RoomListResponse(
     @field:Schema(description = "Salles de la page courante ; vide en mode clusters")
     val rooms: List<RoomResponse>,
     @field:Schema(
-        description = "Agrégats par cellule ; rempli uniquement en mode clusters, sinon vide. " +
-            "Présent uniquement en mode filtrage bbox.",
+        description =
+            "Agrégats par cellule ; rempli uniquement en mode clusters, sinon vide. " +
+                "Présent uniquement en mode filtrage bbox.",
         nullable = true,
     )
     val clusters: List<ClusterResponse>? = null,
@@ -29,20 +31,25 @@ data class RoomListResponse(
     @field:Schema(description = "Nombre total de pages")
     val totalPages: Int,
     @field:Schema(
-        description = "Nombre réel de salles dans la bbox avant plafonnement serveur. " +
-            "Présent uniquement en mode filtrage bbox.",
+        description =
+            "Nombre réel de salles dans la bbox avant plafonnement serveur. " +
+                "Présent uniquement en mode filtrage bbox.",
         nullable = true,
     )
     val totalInBbox: Long? = null,
     @field:Schema(
-        description = "Vrai si des salles dans la bbox ont été écartées par le plafond serveur. " +
-            "Présent uniquement en mode filtrage bbox.",
+        description =
+            "Vrai si des salles dans la bbox ont été écartées par le plafond serveur. " +
+                "Présent uniquement en mode filtrage bbox.",
         nullable = true,
     )
     val truncated: Boolean? = null,
 ) {
     companion object {
-        fun from(roomPage: RoomPage, publicUrl: (String) -> String): RoomListResponse =
+        fun from(
+            roomPage: RoomPage,
+            publicUrl: (String) -> String,
+        ): RoomListResponse =
             RoomListResponse(
                 mode =
                     when (roomPage.mode) {

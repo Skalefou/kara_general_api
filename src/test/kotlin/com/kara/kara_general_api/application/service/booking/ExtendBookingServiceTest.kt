@@ -30,7 +30,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class ExtendBookingServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val bookingExtensionRepository = mockk<BookingExtensionRepository>(relaxed = true)

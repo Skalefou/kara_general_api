@@ -24,7 +24,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ApplyBookingExtensionServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val bookingExtensionRepository = mockk<BookingExtensionRepository>(relaxed = true)
     private val bookingEndReminderRepository = mockk<BookingEndReminderRepository>(relaxed = true)
@@ -55,16 +54,17 @@ class ApplyBookingExtensionServiceTest {
         )
 
     private fun extension(status: BookingExtensionStatus = BookingExtensionStatus.PENDING) =
-        BookingExtension.create(
-            bookingId = bookingId,
-            userId = booking.userId,
-            additionalMinutes = 60,
-            previousEndAt = endAt,
-            price = BigDecimal("40.00"),
-            currency = Currency.EUR,
-            paymentMode = PaymentMode.PAY_ALL,
-            now = endAt.minus(Duration.ofMinutes(30)),
-        ).copy(status = status)
+        BookingExtension
+            .create(
+                bookingId = bookingId,
+                userId = booking.userId,
+                additionalMinutes = 60,
+                previousEndAt = endAt,
+                price = BigDecimal("40.00"),
+                currency = Currency.EUR,
+                paymentMode = PaymentMode.PAY_ALL,
+                now = endAt.minus(Duration.ofMinutes(30)),
+            ).copy(status = status)
 
     @Test
     fun `should push the booking end and add the extension price to the total`() {

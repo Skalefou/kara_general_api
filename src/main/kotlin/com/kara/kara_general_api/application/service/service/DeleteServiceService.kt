@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service as SpringService
 class DeleteServiceService(
     private val serviceRepository: ServiceRepository,
 ) : DeleteServiceUseCase {
-
     @Transactional
     override fun deleteService(id: ServiceId): DeleteServiceResult {
         val deleted = serviceRepository.deleteById(id)

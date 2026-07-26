@@ -17,7 +17,6 @@ private const val SPECIALS = "!*&\$@#%?"
 
 @Component
 class SecureRandomPasswordGenerator : PasswordGenerator {
-
     private val random = SecureRandom().asKotlinRandom()
 
     override fun generate(role: UserRole): String {

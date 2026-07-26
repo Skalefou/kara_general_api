@@ -26,6 +26,7 @@ import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
+import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ChangePasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
@@ -38,7 +39,6 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.Regi
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
-import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -64,7 +64,6 @@ class AuthController(
     private val changePasswordUseCase: ChangePasswordUseCase,
     private val imageStorage: ImageStoragePort,
 ) : AuthApi {
-
     private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
 
     override fun register(request: RegisterRequest): ResponseEntity<Any> {
@@ -91,24 +90,26 @@ class AuthController(
 
             RegisterResult.EmailAlreadyUsed ->
                 ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.CONFLICT,
-                        "Un compte existe déjà avec cet email.",
-                    ).apply {
-                        title = "Email déjà utilisé"
-                        setProperty("code", "EMAIL_ALREADY_USED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.CONFLICT,
+                            "Un compte existe déjà avec cet email.",
+                        ).apply {
+                            title = "Email déjà utilisé"
+                            setProperty("code", "EMAIL_ALREADY_USED")
+                        },
                 )
 
             is RegisterResult.InvalidPassword ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        result.reasons.joinToString(" "),
-                    ).apply {
-                        title = "Mot de passe invalide"
-                        setProperty("code", "INVALID_PASSWORD")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            result.reasons.joinToString(" "),
+                        ).apply {
+                            title = "Mot de passe invalide"
+                            setProperty("code", "INVALID_PASSWORD")
+                        },
                 )
         }
     }
@@ -137,62 +138,70 @@ class AuthController(
 
             LoginResult.UserNotFound ->
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucun compte ne correspond à cet identifiant.",
-                    ).apply {
-                        title = "Compte introuvable"
-                        setProperty("code", "USER_NOT_FOUND")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.NOT_FOUND,
+                            "Aucun compte ne correspond à cet identifiant.",
+                        ).apply {
+                            title = "Compte introuvable"
+                            setProperty("code", "USER_NOT_FOUND")
+                        },
                 )
 
             LoginResult.InvalidCredentials ->
                 ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.UNAUTHORIZED,
-                        "Identifiant ou mot de passe incorrect.",
-                    ).apply {
-                        title = "Identifiants invalides"
-                        setProperty("code", "INVALID_CREDENTIALS")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.UNAUTHORIZED,
+                            "Identifiant ou mot de passe incorrect.",
+                        ).apply {
+                            title = "Identifiants invalides"
+                            setProperty("code", "INVALID_CREDENTIALS")
+                        },
                 )
 
             LoginResult.AccountDeleted ->
                 ResponseEntity.status(HttpStatus.GONE).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.GONE,
-                        "Ce compte a été supprimé.",
-                    ).apply {
-                        title = "Compte supprimé"
-                        setProperty("code", "ACCOUNT_DELETED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.GONE,
+                            "Ce compte a été supprimé.",
+                        ).apply {
+                            title = "Compte supprimé"
+                            setProperty("code", "ACCOUNT_DELETED")
+                        },
                 )
 
             LoginResult.AccountDeactivated ->
                 ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.FORBIDDEN,
-                        "Ce compte a été désactivé. Contactez un administrateur.",
-                    ).apply {
-                        title = "Compte désactivé"
-                        setProperty("code", "ACCOUNT_DEACTIVATED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.FORBIDDEN,
+                            "Ce compte a été désactivé. Contactez un administrateur.",
+                        ).apply {
+                            title = "Compte désactivé"
+                            setProperty("code", "ACCOUNT_DEACTIVATED")
+                        },
                 )
 
             LoginResult.TempPasswordExpired ->
                 ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.FORBIDDEN,
-                        "Le mot de passe temporaire a expiré. Demandez une nouvelle invitation.",
-                    ).apply {
-                        title = "Mot de passe temporaire expiré"
-                        setProperty("code", "TEMP_PASSWORD_EXPIRED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.FORBIDDEN,
+                            "Le mot de passe temporaire a expiré. Demandez une nouvelle invitation.",
+                        ).apply {
+                            title = "Mot de passe temporaire expiré"
+                            setProperty("code", "TEMP_PASSWORD_EXPIRED")
+                        },
                 )
         }
     }
 
-    override fun changePassword(request: ChangePasswordRequest, authentication: Authentication): ResponseEntity<Any> {
+    override fun changePassword(
+        request: ChangePasswordRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
         val command =
             ChangePasswordCommand(
                 userId = UserId(UUID.fromString(authentication.name)),
@@ -206,35 +215,38 @@ class AuthController(
 
             ChangePasswordResult.UserNotFound ->
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucun compte ne correspond à cet identifiant.",
-                    ).apply {
-                        title = "Compte introuvable"
-                        setProperty("code", "USER_NOT_FOUND")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.NOT_FOUND,
+                            "Aucun compte ne correspond à cet identifiant.",
+                        ).apply {
+                            title = "Compte introuvable"
+                            setProperty("code", "USER_NOT_FOUND")
+                        },
                 )
 
             ChangePasswordResult.InvalidCurrentPassword ->
                 ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.UNAUTHORIZED,
-                        "Le mot de passe actuel est incorrect.",
-                    ).apply {
-                        title = "Mot de passe incorrect"
-                        setProperty("code", "INVALID_CURRENT_PASSWORD")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.UNAUTHORIZED,
+                            "Le mot de passe actuel est incorrect.",
+                        ).apply {
+                            title = "Mot de passe incorrect"
+                            setProperty("code", "INVALID_CURRENT_PASSWORD")
+                        },
                 )
 
             is ChangePasswordResult.WeakPassword ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        result.reasons.joinToString(" "),
-                    ).apply {
-                        title = "Mot de passe invalide"
-                        setProperty("code", "WEAK_PASSWORD")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            result.reasons.joinToString(" "),
+                        ).apply {
+                            title = "Mot de passe invalide"
+                            setProperty("code", "WEAK_PASSWORD")
+                        },
                 )
         }
     }
@@ -255,46 +267,50 @@ class AuthController(
 
             VerifyEmailResult.UserNotFound ->
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucun compte ne correspond à cet email.",
-                    ).apply {
-                        title = "Compte introuvable"
-                        setProperty("code", "USER_NOT_FOUND")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.NOT_FOUND,
+                            "Aucun compte ne correspond à cet email.",
+                        ).apply {
+                            title = "Compte introuvable"
+                            setProperty("code", "USER_NOT_FOUND")
+                        },
                 )
 
             VerifyEmailResult.AlreadyVerified ->
                 ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.CONFLICT,
-                        "Cet email a déjà été vérifié.",
-                    ).apply {
-                        title = "Email déjà vérifié"
-                        setProperty("code", "EMAIL_ALREADY_VERIFIED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.CONFLICT,
+                            "Cet email a déjà été vérifié.",
+                        ).apply {
+                            title = "Email déjà vérifié"
+                            setProperty("code", "EMAIL_ALREADY_VERIFIED")
+                        },
                 )
 
             VerifyEmailResult.CodeExpiredOrMissing ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        "Le code de vérification a expiré. Merci de redemander un nouveau code.",
-                    ).apply {
-                        title = "Code expiré"
-                        setProperty("code", "VERIFICATION_CODE_EXPIRED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "Le code de vérification a expiré. Merci de redemander un nouveau code.",
+                        ).apply {
+                            title = "Code expiré"
+                            setProperty("code", "VERIFICATION_CODE_EXPIRED")
+                        },
                 )
 
             VerifyEmailResult.InvalidCode ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        "Le code de vérification est incorrect.",
-                    ).apply {
-                        title = "Code invalide"
-                        setProperty("code", "INVALID_VERIFICATION_CODE")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "Le code de vérification est incorrect.",
+                        ).apply {
+                            title = "Code invalide"
+                            setProperty("code", "INVALID_VERIFICATION_CODE")
+                        },
                 )
         }
     }
@@ -318,46 +334,50 @@ class AuthController(
 
             ResetPasswordResult.UserNotFound ->
                 ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.NOT_FOUND,
-                        "Aucun compte ne correspond à cet email.",
-                    ).apply {
-                        title = "Compte introuvable"
-                        setProperty("code", "USER_NOT_FOUND")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.NOT_FOUND,
+                            "Aucun compte ne correspond à cet email.",
+                        ).apply {
+                            title = "Compte introuvable"
+                            setProperty("code", "USER_NOT_FOUND")
+                        },
                 )
 
             ResetPasswordResult.CodeExpiredOrMissing ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        "Le code de réinitialisation a expiré. Merci de faire une nouvelle demande.",
-                    ).apply {
-                        title = "Code expiré"
-                        setProperty("code", "RESET_CODE_EXPIRED")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "Le code de réinitialisation a expiré. Merci de faire une nouvelle demande.",
+                        ).apply {
+                            title = "Code expiré"
+                            setProperty("code", "RESET_CODE_EXPIRED")
+                        },
                 )
 
             ResetPasswordResult.InvalidCode ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        "Le code de réinitialisation est incorrect.",
-                    ).apply {
-                        title = "Code invalide"
-                        setProperty("code", "INVALID_RESET_CODE")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "Le code de réinitialisation est incorrect.",
+                        ).apply {
+                            title = "Code invalide"
+                            setProperty("code", "INVALID_RESET_CODE")
+                        },
                 )
 
             is ResetPasswordResult.InvalidPassword ->
                 ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.BAD_REQUEST,
-                        result.reasons.joinToString(" "),
-                    ).apply {
-                        title = "Mot de passe invalide"
-                        setProperty("code", "INVALID_PASSWORD")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            result.reasons.joinToString(" "),
+                        ).apply {
+                            title = "Mot de passe invalide"
+                            setProperty("code", "INVALID_PASSWORD")
+                        },
                 )
         }
     }
@@ -378,13 +398,14 @@ class AuthController(
 
             RefreshTokenResult.InvalidToken ->
                 ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    ProblemDetail.forStatusAndDetail(
-                        HttpStatus.UNAUTHORIZED,
-                        "Le refresh token est invalide, expiré ou a déjà été utilisé.",
-                    ).apply {
-                        title = "Refresh token invalide"
-                        setProperty("code", "INVALID_REFRESH_TOKEN")
-                    },
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.UNAUTHORIZED,
+                            "Le refresh token est invalide, expiré ou a déjà été utilisé.",
+                        ).apply {
+                            title = "Refresh token invalide"
+                            setProperty("code", "INVALID_REFRESH_TOKEN")
+                        },
                 )
         }
     }

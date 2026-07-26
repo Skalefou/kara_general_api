@@ -20,7 +20,6 @@ class InvoiceRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: InvoiceRowMapper,
 ) : InvoiceRepository {
-
     /**
      * Union des reçus du client : paiements « payer tout » PAID (source 'PAY') + parts de cagnotte CAPTURED
      * dont il est le payeur (source 'SHR'). Chaque source est jointe booking → room pour le libellé (nom de
@@ -60,14 +59,15 @@ class InvoiceRepositoryAdapter(
             JOIN users u ON u.id = p.user_id
             WHERE p.id = :paymentId AND p.status = 'PAID'
             """.trimIndent()
-        return jdbc.query(sql, mapOf("paymentId" to paymentId.value)) { rs, _ ->
-            detail(
-                invoiceId = InvoiceId.reservation(PaymentId(rs.getObject("source_id", UUID::class.java))),
-                type = InvoiceType.RESERVATION,
-                rs = rs,
-                ownerColumn = "user_id",
-            )
-        }.firstOrNull()
+        return jdbc
+            .query(sql, mapOf("paymentId" to paymentId.value)) { rs, _ ->
+                detail(
+                    invoiceId = InvoiceId.reservation(PaymentId(rs.getObject("source_id", UUID::class.java))),
+                    type = InvoiceType.RESERVATION,
+                    rs = rs,
+                    ownerColumn = "user_id",
+                )
+            }.firstOrNull()
     }
 
     /** Reçu + acheteur d'une part de cagnotte, uniquement si elle est CAPTURED. */
@@ -83,14 +83,15 @@ class InvoiceRepositoryAdapter(
             JOIN users u ON u.id = ps.payer_user_id
             WHERE ps.id = :shareId AND ps.status = 'CAPTURED'
             """.trimIndent()
-        return jdbc.query(sql, mapOf("shareId" to shareId.value)) { rs, _ ->
-            detail(
-                invoiceId = InvoiceId.cagnotte(PoolShareId(rs.getObject("source_id", UUID::class.java))),
-                type = InvoiceType.CAGNOTTE,
-                rs = rs,
-                ownerColumn = "user_id",
-            )
-        }.firstOrNull()
+        return jdbc
+            .query(sql, mapOf("shareId" to shareId.value)) { rs, _ ->
+                detail(
+                    invoiceId = InvoiceId.cagnotte(PoolShareId(rs.getObject("source_id", UUID::class.java))),
+                    type = InvoiceType.CAGNOTTE,
+                    rs = rs,
+                    ownerColumn = "user_id",
+                )
+            }.firstOrNull()
     }
 
     private fun detail(

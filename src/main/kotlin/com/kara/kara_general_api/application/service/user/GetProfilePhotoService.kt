@@ -16,7 +16,6 @@ class GetProfilePhotoService(
     private val userRepository: UserRepository,
     private val imageStorage: ImageStoragePort,
 ) : GetProfilePhotoUseCase {
-
     override fun getPhotoUrl(userId: UserId): GetProfilePhotoResult {
         val user = userRepository.findById(userId) ?: return GetProfilePhotoResult.UserNotFound
         val status = user.photoStatus ?: return GetProfilePhotoResult.NoPhoto

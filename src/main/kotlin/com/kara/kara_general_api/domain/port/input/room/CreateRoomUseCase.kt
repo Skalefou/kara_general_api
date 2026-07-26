@@ -20,12 +20,16 @@ data class CreateRoomCommand(
 )
 
 sealed interface CreateRoomResult {
-    data class Success(val room: Room) : CreateRoomResult
+    data class Success(
+        val room: Room,
+    ) : CreateRoomResult
 
     data object AddressNotFound : CreateRoomResult
 
     /** Un des services référencés n'existe pas dans le catalogue global. */
-    data class UnknownService(val serviceId: ServiceId) : CreateRoomResult
+    data class UnknownService(
+        val serviceId: ServiceId,
+    ) : CreateRoomResult
 }
 
 interface CreateRoomUseCase {

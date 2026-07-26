@@ -4,23 +4,23 @@ import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingEstimate
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
+import com.kara.kara_general_api.domain.model.booking.PaymentMode
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.UserId
-import com.kara.kara_general_api.domain.model.booking.PaymentMode
 import com.kara.kara_general_api.domain.port.input.booking.BookingDetailView
 import com.kara.kara_general_api.domain.port.input.booking.CancelBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.CancelBookingUseCase
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.CreateBookingUseCase
-import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
-import com.kara.kara_general_api.domain.port.input.booking.ListServerBookingsUseCase
-import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyUseCase
-import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationUseCase
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingResult
 import com.kara.kara_general_api.domain.port.input.booking.EstimateBookingUseCase
 import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailResult
 import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListServerBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyUseCase
+import com.kara.kara_general_api.domain.port.input.chat.OpenBookingConversationUseCase
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
@@ -50,7 +50,6 @@ private const val REQUEST_BODY =
 @WebMvcTest(BookingController::class)
 @Import(SecurityConfig::class)
 class BookingControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -224,30 +223,33 @@ class BookingControllerTest {
             """{"roomId": "$ROOM_ID", "startAt": "2026-08-01T18:00:00Z", "endAt": "2026-08-01T21:30:00Z", """ +
                 """"numberOfPeople": 1, "optionIds": []}"""
 
-        mockMvc.perform(
-            post("/api/v1/bookings/estimate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(invalidBody),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/bookings/estimate")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidBody),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         verify(exactly = 0) { estimateBookingUseCase.estimate(any()) }
     }
 
-    private fun detailView(status: BookingStatus, ticketCode: String?) =
-        BookingDetailView(
-            bookingId = UUID.fromString(BOOKING_ID),
-            roomName = "Salle Étoile",
-            roomAddress = "12 rue de Paris, 69002 Lyon, France",
-            startAt = Instant.parse("2026-08-01T18:00:00Z"),
-            endAt = Instant.parse("2026-08-01T21:00:00Z"),
-            numberOfPeople = 8,
-            totalPrice = BigDecimal("435.00"),
-            currency = Currency.EUR,
-            status = status,
-            paymentMode = PaymentMode.PAY_ALL,
-            ticketCode = ticketCode,
-        )
+    private fun detailView(
+        status: BookingStatus,
+        ticketCode: String?,
+    ) = BookingDetailView(
+        bookingId = UUID.fromString(BOOKING_ID),
+        roomName = "Salle Étoile",
+        roomAddress = "12 rue de Paris, 69002 Lyon, France",
+        startAt = Instant.parse("2026-08-01T18:00:00Z"),
+        endAt = Instant.parse("2026-08-01T21:00:00Z"),
+        numberOfPeople = 8,
+        totalPrice = BigDecimal("435.00"),
+        currency = Currency.EUR,
+        status = status,
+        paymentMode = PaymentMode.PAY_ALL,
+        ticketCode = ticketCode,
+    )
 
     @Test
     fun `should return 401 when fetching a booking detail without authentication`() {
@@ -262,7 +264,8 @@ class BookingControllerTest {
         every { getBookingDetailUseCase.getDetail(any(), any()) } returns
             GetBookingDetailResult.Found(detailView(BookingStatus.CONFIRMED, "KARA-TKT-3F7Q2K9A"))
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("CONFIRMED"))
             .andExpect(jsonPath("$.ticketCode").value("KARA-TKT-3F7Q2K9A"))
@@ -275,7 +278,8 @@ class BookingControllerTest {
         every { getBookingDetailUseCase.getDetail(any(), any()) } returns
             GetBookingDetailResult.Found(detailView(BookingStatus.PENDING, null))
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.ticketCode").doesNotExist())
@@ -286,7 +290,8 @@ class BookingControllerTest {
     fun `should return 403 when fetching a booking the user does not own`() {
         every { getBookingDetailUseCase.getDetail(any(), any()) } returns GetBookingDetailResult.NotOwner
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("BOOKING_NOT_OWNER"))
     }
@@ -296,7 +301,8 @@ class BookingControllerTest {
     fun `should return 404 when fetching an unknown booking`() {
         every { getBookingDetailUseCase.getDetail(any(), any()) } returns GetBookingDetailResult.NotFound
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("BOOKING_NOT_FOUND"))
     }
@@ -308,7 +314,8 @@ class BookingControllerTest {
         every { cancelBookingUseCase.cancel(any()) } returns
             CancelBookingResult.Cancelled(confirmed.cancel(), refunded = true)
 
-        mockMvc.perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
+        mockMvc
+            .perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("CANCELLED"))
             .andExpect(jsonPath("$.refunded").value(true))
@@ -320,7 +327,8 @@ class BookingControllerTest {
         every { cancelBookingUseCase.cancel(any()) } returns
             CancelBookingResult.Cancelled(sampleBooking().cancel(), refunded = false)
 
-        mockMvc.perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
+        mockMvc
+            .perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("CANCELLED"))
             .andExpect(jsonPath("$.refunded").value(false))
@@ -331,7 +339,8 @@ class BookingControllerTest {
     fun `should return 409 when cancelling an already cancelled booking`() {
         every { cancelBookingUseCase.cancel(any()) } returns CancelBookingResult.AlreadyCancelled
 
-        mockMvc.perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
+        mockMvc
+            .perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("BOOKING_ALREADY_CANCELLED"))
     }
@@ -341,7 +350,8 @@ class BookingControllerTest {
     fun `should return 409 when cancelling a booking already started`() {
         every { cancelBookingUseCase.cancel(any()) } returns CancelBookingResult.AlreadyStarted
 
-        mockMvc.perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
+        mockMvc
+            .perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("BOOKING_ALREADY_STARTED"))
     }
@@ -351,7 +361,8 @@ class BookingControllerTest {
     fun `should return 403 when cancelling a booking the user does not own`() {
         every { cancelBookingUseCase.cancel(any()) } returns CancelBookingResult.NotOwner
 
-        mockMvc.perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
+        mockMvc
+            .perform(post("/api/v1/bookings/$BOOKING_ID/cancel"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("BOOKING_NOT_OWNER"))
     }

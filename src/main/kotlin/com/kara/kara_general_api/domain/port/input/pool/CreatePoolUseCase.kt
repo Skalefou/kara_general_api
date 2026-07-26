@@ -26,7 +26,9 @@ data class CreateExtensionPoolCommand(
 )
 
 sealed interface CreatePoolResult {
-    data class Created(val view: PoolView) : CreatePoolResult
+    data class Created(
+        val view: PoolView,
+    ) : CreatePoolResult
 
     data object BookingNotFound : CreatePoolResult
 
@@ -45,14 +47,19 @@ sealed interface CreatePoolResult {
     data object ReservationTooClose : CreatePoolResult
 
     /** La somme des parts ne correspond pas au montant cible (= prix total de la réservation). */
-    data class SharesMismatch(val expected: BigDecimal, val actual: BigDecimal) : CreatePoolResult
+    data class SharesMismatch(
+        val expected: BigDecimal,
+        val actual: BigDecimal,
+    ) : CreatePoolResult
 
     /** Aucune part fournie, ou montant non strictement positif. */
     data object InvalidShares : CreatePoolResult
 }
 
 sealed interface CreateExtensionPoolResult {
-    data class Created(val view: PoolView) : CreateExtensionPoolResult
+    data class Created(
+        val view: PoolView,
+    ) : CreateExtensionPoolResult
 
     data object ExtensionNotFound : CreateExtensionPoolResult
 
@@ -66,7 +73,10 @@ sealed interface CreateExtensionPoolResult {
 
     data object SettlementWindowTooShort : CreateExtensionPoolResult
 
-    data class SharesMismatch(val expected: BigDecimal, val actual: BigDecimal) : CreateExtensionPoolResult
+    data class SharesMismatch(
+        val expected: BigDecimal,
+        val actual: BigDecimal,
+    ) : CreateExtensionPoolResult
 
     data object InvalidShares : CreateExtensionPoolResult
 }

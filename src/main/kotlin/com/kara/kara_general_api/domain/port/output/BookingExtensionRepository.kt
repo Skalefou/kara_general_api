@@ -14,9 +14,17 @@ interface BookingExtensionRepository {
 
     fun findPendingByBookingId(bookingId: BookingId): BookingExtension?
 
-    fun updateStatus(id: BookingExtensionId, status: BookingExtensionStatus)
+    fun updateStatus(
+        id: BookingExtensionId,
+        status: BookingExtensionStatus,
+    )
 
-    fun findNextHeldStart(roomId: RoomId, after: Instant, excluding: BookingId, now: Instant): Instant?
+    fun findNextHeldStart(
+        roomId: RoomId,
+        after: Instant,
+        excluding: BookingId,
+        now: Instant,
+    ): Instant?
 
     fun findExpiredPending(now: Instant): List<BookingExtension>
 }

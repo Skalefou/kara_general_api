@@ -17,13 +17,13 @@ class CreateRoomService(
     private val serviceRepository: ServiceRepository,
     private val roomServiceRepository: RoomServiceRepository,
 ) : CreateRoomUseCase {
-
     // Le géocodage (appel HTTP externe) est effectué hors transaction :
     // les écritures (save de la salle + liaisons de services) suivent la validation des services.
     override fun createRoom(command: CreateRoomCommand): CreateRoomResult {
         // Valide l'existence des services avant toute écriture pour éviter une salle orpheline
         // en cas de service inconnu (et pour ne pas dépendre d'une violation de contrainte FK).
-        command.serviceIds.firstOrNull { !serviceRepository.existsById(it) }
+        command.serviceIds
+            .firstOrNull { !serviceRepository.existsById(it) }
             ?.let { return CreateRoomResult.UnknownService(it) }
 
         val coordinates = geocodingPort.geocode(command.address) ?: return CreateRoomResult.AddressNotFound

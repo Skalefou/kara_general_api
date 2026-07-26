@@ -26,7 +26,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class UpdatePoolShareServiceTest {
-
     private val poolRepository = mockk<PoolRepository>()
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>()
@@ -41,10 +40,23 @@ class UpdatePoolShareServiceTest {
         Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, PoolStatus.OPEN, Instant.now().plusSeconds(3600), "g", Instant.now())
 
     private fun creatorShare(amount: String = "60.00") =
-        PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Créateur", null, BigDecimal(amount), PoolShareStatus.PENDING, null, null, creatorId, true)
+        PoolShare(
+            PoolShareId(UUID.randomUUID()),
+            poolId,
+            "Créateur",
+            null,
+            BigDecimal(amount),
+            PoolShareStatus.PENDING,
+            null,
+            null,
+            creatorId,
+            true,
+        )
 
-    private fun targetShare(amount: String = "40.00", status: PoolShareStatus = PoolShareStatus.PENDING) =
-        PoolShare(targetId, poolId, "Bob", null, BigDecimal(amount), status, null, "tok", null, false)
+    private fun targetShare(
+        amount: String = "40.00",
+        status: PoolShareStatus = PoolShareStatus.PENDING,
+    ) = PoolShare(targetId, poolId, "Bob", null, BigDecimal(amount), status, null, "tok", null, false)
 
     private fun stubOwnership() {
         every { poolRepository.findById(poolId) } returns pool()

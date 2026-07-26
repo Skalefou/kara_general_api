@@ -21,8 +21,10 @@ private val SERVER_TOPIC = Regex("^/topic/servers/([^/]+)/(?:orders|emergency)$"
 class StompSubscribeAuthorizationInterceptor(
     private val chatRepository: ChatRepository,
 ) : ChannelInterceptor {
-
-    override fun preSend(message: Message<*>, channel: MessageChannel): Message<*> {
+    override fun preSend(
+        message: Message<*>,
+        channel: MessageChannel,
+    ): Message<*> {
         val accessor =
             MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
                 ?: return message
@@ -37,7 +39,10 @@ class StompSubscribeAuthorizationInterceptor(
         return message
     }
 
-    private fun isAllowed(authentication: Authentication, destination: String): Boolean {
+    private fun isAllowed(
+        authentication: Authentication,
+        destination: String,
+    ): Boolean {
         val currentUserId = parseUuid(authentication.name) ?: return false
 
         CONVERSATION_TOPIC.matchEntire(destination)?.let { match ->
@@ -53,8 +58,7 @@ class StompSubscribeAuthorizationInterceptor(
         return false
     }
 
-    private fun isAdmin(authentication: Authentication): Boolean =
-        authentication.authorities.any { it.authority == "ROLE_ADMIN" }
+    private fun isAdmin(authentication: Authentication): Boolean = authentication.authorities.any { it.authority == "ROLE_ADMIN" }
 
     private fun parseUuid(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()
 }

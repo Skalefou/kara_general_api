@@ -12,7 +12,6 @@ class ServiceRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: ServiceRowMapper,
 ) : ServiceRepository {
-
     override fun save(service: Service): Service {
         val sql =
             """

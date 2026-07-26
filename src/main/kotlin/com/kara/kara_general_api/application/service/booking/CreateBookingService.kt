@@ -23,7 +23,6 @@ class CreateBookingService(
     private val roomOptionRepository: RoomOptionRepository,
     private val bookingRepository: BookingRepository,
 ) : CreateBookingUseCase {
-
     @Transactional
     override fun createBooking(command: CreateBookingCommand): CreateBookingResult {
         val room = roomRepository.findById(command.roomId) ?: return CreateBookingResult.RoomNotFound

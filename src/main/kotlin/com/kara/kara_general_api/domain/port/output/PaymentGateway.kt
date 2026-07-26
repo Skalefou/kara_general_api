@@ -31,7 +31,11 @@ interface PaymentGateway {
     fun createEphemeralKey(customerId: String): String
 
     /** Crée un PaymentIntent rattaché au client Stripe et retourne son client secret + identifiant. */
-    fun createPaymentIntent(amount: BigDecimal, currency: Currency, customerId: String): PaymentIntentResult
+    fun createPaymentIntent(
+        amount: BigDecimal,
+        currency: Currency,
+        customerId: String,
+    ): PaymentIntentResult
 
     /**
      * Crée un PaymentIntent en **capture manuelle** (autorisation seule, aucun prélèvement) pour une part de
@@ -55,7 +59,10 @@ interface PaymentGateway {
     fun refundPaymentIntent(paymentIntentId: String)
 
     /** Vérifie la signature du webhook et décode l'événement. Retourne null si la signature est invalide. */
-    fun verifyAndParseWebhook(payload: String, signature: String): StripeWebhookEvent?
+    fun verifyAndParseWebhook(
+        payload: String,
+        signature: String,
+    ): StripeWebhookEvent?
 
     /** Clé publiable Stripe à transmettre au front pour initialiser le PaymentSheet. */
     fun publishableKey(): String

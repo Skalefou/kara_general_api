@@ -24,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class SetRoomStockServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val productRepository = mockk<ProductRepository>()
     private val roomStockRepository = mockk<RoomStockRepository>(relaxed = true)

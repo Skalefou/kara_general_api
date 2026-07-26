@@ -14,7 +14,10 @@ import java.util.UUID
 
 @Component
 class BookingExtensionRowMapper : RowMapper<BookingExtension> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): BookingExtension =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): BookingExtension =
         BookingExtension(
             id = BookingExtensionId(rs.getObject("id", UUID::class.java)),
             bookingId = BookingId(rs.getObject("booking_id", UUID::class.java)),

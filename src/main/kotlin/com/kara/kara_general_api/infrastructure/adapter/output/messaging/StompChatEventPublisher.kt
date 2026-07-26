@@ -22,8 +22,10 @@ class StompChatEventPublisher(
     private val messagingTemplate: SimpMessagingTemplate,
     private val imageStorage: ImageStoragePort,
 ) : ChatEventPublisher {
-
-    override fun publishMessage(conversationId: ConversationId, message: MessageView) {
+    override fun publishMessage(
+        conversationId: ConversationId,
+        message: MessageView,
+    ) {
         val dto = MessageDto.from(message) { key -> imageStorage.signedUrl(key, PHOTO_URL_TTL) }
         messagingTemplate.convertAndSend("/topic/conversations/${conversationId.value}", dto)
     }

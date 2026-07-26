@@ -41,9 +41,10 @@ data class UpdateRoomRequest(
     )
     val status: RoomStatus? = null,
     @field:Schema(
-        description = "Identifiants des services du catalogue global attachés à la salle. " +
-            "null = liaisons inchangées ; une liste (même vide) remplace l'ensemble des liaisons " +
-            "(liste vide = tout détacher).",
+        description =
+            "Identifiants des services du catalogue global attachés à la salle. " +
+                "null = liaisons inchangées ; une liste (même vide) remplace l'ensemble des liaisons " +
+                "(liste vide = tout détacher).",
     )
     val serviceIds: List<UUID>? = null,
 )

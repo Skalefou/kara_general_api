@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Profile
 class StripeConfig(
     @Value("\${kara.stripe.secret-key}") private val secretKey: String,
 ) {
-
     @PostConstruct
     fun init() {
         Stripe.apiKey = secretKey

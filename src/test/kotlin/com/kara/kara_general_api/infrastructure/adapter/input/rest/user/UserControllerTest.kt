@@ -54,7 +54,6 @@ private const val REQUEST_BODY = """{"password": "Azerty123"}"""
 @WebMvcTest(UserController::class)
 @Import(SecurityConfig::class)
 class UserControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -108,11 +107,12 @@ class UserControllerTest {
     fun `should return 204 when account is deleted`() {
         every { deleteAccountUseCase.deleteAccount(any()) } returns DeleteAccountResult.Success
 
-        mockMvc.perform(
-            delete("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                delete("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isNoContent)
     }
 
     @Test
@@ -120,12 +120,12 @@ class UserControllerTest {
     fun `should return 401 when password is incorrect`() {
         every { deleteAccountUseCase.deleteAccount(any()) } returns DeleteAccountResult.InvalidPassword
 
-        mockMvc.perform(
-            delete("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        )
-            .andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                delete("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("INVALID_PASSWORD"))
     }
 
@@ -134,22 +134,23 @@ class UserControllerTest {
     fun `should return 404 when user is not found`() {
         every { deleteAccountUseCase.deleteAccount(any()) } returns DeleteAccountResult.UserNotFound
 
-        mockMvc.perform(
-            delete("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        )
-            .andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                delete("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
     }
 
     @Test
     fun `should return 401 when not authenticated`() {
-        mockMvc.perform(
-            delete("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                delete("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isUnauthorized)
     }
 
     @Test
@@ -157,12 +158,12 @@ class UserControllerTest {
     fun `should return 200 when profile is updated`() {
         every { updateProfileUseCase.updateProfile(any()) } returns UpdateProfileResult.Success(user)
 
-        mockMvc.perform(
-            patch("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"firstName": "Janet"}"""),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                patch("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"firstName": "Janet"}"""),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.firstName").value("Jane"))
     }
 
@@ -171,12 +172,12 @@ class UserControllerTest {
     fun `should return 404 when profile update targets an unknown user`() {
         every { updateProfileUseCase.updateProfile(any()) } returns UpdateProfileResult.UserNotFound
 
-        mockMvc.perform(
-            patch("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"firstName": "Janet"}"""),
-        )
-            .andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                patch("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"firstName": "Janet"}"""),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
     }
 
@@ -185,32 +186,34 @@ class UserControllerTest {
     fun `should return 409 when the new email is already used`() {
         every { updateProfileUseCase.updateProfile(any()) } returns UpdateProfileResult.EmailAlreadyUsed
 
-        mockMvc.perform(
-            patch("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email": "taken@example.com"}"""),
-        )
-            .andExpect(status().isConflict)
+        mockMvc
+            .perform(
+                patch("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "taken@example.com"}"""),
+            ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"))
     }
 
     @Test
     @WithMockUser(username = USER_ID)
     fun `should return 400 when the phone number is invalid`() {
-        mockMvc.perform(
-            patch("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phoneNumber": "invalid"}"""),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                patch("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"phoneNumber": "invalid"}"""),
+            ).andExpect(status().isBadRequest)
     }
 
     @Test
     fun `should return 401 when updating profile unauthenticated`() {
-        mockMvc.perform(
-            patch("/api/v1/users/me")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"firstName": "Janet"}"""),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                patch("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"firstName": "Janet"}"""),
+            ).andExpect(status().isUnauthorized)
     }
 
     private val createServerRequestBody =
@@ -230,12 +233,12 @@ class UserControllerTest {
         every { createServerAccountUseCase.createServerAccount(any()) } returns
             CreateServerAccountResult.Success(user.copy(role = UserRole.SERVER))
 
-        mockMvc.perform(
-            post("/api/v1/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(createServerRequestBody),
-        )
-            .andExpect(status().isCreated)
+        mockMvc
+            .perform(
+                post("/api/v1/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(createServerRequestBody),
+            ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.role").value("SERVER"))
     }
 
@@ -244,23 +247,24 @@ class UserControllerTest {
     fun `should return 409 when creating a server account with a used email`() {
         every { createServerAccountUseCase.createServerAccount(any()) } returns CreateServerAccountResult.EmailAlreadyUsed
 
-        mockMvc.perform(
-            post("/api/v1/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(createServerRequestBody),
-        )
-            .andExpect(status().isConflict)
+        mockMvc
+            .perform(
+                post("/api/v1/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(createServerRequestBody),
+            ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"))
     }
 
     @Test
     @WithMockUser(username = USER_ID, roles = ["CLIENT"])
     fun `should return 403 when a non-admin creates a server account`() {
-        mockMvc.perform(
-            post("/api/v1/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(createServerRequestBody),
-        ).andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                post("/api/v1/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(createServerRequestBody),
+            ).andExpect(status().isForbidden)
     }
 
     @Test
@@ -269,7 +273,8 @@ class UserControllerTest {
         every { listAllAccountsUseCase.listAllAccounts(any()) } returns
             AccountPage(accounts = listOf(user), page = 0, size = 20, totalElements = 1)
 
-        mockMvc.perform(get("/api/v1/users"))
+        mockMvc
+            .perform(get("/api/v1/users"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.totalElements").value(1))
             .andExpect(jsonPath("$.users[0].email").value("jane.doe@example.com"))
@@ -290,7 +295,8 @@ class UserControllerTest {
             )
         every { imageStorage.signedUrl("profiles/x/full.webp", any()) } returns "https://signed.example/x"
 
-        mockMvc.perform(get("/api/v1/users"))
+        mockMvc
+            .perform(get("/api/v1/users"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.users[0].photoUrl").value("https://signed.example/x"))
     }
@@ -301,7 +307,8 @@ class UserControllerTest {
         every { listAllAccountsUseCase.listAllAccounts(any()) } returns
             AccountPage(accounts = listOf(user), page = 0, size = 20, totalElements = 1)
 
-        mockMvc.perform(get("/api/v1/users"))
+        mockMvc
+            .perform(get("/api/v1/users"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.users[0].photoUrl").isEmpty)
     }
@@ -311,11 +318,12 @@ class UserControllerTest {
     fun `should return 200 when an admin updates an account by id`() {
         every { updateProfileUseCase.updateProfile(any()) } returns UpdateProfileResult.Success(user)
 
-        mockMvc.perform(
-            patch("/api/v1/users/$USER_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"firstName": "Janet"}"""),
-        ).andExpect(status().isOk)
+        mockMvc
+            .perform(
+                patch("/api/v1/users/$USER_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"firstName": "Janet"}"""),
+            ).andExpect(status().isOk)
     }
 
     @Test
@@ -323,7 +331,8 @@ class UserControllerTest {
     fun `should return 204 when a server account is reinvited`() {
         every { reinviteServerAccountUseCase.reinvite(any()) } returns ReinviteServerAccountResult.Success
 
-        mockMvc.perform(post("/api/v1/users/$USER_ID/reinvite"))
+        mockMvc
+            .perform(post("/api/v1/users/$USER_ID/reinvite"))
             .andExpect(status().isNoContent)
     }
 
@@ -332,7 +341,8 @@ class UserControllerTest {
     fun `should return 409 when reinviting an account that is not a server`() {
         every { reinviteServerAccountUseCase.reinvite(any()) } returns ReinviteServerAccountResult.NotAServer
 
-        mockMvc.perform(post("/api/v1/users/$USER_ID/reinvite"))
+        mockMvc
+            .perform(post("/api/v1/users/$USER_ID/reinvite"))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("NOT_A_SERVER"))
     }
@@ -342,7 +352,8 @@ class UserControllerTest {
     fun `should return 204 when an account is deactivated`() {
         every { deactivateAccountUseCase.deactivate(any()) } returns DeactivateAccountResult.Success
 
-        mockMvc.perform(post("/api/v1/users/$USER_ID/deactivate"))
+        mockMvc
+            .perform(post("/api/v1/users/$USER_ID/deactivate"))
             .andExpect(status().isNoContent)
     }
 
@@ -351,7 +362,8 @@ class UserControllerTest {
     fun `should return 409 when deactivating an already deactivated account`() {
         every { deactivateAccountUseCase.deactivate(any()) } returns DeactivateAccountResult.AlreadyDeactivated
 
-        mockMvc.perform(post("/api/v1/users/$USER_ID/deactivate"))
+        mockMvc
+            .perform(post("/api/v1/users/$USER_ID/deactivate"))
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("ALREADY_DEACTIVATED"))
     }
@@ -370,7 +382,8 @@ class UserControllerTest {
         val imageId = UUID.randomUUID()
         every { updateProfilePhotoUseCase.updatePhoto(any()) } returns UpdateProfilePhotoResult.Accepted(imageId)
 
-        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
+        mockMvc
+            .perform(multipart("/api/v1/users/me/photo").file(photoFile()))
             .andExpect(status().isAccepted)
             .andExpect(jsonPath("$.imageId").value(imageId.toString()))
             .andExpect(jsonPath("$.status").value("PROCESSING"))
@@ -381,7 +394,8 @@ class UserControllerTest {
     fun `should return 415 when the profile photo type is not supported`() {
         every { updateProfilePhotoUseCase.updatePhoto(any()) } returns UpdateProfilePhotoResult.InvalidImageType
 
-        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile("text/plain")))
+        mockMvc
+            .perform(multipart("/api/v1/users/me/photo").file(photoFile("text/plain")))
             .andExpect(status().isUnsupportedMediaType)
             .andExpect(jsonPath("$.code").value("INVALID_IMAGE_TYPE"))
     }
@@ -391,14 +405,16 @@ class UserControllerTest {
     fun `should return 413 when the profile photo is too large`() {
         every { updateProfilePhotoUseCase.updatePhoto(any()) } returns UpdateProfilePhotoResult.ImageTooLarge
 
-        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
+        mockMvc
+            .perform(multipart("/api/v1/users/me/photo").file(photoFile()))
             .andExpect(status().isPayloadTooLarge)
             .andExpect(jsonPath("$.code").value("IMAGE_TOO_LARGE"))
     }
 
     @Test
     fun `should return 401 when uploading a profile photo unauthenticated`() {
-        mockMvc.perform(multipart("/api/v1/users/me/photo").file(photoFile()))
+        mockMvc
+            .perform(multipart("/api/v1/users/me/photo").file(photoFile()))
             .andExpect(status().isUnauthorized)
     }
 
@@ -412,7 +428,8 @@ class UserControllerTest {
                 fullUrl = "https://signed.example/full",
             )
 
-        mockMvc.perform(get("/api/v1/users/me/photo"))
+        mockMvc
+            .perform(get("/api/v1/users/me/photo"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("READY"))
             .andExpect(jsonPath("$.variants.thumbnail").value("https://signed.example/thumb"))
@@ -425,7 +442,8 @@ class UserControllerTest {
         every { getProfilePhotoUseCase.getPhotoUrl(any()) } returns
             GetProfilePhotoResult.Success(status = PhotoStatus.PROCESSING, thumbnailUrl = null, fullUrl = null)
 
-        mockMvc.perform(get("/api/v1/users/me/photo"))
+        mockMvc
+            .perform(get("/api/v1/users/me/photo"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("PROCESSING"))
             .andExpect(jsonPath("$.variants").isEmpty)
@@ -436,7 +454,8 @@ class UserControllerTest {
     fun `should return 404 when no profile photo is set`() {
         every { getProfilePhotoUseCase.getPhotoUrl(any()) } returns GetProfilePhotoResult.NoPhoto
 
-        mockMvc.perform(get("/api/v1/users/me/photo"))
+        mockMvc
+            .perform(get("/api/v1/users/me/photo"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("PROFILE_PHOTO_NOT_FOUND"))
     }
@@ -446,7 +465,8 @@ class UserControllerTest {
     fun `should return 204 when a profile photo is deleted`() {
         every { deleteProfilePhotoUseCase.deletePhoto(any()) } returns DeleteProfilePhotoResult.Success
 
-        mockMvc.perform(delete("/api/v1/users/me/photo"))
+        mockMvc
+            .perform(delete("/api/v1/users/me/photo"))
             .andExpect(status().isNoContent)
     }
 }

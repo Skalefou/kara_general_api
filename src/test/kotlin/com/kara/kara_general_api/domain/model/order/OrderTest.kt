@@ -12,7 +12,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class OrderTest {
-
     private fun order(
         quantity: Int = 2,
         unitPrice: BigDecimal = BigDecimal("2.50"),

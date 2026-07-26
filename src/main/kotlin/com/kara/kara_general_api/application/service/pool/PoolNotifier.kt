@@ -43,7 +43,10 @@ class PoolNotifier(
     }
 
     /** Cagnotte expirée : email à chaque participant identifié + push best-effort aux payeurs connus. */
-    fun notifyPoolCancelled(booking: Booking, shares: List<PoolShare>) {
+    fun notifyPoolCancelled(
+        booking: Booking,
+        shares: List<PoolShare>,
+    ) {
         val roomName = roomRepository.findById(booking.roomId)?.name ?: "votre réservation"
         shares.forEach { share ->
             share.email?.let { email ->

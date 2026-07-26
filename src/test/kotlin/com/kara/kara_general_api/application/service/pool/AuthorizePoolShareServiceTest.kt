@@ -33,7 +33,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class AuthorizePoolShareServiceTest {
-
     private val poolRepository = mockk<PoolRepository>()
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
@@ -44,8 +43,10 @@ class AuthorizePoolShareServiceTest {
     private val shareId = PoolShareId(UUID.randomUUID())
     private val payerId = UserId(UUID.randomUUID())
 
-    private fun pool(status: PoolStatus = PoolStatus.OPEN, deadline: Instant = Instant.now().plusSeconds(3600)) =
-        Pool(poolId, BookingId(UUID.randomUUID()), BigDecimal("100.00"), Currency.EUR, status, deadline, "g", Instant.now())
+    private fun pool(
+        status: PoolStatus = PoolStatus.OPEN,
+        deadline: Instant = Instant.now().plusSeconds(3600),
+    ) = Pool(poolId, BookingId(UUID.randomUUID()), BigDecimal("100.00"), Currency.EUR, status, deadline, "g", Instant.now())
 
     private fun share(status: PoolShareStatus = PoolShareStatus.PENDING) =
         PoolShare(shareId, poolId, "Alice", Email("a@b.com"), BigDecimal("50.00"), status, null, "tok", null, false)

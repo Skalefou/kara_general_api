@@ -9,7 +9,9 @@ data class DeleteAccountCommand(
 
 sealed interface DeleteAccountResult {
     data object Success : DeleteAccountResult
+
     data object UserNotFound : DeleteAccountResult
+
     data object InvalidPassword : DeleteAccountResult
 }
 

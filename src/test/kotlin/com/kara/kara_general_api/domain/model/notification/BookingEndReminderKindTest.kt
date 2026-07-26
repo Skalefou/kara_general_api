@@ -5,7 +5,6 @@ import java.time.Duration
 import kotlin.test.assertEquals
 
 class BookingEndReminderKindTest {
-
     @Test
     fun `TEN_MINUTES carries a 10 minute lead`() {
         assertEquals(Duration.ofMinutes(10), BookingEndReminderKind.TEN_MINUTES.lead)

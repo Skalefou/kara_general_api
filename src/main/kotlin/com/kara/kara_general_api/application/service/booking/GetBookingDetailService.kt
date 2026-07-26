@@ -18,9 +18,11 @@ class GetBookingDetailService(
     private val bookingRepository: BookingRepository,
     private val roomRepository: RoomRepository,
 ) : GetBookingDetailUseCase {
-
     @Transactional(readOnly = true)
-    override fun getDetail(bookingId: BookingId, requesterId: UserId): GetBookingDetailResult {
+    override fun getDetail(
+        bookingId: BookingId,
+        requesterId: UserId,
+    ): GetBookingDetailResult {
         val booking = bookingRepository.findById(bookingId) ?: return GetBookingDetailResult.NotFound
         if (booking.userId != requesterId) return GetBookingDetailResult.NotOwner
         val room = roomRepository.findById(booking.roomId)
@@ -41,6 +43,5 @@ class GetBookingDetailService(
         )
     }
 
-    private fun formatAddress(room: Room): String =
-        with(room.address) { "$street, $postalCode $city, $country" }
+    private fun formatAddress(room: Room): String = with(room.address) { "$street, $postalCode $city, $country" }
 }

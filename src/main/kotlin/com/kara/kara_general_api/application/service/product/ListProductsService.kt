@@ -9,6 +9,5 @@ import org.springframework.stereotype.Service as SpringService
 class ListProductsService(
     private val productRepository: ProductRepository,
 ) : ListProductsUseCase {
-
     override fun listProducts(): List<Product> = productRepository.findAll()
 }

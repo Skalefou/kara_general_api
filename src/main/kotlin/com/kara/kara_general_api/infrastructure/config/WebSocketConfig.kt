@@ -19,7 +19,6 @@ class WebSocketConfig(
     private val stompAuthChannelInterceptor: StompAuthChannelInterceptor,
     private val stompSubscribeAuthorizationInterceptor: StompSubscribeAuthorizationInterceptor,
 ) : WebSocketMessageBrokerConfigurer {
-
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*")
     }

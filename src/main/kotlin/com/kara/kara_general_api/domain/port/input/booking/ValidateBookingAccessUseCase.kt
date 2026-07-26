@@ -24,7 +24,10 @@ data class BookingAccessView(
 )
 
 sealed interface ValidateBookingAccessResult {
-    data class Granted(val view: BookingAccessView, val checkedInAt: Instant) : ValidateBookingAccessResult
+    data class Granted(
+        val view: BookingAccessView,
+        val checkedInAt: Instant,
+    ) : ValidateBookingAccessResult
 
     data class AlreadyCheckedIn(
         val view: BookingAccessView,
@@ -36,9 +39,13 @@ sealed interface ValidateBookingAccessResult {
 
     data object NotAssignedServer : ValidateBookingAccessResult
 
-    data class NotConfirmed(val view: BookingAccessView) : ValidateBookingAccessResult
+    data class NotConfirmed(
+        val view: BookingAccessView,
+    ) : ValidateBookingAccessResult
 
-    data class OutsideAdmissionWindow(val view: BookingAccessView) : ValidateBookingAccessResult
+    data class OutsideAdmissionWindow(
+        val view: BookingAccessView,
+    ) : ValidateBookingAccessResult
 
     data object RoomNotFound : ValidateBookingAccessResult
 }

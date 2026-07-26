@@ -11,7 +11,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class BookingTest {
-
     @Test
     fun `create sets a 15-minute payment window from createdAt`() {
         val booking =

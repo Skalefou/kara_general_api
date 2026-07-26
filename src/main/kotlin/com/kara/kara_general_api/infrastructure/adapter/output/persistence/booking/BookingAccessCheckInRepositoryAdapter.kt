@@ -15,7 +15,6 @@ import java.util.UUID
 class BookingAccessCheckInRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : BookingAccessCheckInRepository {
-
     override fun findByBookingId(bookingId: BookingId): BookingAccessCheckIn? {
         val sql =
             """
@@ -23,7 +22,8 @@ class BookingAccessCheckInRepositoryAdapter(
             FROM booking_access_check_ins
             WHERE booking_id = :bookingId
             """.trimIndent()
-        return jdbc.query(sql, mapOf("bookingId" to bookingId.value)) { rs, _ -> mapRow(rs) }
+        return jdbc
+            .query(sql, mapOf("bookingId" to bookingId.value)) { rs, _ -> mapRow(rs) }
             .firstOrNull()
     }
 
@@ -44,13 +44,15 @@ class BookingAccessCheckInRepositoryAdapter(
             DO UPDATE SET booking_id = booking_access_check_ins.booking_id
             RETURNING id, booking_id, server_id, checked_in_at
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            MapSqlParameterSource()
-                .addValue("id", checkIn.id.value)
-                .addValue("bookingId", checkIn.bookingId.value)
-                .addValue("serverId", checkIn.serverId.value)
-                .addValue("checkedInAt", java.sql.Timestamp.from(checkIn.checkedInAt)),
-        ) { rs, _ -> mapRow(rs) }.first()
+        return jdbc
+            .query(
+                sql,
+                MapSqlParameterSource()
+                    .addValue("id", checkIn.id.value)
+                    .addValue("bookingId", checkIn.bookingId.value)
+                    .addValue("serverId", checkIn.serverId.value)
+                    .addValue("checkedInAt", java.sql.Timestamp.from(checkIn.checkedInAt)),
+            ) { rs, _ -> mapRow(rs) }
+            .first()
     }
 }

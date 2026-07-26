@@ -17,7 +17,6 @@ private const val TOKEN_BYTE_LENGTH = 32
 class RedisRefreshTokenAdapter(
     private val redisTemplate: StringRedisTemplate,
 ) : RefreshTokenRepository {
-
     private val secureRandom = SecureRandom()
 
     override fun issue(userId: UserId): RefreshToken {

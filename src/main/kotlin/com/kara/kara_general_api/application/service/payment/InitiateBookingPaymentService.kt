@@ -26,7 +26,6 @@ class InitiateBookingPaymentService(
     private val paymentGateway: PaymentGateway,
     private val paymentRepository: PaymentRepository,
 ) : InitiateBookingPaymentUseCase {
-
     @Transactional
     override fun initiate(command: InitiateBookingPaymentCommand): InitiateBookingPaymentResult {
         val booking =

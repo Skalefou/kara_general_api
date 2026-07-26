@@ -29,7 +29,6 @@ import java.math.BigDecimal
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class RoomRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -117,7 +116,11 @@ class RoomRepositoryAdapterTest {
         assertEquals(50, found?.maxCapacity)
     }
 
-    private fun saveRoom(name: String, latitude: Double?, longitude: Double?): Room {
+    private fun saveRoom(
+        name: String,
+        latitude: Double?,
+        longitude: Double?,
+    ): Room {
         val base =
             Room.create(
                 name = name,

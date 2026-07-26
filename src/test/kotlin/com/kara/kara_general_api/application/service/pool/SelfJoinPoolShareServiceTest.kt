@@ -29,7 +29,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class SelfJoinPoolShareServiceTest {
-
     private val poolRepository = mockk<PoolRepository>(relaxed = true)
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
@@ -41,11 +40,15 @@ class SelfJoinPoolShareServiceTest {
     private val poolId = PoolId(UUID.randomUUID())
     private val bookingId = BookingId(UUID.randomUUID())
 
-    private fun pool(status: PoolStatus = PoolStatus.OPEN, deadline: Instant = Instant.now().plusSeconds(3600)) =
-        Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, status, deadline, token, Instant.now())
+    private fun pool(
+        status: PoolStatus = PoolStatus.OPEN,
+        deadline: Instant = Instant.now().plusSeconds(3600),
+    ) = Pool(poolId, bookingId, BigDecimal("100.00"), Currency.EUR, status, deadline, token, Instant.now())
 
-    private fun creatorShare(amount: String = "100.00", status: PoolShareStatus = PoolShareStatus.PENDING) =
-        PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Créateur", null, BigDecimal(amount), status, null, null, null, true)
+    private fun creatorShare(
+        amount: String = "100.00",
+        status: PoolShareStatus = PoolShareStatus.PENDING,
+    ) = PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Créateur", null, BigDecimal(amount), status, null, null, null, true)
 
     private fun user(): User {
         val u = mockk<User>(relaxed = true)
@@ -65,8 +68,7 @@ class SelfJoinPoolShareServiceTest {
             PaymentIntentResult("cs_1", "pi_1")
     }
 
-    private fun command(amount: String) =
-        SelfJoinPoolShareCommand(globalToken = token, callerId = callerId, amount = BigDecimal(amount))
+    private fun command(amount: String) = SelfJoinPoolShareCommand(globalToken = token, callerId = callerId, amount = BigDecimal(amount))
 
     @Test
     fun `happy path carves the remainder and authorizes the self-share`() {
@@ -88,8 +90,10 @@ class SelfJoinPoolShareServiceTest {
         verify {
             poolShareRepository.save(
                 match {
-                    !it.isCreatorShare && it.payerUserId == callerId &&
-                        it.stripePaymentIntentId == "pi_1" && it.amount.compareTo(BigDecimal("30.00")) == 0
+                    !it.isCreatorShare &&
+                        it.payerUserId == callerId &&
+                        it.stripePaymentIntentId == "pi_1" &&
+                        it.amount.compareTo(BigDecimal("30.00")) == 0
                 },
             )
         }
@@ -142,7 +146,18 @@ class SelfJoinPoolShareServiceTest {
     fun `returns AlreadyJoined when the caller already holds a share`() {
         val creator = creatorShare("100.00")
         val existing =
-            PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Jane", null, BigDecimal("20.00"), PoolShareStatus.PENDING, "pi_x", null, callerId, false)
+            PoolShare(
+                PoolShareId(UUID.randomUUID()),
+                poolId,
+                "Jane",
+                null,
+                BigDecimal("20.00"),
+                PoolShareStatus.PENDING,
+                "pi_x",
+                null,
+                callerId,
+                false,
+            )
         every { poolRepository.findByGlobalLinkToken(token) } returns pool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator, existing)

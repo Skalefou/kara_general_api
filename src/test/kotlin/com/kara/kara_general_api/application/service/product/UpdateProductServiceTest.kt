@@ -16,7 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class UpdateProductServiceTest {
-
     private val productRepository = mockk<ProductRepository>()
     private val sut = UpdateProductService(productRepository)
 

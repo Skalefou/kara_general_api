@@ -49,7 +49,6 @@ private const val MESSAGE_ID = "22222222-2222-2222-2222-222222222222"
 @WebMvcTest(ChatController::class)
 @Import(SecurityConfig::class)
 class ChatControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -107,12 +106,12 @@ class ChatControllerTest {
     fun `should return 201 with the created message`() {
         every { sendMessageUseCase.sendMessage(any()) } returns SendMessageResult.Success(sampleMessageView())
 
-        mockMvc.perform(
-            post("/api/v1/chat/conversations/$CONVERSATION_ID/messages")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"text": "Bonjour"}"""),
-        )
-            .andExpect(status().isCreated)
+        mockMvc
+            .perform(
+                post("/api/v1/chat/conversations/$CONVERSATION_ID/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"text": "Bonjour"}"""),
+            ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.id").value(MESSAGE_ID))
             .andExpect(jsonPath("$.text").value("Bonjour"))
             .andExpect(jsonPath("$.type").value("text"))
@@ -126,7 +125,8 @@ class ChatControllerTest {
     fun `should return 403 when the user is not a participant`() {
         every { getMessagesUseCase.getMessages(any()) } returns GetMessagesResult.NotParticipant
 
-        mockMvc.perform(get("/api/v1/chat/conversations/$CONVERSATION_ID/messages"))
+        mockMvc
+            .perform(get("/api/v1/chat/conversations/$CONVERSATION_ID/messages"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("NOT_A_PARTICIPANT"))
     }
@@ -134,11 +134,12 @@ class ChatControllerTest {
     @Test
     @WithMockUser(username = USER_ID)
     fun `should return 400 when the message text is blank`() {
-        mockMvc.perform(
-            post("/api/v1/chat/conversations/$CONVERSATION_ID/messages")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"text": "   "}"""),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/chat/conversations/$CONVERSATION_ID/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"text": "   "}"""),
+            ).andExpect(status().isBadRequest)
     }
 
     @Test
@@ -146,12 +147,12 @@ class ChatControllerTest {
     fun `should return 200 with the updated message after toggling a reaction`() {
         every { toggleReactionUseCase.toggleReaction(any()) } returns ToggleReactionResult.Success(sampleMessageView())
 
-        mockMvc.perform(
-            post("/api/v1/chat/conversations/$CONVERSATION_ID/messages/$MESSAGE_ID/reactions")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"emoji": "👍"}"""),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/chat/conversations/$CONVERSATION_ID/messages/$MESSAGE_ID/reactions")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"emoji": "👍"}"""),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.reactions[0].userName").value("Jane Doe"))
     }
 
@@ -160,7 +161,8 @@ class ChatControllerTest {
     fun `should return 204 when marking a message as read`() {
         every { markMessageReadUseCase.markRead(any()) } returns MarkMessageReadResult.Success
 
-        mockMvc.perform(post("/api/v1/chat/conversations/$CONVERSATION_ID/messages/$MESSAGE_ID/read"))
+        mockMvc
+            .perform(post("/api/v1/chat/conversations/$CONVERSATION_ID/messages/$MESSAGE_ID/read"))
             .andExpect(status().isNoContent)
     }
 
@@ -169,7 +171,8 @@ class ChatControllerTest {
     fun `should return 403 when a non-author deletes a message`() {
         every { deleteMessageUseCase.deleteMessage(any()) } returns DeleteMessageResult.NotAuthor
 
-        mockMvc.perform(delete("/api/v1/chat/conversations/$CONVERSATION_ID/messages/$MESSAGE_ID"))
+        mockMvc
+            .perform(delete("/api/v1/chat/conversations/$CONVERSATION_ID/messages/$MESSAGE_ID"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("NOT_MESSAGE_AUTHOR"))
     }
@@ -191,7 +194,8 @@ class ChatControllerTest {
                 ),
             )
 
-        mockMvc.perform(get("/api/v1/chat/conversations"))
+        mockMvc
+            .perform(get("/api/v1/chat/conversations"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].counterpartName").value("John Doe"))
             .andExpect(jsonPath("$[0].title").value("John Doe"))
@@ -216,12 +220,12 @@ class ChatControllerTest {
                 ),
             )
 
-        mockMvc.perform(
-            post("/api/v1/chat/conversations")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"participantIds": ["$USER_ID"]}"""),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/chat/conversations")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"participantIds": ["$USER_ID"]}"""),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.id").value(CONVERSATION_ID))
     }
 

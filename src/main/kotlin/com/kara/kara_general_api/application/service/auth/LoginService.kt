@@ -18,7 +18,6 @@ class LoginService(
     private val tokenService: TokenService,
     private val refreshTokenRepository: RefreshTokenRepository,
 ) : LoginUseCase {
-
     override fun login(command: LoginCommand): LoginResult {
         val user =
             when (val identifier = command.identifier) {

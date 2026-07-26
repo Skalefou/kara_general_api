@@ -16,7 +16,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class GetRoomServiceTest {
-
     private val roomRepository = mockk<RoomRepository>()
     private val roomOptionRepository = mockk<RoomOptionRepository>()
     private val sut = GetRoomService(roomRepository, roomOptionRepository)

@@ -19,18 +19,24 @@ data class CreateBookingCommand(
 )
 
 sealed interface CreateBookingResult {
-    data class Created(val booking: Booking) : CreateBookingResult
+    data class Created(
+        val booking: Booking,
+    ) : CreateBookingResult
 
     data object RoomNotFound : CreateBookingResult
 
     data object TooFewPeople : CreateBookingResult
 
-    data class CapacityExceeded(val maxCapacity: Int) : CreateBookingResult
+    data class CapacityExceeded(
+        val maxCapacity: Int,
+    ) : CreateBookingResult
 
     data object InvalidTimeSlot : CreateBookingResult
 
     /** Au moins un identifiant d'option ne correspond à aucune option de la salle. */
-    data class UnknownOptions(val optionIds: List<UUID>) : CreateBookingResult
+    data class UnknownOptions(
+        val optionIds: List<UUID>,
+    ) : CreateBookingResult
 
     /** Le créneau chevauche une réservation existante (PENDING ou CONFIRMED) sur la même salle. */
     data object SlotUnavailable : CreateBookingResult

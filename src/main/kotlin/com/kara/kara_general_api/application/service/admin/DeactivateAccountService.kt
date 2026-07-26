@@ -13,7 +13,6 @@ class DeactivateAccountService(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
 ) : DeactivateAccountUseCase {
-
     @Transactional
     override fun deactivate(command: DeactivateAccountCommand): DeactivateAccountResult {
         val user = userRepository.findById(command.userId) ?: return DeactivateAccountResult.UserNotFound

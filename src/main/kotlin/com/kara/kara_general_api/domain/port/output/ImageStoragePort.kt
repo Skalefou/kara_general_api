@@ -16,16 +16,30 @@ enum class ImageVisibility {
  */
 interface ImageStoragePort {
     /** Téléverse (écrase si présent) [bytes] sous la clé [key] dans le bucket correspondant à [visibility]. */
-    fun upload(visibility: ImageVisibility, key: String, bytes: ByteArray, contentType: String)
+    fun upload(
+        visibility: ImageVisibility,
+        key: String,
+        bytes: ByteArray,
+        contentType: String,
+    )
 
     /** Vrai si l'objet [key] existe déjà dans le bucket correspondant à [visibility]. */
-    fun exists(visibility: ImageVisibility, key: String): Boolean
+    fun exists(
+        visibility: ImageVisibility,
+        key: String,
+    ): Boolean
 
     /** Supprime l'objet [key] du bucket correspondant à [visibility] (no-op si absent). */
-    fun delete(visibility: ImageVisibility, key: String)
+    fun delete(
+        visibility: ImageVisibility,
+        key: String,
+    )
 
     /** URL signée V4 (lecture) valable [ttl] pour un objet du bucket privé. */
-    fun signedUrl(key: String, ttl: Duration): String
+    fun signedUrl(
+        key: String,
+        ttl: Duration,
+    ): String
 
     /** URL publique (CDN) d'un objet du bucket public. */
     fun publicUrl(key: String): String

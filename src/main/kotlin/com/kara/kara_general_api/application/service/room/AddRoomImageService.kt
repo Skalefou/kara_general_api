@@ -32,7 +32,6 @@ class AddRoomImageService(
     private val imageProcessing: ImageProcessingPort,
     private val correlationRepository: ImageJobCorrelationRepository,
 ) : AddRoomImageUseCase {
-
     @Transactional
     override fun addImage(command: AddRoomImageCommand): AddRoomImageResult {
         val contentType = command.contentType

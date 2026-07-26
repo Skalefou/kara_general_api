@@ -14,7 +14,9 @@ data class SendMessageCommand(
 )
 
 sealed interface SendMessageResult {
-    data class Success(val message: MessageView) : SendMessageResult
+    data class Success(
+        val message: MessageView,
+    ) : SendMessageResult
 
     data object ConversationNotFound : SendMessageResult
 

@@ -24,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class TriggerEmergencyServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val serverShiftRepository = mockk<ServerShiftRepository>()

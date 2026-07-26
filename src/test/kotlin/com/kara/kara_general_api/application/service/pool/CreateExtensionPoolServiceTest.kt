@@ -29,7 +29,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class CreateExtensionPoolServiceTest {
-
     private val bookingExtensionRepository = mockk<BookingExtensionRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
@@ -54,23 +53,26 @@ class CreateExtensionPoolServiceTest {
     private fun extension(
         status: BookingExtensionStatus = BookingExtensionStatus.PENDING,
         paymentMode: PaymentMode = PaymentMode.SHARED_POT,
-    ) = BookingExtension.create(
-        bookingId = bookingId,
-        userId = ownerId,
-        additionalMinutes = 60,
-        previousEndAt = Instant.now().plus(Duration.ofHours(1)),
-        price = BigDecimal("40.00"),
-        currency = Currency.EUR,
-        paymentMode = paymentMode,
-        now = Instant.now(),
-    ).copy(status = status)
+    ) = BookingExtension
+        .create(
+            bookingId = bookingId,
+            userId = ownerId,
+            additionalMinutes = 60,
+            previousEndAt = Instant.now().plus(Duration.ofHours(1)),
+            price = BigDecimal("40.00"),
+            currency = Currency.EUR,
+            paymentMode = paymentMode,
+            now = Instant.now(),
+        ).copy(status = status)
 
-    private fun command(shares: List<CreatePoolShareInput>, extensionId: BookingExtension) =
-        CreateExtensionPoolCommand(
-            extensionId = extensionId.id,
-            creatorId = ownerId,
-            shares = shares,
-        )
+    private fun command(
+        shares: List<CreatePoolShareInput>,
+        extensionId: BookingExtension,
+    ) = CreateExtensionPoolCommand(
+        extensionId = extensionId.id,
+        creatorId = ownerId,
+        shares = shares,
+    )
 
     @Test
     fun `should open a pool targeting the extension price and bound to the extension`() {

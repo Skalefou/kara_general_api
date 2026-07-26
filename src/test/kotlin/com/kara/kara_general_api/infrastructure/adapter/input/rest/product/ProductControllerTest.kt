@@ -36,7 +36,6 @@ private const val REQUEST_BODY =
 @WebMvcTest(ProductController::class)
 @Import(SecurityConfig::class)
 class ProductControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -66,11 +65,12 @@ class ProductControllerTest {
     fun `should return 201 when admin creates a product`() {
         every { createProductUseCase.createProduct(any()) } returns product
 
-        mockMvc.perform(
-            post("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        ).andExpect(status().isCreated)
+        mockMvc
+            .perform(
+                post("/api/v1/products")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.id").value(PRODUCT_ID))
             .andExpect(jsonPath("$.name").value("Coca-Cola 33cl"))
             .andExpect(jsonPath("$.price").value(2.50))
@@ -82,11 +82,12 @@ class ProductControllerTest {
     fun `should return 400 when the create body fails bean validation`() {
         val invalidBody = """{"name": "  ", "description": null, "price": -5, "currency": "EUR"}"""
 
-        mockMvc.perform(
-            post("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(invalidBody),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/products")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidBody),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         verify(exactly = 0) { createProductUseCase.createProduct(any()) }
@@ -95,20 +96,22 @@ class ProductControllerTest {
     @Test
     @WithMockUser(roles = ["CLIENT"])
     fun `should return 403 when non-admin creates a product`() {
-        mockMvc.perform(
-            post("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        ).andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                post("/api/v1/products")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isForbidden)
     }
 
     @Test
     fun `should return 401 when unauthenticated creates a product`() {
-        mockMvc.perform(
-            post("/api/v1/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(REQUEST_BODY),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/products")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(REQUEST_BODY),
+            ).andExpect(status().isUnauthorized)
     }
 
     @Test
@@ -116,7 +119,8 @@ class ProductControllerTest {
     fun `should return 200 with the catalog when admin lists products`() {
         every { listProductsUseCase.listProducts() } returns listOf(product)
 
-        mockMvc.perform(get("/api/v1/products"))
+        mockMvc
+            .perform(get("/api/v1/products"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].name").value("Coca-Cola 33cl"))
@@ -127,7 +131,8 @@ class ProductControllerTest {
     fun `should return 200 when a server lists products to stock a room`() {
         every { listProductsUseCase.listProducts() } returns listOf(product)
 
-        mockMvc.perform(get("/api/v1/products"))
+        mockMvc
+            .perform(get("/api/v1/products"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
     }
@@ -135,7 +140,8 @@ class ProductControllerTest {
     @Test
     @WithMockUser(roles = ["CLIENT"])
     fun `should return 403 when a client lists products`() {
-        mockMvc.perform(get("/api/v1/products"))
+        mockMvc
+            .perform(get("/api/v1/products"))
             .andExpect(status().isForbidden)
     }
 
@@ -145,22 +151,24 @@ class ProductControllerTest {
         every { updateProductUseCase.updateProduct(any()) } returns
             UpdateProductResult.Success(product.copy(name = "Coca-Cola Zero 33cl"))
 
-        mockMvc.perform(
-            patch("/api/v1/products/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"name": "Coca-Cola Zero 33cl"}"""),
-        ).andExpect(status().isOk)
+        mockMvc
+            .perform(
+                patch("/api/v1/products/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "Coca-Cola Zero 33cl"}"""),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Coca-Cola Zero 33cl"))
     }
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
     fun `should return 400 when the update body fails bean validation`() {
-        mockMvc.perform(
-            patch("/api/v1/products/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"price": -5}"""),
-        ).andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                patch("/api/v1/products/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"price": -5}"""),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
 
         verify(exactly = 0) { updateProductUseCase.updateProduct(any()) }
@@ -171,31 +179,34 @@ class ProductControllerTest {
     fun `should return 404 when admin updates an unknown product`() {
         every { updateProductUseCase.updateProduct(any()) } returns UpdateProductResult.NotFound
 
-        mockMvc.perform(
-            patch("/api/v1/products/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"name": "x"}"""),
-        ).andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                patch("/api/v1/products/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "x"}"""),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("PRODUCT_NOT_FOUND"))
     }
 
     @Test
     @WithMockUser(roles = ["CLIENT"])
     fun `should return 403 when non-admin updates a product`() {
-        mockMvc.perform(
-            patch("/api/v1/products/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"name": "x"}"""),
-        ).andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                patch("/api/v1/products/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "x"}"""),
+            ).andExpect(status().isForbidden)
     }
 
     @Test
     fun `should return 401 when unauthenticated updates a product`() {
-        mockMvc.perform(
-            patch("/api/v1/products/$PRODUCT_ID")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"name": "x"}"""),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                patch("/api/v1/products/$PRODUCT_ID")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "x"}"""),
+            ).andExpect(status().isUnauthorized)
     }
 
     @Test
@@ -204,7 +215,8 @@ class ProductControllerTest {
         every { deleteProductUseCase.deleteProduct(ProductId(UUID.fromString(PRODUCT_ID))) } returns
             DeleteProductResult.Success
 
-        mockMvc.perform(delete("/api/v1/products/$PRODUCT_ID"))
+        mockMvc
+            .perform(delete("/api/v1/products/$PRODUCT_ID"))
             .andExpect(status().isNoContent)
     }
 
@@ -214,7 +226,8 @@ class ProductControllerTest {
         every { deleteProductUseCase.deleteProduct(ProductId(UUID.fromString(PRODUCT_ID))) } returns
             DeleteProductResult.NotFound
 
-        mockMvc.perform(delete("/api/v1/products/$PRODUCT_ID"))
+        mockMvc
+            .perform(delete("/api/v1/products/$PRODUCT_ID"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("PRODUCT_NOT_FOUND"))
     }
@@ -222,7 +235,8 @@ class ProductControllerTest {
     @Test
     @WithMockUser(roles = ["CLIENT"])
     fun `should return 403 when non-admin deletes a product`() {
-        mockMvc.perform(delete("/api/v1/products/$PRODUCT_ID"))
+        mockMvc
+            .perform(delete("/api/v1/products/$PRODUCT_ID"))
             .andExpect(status().isForbidden)
     }
 }

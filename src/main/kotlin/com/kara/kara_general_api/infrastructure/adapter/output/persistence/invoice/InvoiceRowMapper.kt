@@ -18,7 +18,10 @@ import java.util.UUID
  */
 @Component
 class InvoiceRowMapper : RowMapper<Invoice> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): Invoice {
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): Invoice {
         val sourceType = rs.getString("source_type")
         val sourceId = rs.getObject("source_id", UUID::class.java)
         val (type, invoiceId) =

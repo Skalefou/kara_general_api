@@ -22,7 +22,6 @@ class GetPoolRecapService(
     private val bookingRepository: BookingRepository,
     private val roomRepository: RoomRepository,
 ) : GetPoolRecapUseCase {
-
     @Transactional(readOnly = true)
     override fun getByGlobalToken(globalToken: String): GetPoolRecapResult {
         val pool = poolRepository.findByGlobalLinkToken(globalToken) ?: return GetPoolRecapResult.NotFound
@@ -36,7 +35,10 @@ class GetPoolRecapService(
         return recap(pool, share = share)
     }
 
-    private fun recap(pool: Pool, share: PoolShare?): GetPoolRecapResult {
+    private fun recap(
+        pool: Pool,
+        share: PoolShare?,
+    ): GetPoolRecapResult {
         val booking = bookingRepository.findById(pool.bookingId) ?: return GetPoolRecapResult.NotFound
         val room = roomRepository.findById(booking.roomId)
         val shares = poolShareRepository.findByPoolId(pool.id)

@@ -30,7 +30,6 @@ class ValidateBookingAccessService(
     private val serverShiftRepository: ServerShiftRepository,
     private val bookingAccessCheckInRepository: BookingAccessCheckInRepository,
 ) : ValidateBookingAccessUseCase {
-
     @Transactional
     override fun validate(command: ValidateBookingAccessCommand): ValidateBookingAccessResult {
         val booking =
@@ -78,7 +77,10 @@ class ValidateBookingAccessService(
             checkedInByName = userRepository.findById(checkIn.serverId).displayName(UNKNOWN_SERVER),
         )
 
-    private fun viewOf(booking: Booking, room: Room): BookingAccessView =
+    private fun viewOf(
+        booking: Booking,
+        room: Room,
+    ): BookingAccessView =
         BookingAccessView(
             bookingId = booking.id.value,
             ticketCode = booking.ticketCode(),

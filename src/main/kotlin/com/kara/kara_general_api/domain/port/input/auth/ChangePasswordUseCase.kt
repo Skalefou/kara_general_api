@@ -15,7 +15,9 @@ sealed interface ChangePasswordResult {
 
     data object InvalidCurrentPassword : ChangePasswordResult
 
-    data class WeakPassword(val reasons: List<String>) : ChangePasswordResult
+    data class WeakPassword(
+        val reasons: List<String>,
+    ) : ChangePasswordResult
 }
 
 interface ChangePasswordUseCase {

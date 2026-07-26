@@ -27,7 +27,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class GetInvoiceDownloadServiceTest {
-
     private val invoiceRepository = mockk<InvoiceRepository>()
     private val pdfGenerator = mockk<InvoicePdfGenerator>(relaxed = true)
     private val objectStorage = mockk<ImageStoragePort>(relaxed = true)
@@ -39,8 +38,13 @@ class GetInvoiceDownloadServiceTest {
     private fun detail(owner: UserId = ownerId): InvoiceDetail {
         val invoice =
             Invoice(
-                InvoiceId.reservation(paymentId), InvoiceType.RESERVATION, "Salle Étoile",
-                BigDecimal("435.00"), Currency.EUR, Instant.parse("2026-07-10T10:00:00Z"), BookingId(UUID.randomUUID()),
+                InvoiceId.reservation(paymentId),
+                InvoiceType.RESERVATION,
+                "Salle Étoile",
+                BigDecimal("435.00"),
+                Currency.EUR,
+                Instant.parse("2026-07-10T10:00:00Z"),
+                BookingId(UUID.randomUUID()),
             )
         return InvoiceDetail(invoice, owner, InvoiceBuyer("Jane Doe", "jane@example.com"))
     }
@@ -79,13 +83,16 @@ class GetInvoiceDownloadServiceTest {
         every { pdfGenerator.generate(any(), any()) } returns byteArrayOf(1, 2, 3)
         every { objectStorage.signedUrl(any(), any()) } returns "https://signed/url"
 
-        val result = assertInstanceOf<GetInvoiceDownloadResult.Found>(
-            sut.getDownloadUrl(InvoiceId.reservation(paymentId), ownerId),
-        )
+        val result =
+            assertInstanceOf<GetInvoiceDownloadResult.Found>(
+                sut.getDownloadUrl(InvoiceId.reservation(paymentId), ownerId),
+            )
 
         assertEquals("https://signed/url", result.downloadUrl)
         verify(exactly = 1) { pdfGenerator.generate(any(), any()) }
-        verify(exactly = 1) { objectStorage.upload(ImageVisibility.PRIVATE, "invoices/PAY-${paymentId.value}.pdf", byteArrayOf(1, 2, 3), "application/pdf") }
+        verify(exactly = 1) {
+            objectStorage.upload(ImageVisibility.PRIVATE, "invoices/PAY-${paymentId.value}.pdf", byteArrayOf(1, 2, 3), "application/pdf")
+        }
     }
 
     @Test
@@ -94,9 +101,10 @@ class GetInvoiceDownloadServiceTest {
         every { objectStorage.exists(ImageVisibility.PRIVATE, any()) } returns true
         every { objectStorage.signedUrl(any(), any()) } returns "https://signed/existing"
 
-        val result = assertInstanceOf<GetInvoiceDownloadResult.Found>(
-            sut.getDownloadUrl(InvoiceId.reservation(paymentId), ownerId),
-        )
+        val result =
+            assertInstanceOf<GetInvoiceDownloadResult.Found>(
+                sut.getDownloadUrl(InvoiceId.reservation(paymentId), ownerId),
+            )
 
         assertEquals("https://signed/existing", result.downloadUrl)
         verify(exactly = 0) { pdfGenerator.generate(any(), any()) }

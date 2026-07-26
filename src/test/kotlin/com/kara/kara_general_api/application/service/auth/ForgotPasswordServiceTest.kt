@@ -21,7 +21,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ForgotPasswordServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val passwordResetCodeRepository = mockk<PasswordResetCodeRepository>(relaxed = true)
     private val emailService = mockk<EmailService>(relaxed = true)

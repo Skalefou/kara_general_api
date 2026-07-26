@@ -28,7 +28,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class BookingEndReminderRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -118,11 +117,12 @@ class BookingEndReminderRepositoryAdapterTest {
         adapter.markSent(bookingId, BookingEndReminderKind.TEN_MINUTES)
         adapter.markSent(bookingId, BookingEndReminderKind.TEN_MINUTES)
 
-        val count = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM booking_end_reminders WHERE booking_id = :id AND kind = :kind",
-            mapOf("id" to bookingId.value, "kind" to "TEN_MINUTES"),
-            Int::class.java,
-        )
+        val count =
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM booking_end_reminders WHERE booking_id = :id AND kind = :kind",
+                mapOf("id" to bookingId.value, "kind" to "TEN_MINUTES"),
+                Int::class.java,
+            )
         assertEquals(1, count)
     }
 
@@ -130,15 +130,19 @@ class BookingEndReminderRepositoryAdapterTest {
     fun `updateFcmToken persists the new device token`() {
         userRepositoryAdapter.updateFcmToken(userId, "fresh-token")
 
-        val stored = jdbc.queryForObject(
-            "SELECT fcm_token FROM users WHERE id = :id",
-            mapOf("id" to userId.value),
-            String::class.java,
-        )
+        val stored =
+            jdbc.queryForObject(
+                "SELECT fcm_token FROM users WHERE id = :id",
+                mapOf("id" to userId.value),
+                String::class.java,
+            )
         assertEquals("fresh-token", stored)
     }
 
-    private fun insertUser(id: UserId, fcmToken: String?) {
+    private fun insertUser(
+        id: UserId,
+        fcmToken: String?,
+    ) {
         val sql =
             """
             INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number,
@@ -169,7 +173,11 @@ class BookingEndReminderRepositoryAdapterTest {
         jdbc.update(sql, mapOf("id" to id.value))
     }
 
-    private fun insertBooking(id: BookingId, status: String, endAt: Instant) {
+    private fun insertBooking(
+        id: BookingId,
+        status: String,
+        endAt: Instant,
+    ) {
         val sql =
             """
             INSERT INTO bookings (id, room_id, user_id, start_at, end_at, number_of_people,

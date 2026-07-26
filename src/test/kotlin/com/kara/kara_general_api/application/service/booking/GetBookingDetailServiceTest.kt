@@ -26,7 +26,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class GetBookingDetailServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val sut = GetBookingDetailService(bookingRepository, roomRepository)

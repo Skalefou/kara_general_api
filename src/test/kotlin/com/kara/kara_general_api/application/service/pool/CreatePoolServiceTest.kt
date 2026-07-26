@@ -32,7 +32,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class CreatePoolServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val roomRepository = mockk<RoomRepository>()
     private val poolRepository = mockk<PoolRepository>(relaxed = true)
@@ -120,9 +119,14 @@ class CreatePoolServiceTest {
         every { bookingRepository.findById(bookingId) } returns booking()
         every { poolRepository.findByBookingId(bookingId) } returns mockk()
 
-        assertEquals(CreatePoolResult.PoolAlreadyExists, sut.create(command(
-            CreatePoolShareInput("Alice", null, BigDecimal("100.00"), isCreatorShare = true),
-        )))
+        assertEquals(
+            CreatePoolResult.PoolAlreadyExists,
+            sut.create(
+                command(
+                    CreatePoolShareInput("Alice", null, BigDecimal("100.00"), isCreatorShare = true),
+                ),
+            ),
+        )
     }
 
     @Test
@@ -130,10 +134,13 @@ class CreatePoolServiceTest {
         every { bookingRepository.findById(bookingId) } returns booking(total = BigDecimal("100.00"))
         every { poolRepository.findByBookingId(bookingId) } returns null
 
-        val result = sut.create(command(
-            CreatePoolShareInput("Alice", null, BigDecimal("40.00"), isCreatorShare = true),
-            CreatePoolShareInput("Bob", "bob@example.com", BigDecimal("50.00")),
-        ))
+        val result =
+            sut.create(
+                command(
+                    CreatePoolShareInput("Alice", null, BigDecimal("40.00"), isCreatorShare = true),
+                    CreatePoolShareInput("Bob", "bob@example.com", BigDecimal("50.00")),
+                ),
+            )
 
         val mismatch = assertIs<CreatePoolResult.SharesMismatch>(result)
         assertEquals(BigDecimal("100.00"), mismatch.expected)
@@ -145,9 +152,12 @@ class CreatePoolServiceTest {
         every { bookingRepository.findById(bookingId) } returns booking(startAt = Instant.now().plusSeconds(600))
         every { poolRepository.findByBookingId(bookingId) } returns null
 
-        val result = sut.create(command(
-            CreatePoolShareInput("Alice", null, BigDecimal("100.00"), isCreatorShare = true),
-        ))
+        val result =
+            sut.create(
+                command(
+                    CreatePoolShareInput("Alice", null, BigDecimal("100.00"), isCreatorShare = true),
+                ),
+            )
 
         assertEquals(CreatePoolResult.ReservationTooClose, result)
     }
@@ -159,10 +169,13 @@ class CreatePoolServiceTest {
         val savedShares = slot<List<PoolShare>>()
         every { poolShareRepository.saveAll(capture(savedShares)) } answers { firstArg() }
 
-        val result = sut.create(command(
-            CreatePoolShareInput("Alice (moi)", null, BigDecimal("60.00"), isCreatorShare = true),
-            CreatePoolShareInput("Bob", "bob@example.com", BigDecimal("40.00")),
-        ))
+        val result =
+            sut.create(
+                command(
+                    CreatePoolShareInput("Alice (moi)", null, BigDecimal("60.00"), isCreatorShare = true),
+                    CreatePoolShareInput("Bob", "bob@example.com", BigDecimal("40.00")),
+                ),
+            )
 
         val created = assertIs<CreatePoolResult.Created>(result)
         assertEquals(BigDecimal("100.00"), created.view.targetAmount)

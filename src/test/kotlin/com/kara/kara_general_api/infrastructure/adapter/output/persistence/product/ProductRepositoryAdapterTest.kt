@@ -29,7 +29,6 @@ import java.util.UUID
 @SpringBootTest(properties = ["spring.jpa.hibernate.ddl-auto=create-drop"])
 @ActiveProfiles("test")
 class ProductRepositoryAdapterTest {
-
     @MockkBean
     lateinit var firebaseAuth: FirebaseAuth
 
@@ -53,7 +52,10 @@ class ProductRepositoryAdapterTest {
         jdbc.update("DELETE FROM products", emptyMap<String, Any>())
     }
 
-    private fun product(name: String, price: String): Product =
+    private fun product(
+        name: String,
+        price: String,
+    ): Product =
         Product(
             id = ProductId(UUID.randomUUID()),
             name = name,

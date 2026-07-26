@@ -13,7 +13,11 @@ data class BookingAccessCheckIn(
     companion object {
         val EARLY_ARRIVAL_TOLERANCE: Duration = Duration.ofMinutes(30)
 
-        fun record(bookingId: BookingId, serverId: UserId, now: Instant): BookingAccessCheckIn =
+        fun record(
+            bookingId: BookingId,
+            serverId: UserId,
+            now: Instant,
+        ): BookingAccessCheckIn =
             BookingAccessCheckIn(
                 id = BookingAccessCheckInId.generate(),
                 bookingId = bookingId,
@@ -21,7 +25,10 @@ data class BookingAccessCheckIn(
                 checkedInAt = now,
             )
 
-        fun isWithinAdmissionWindow(booking: Booking, now: Instant): Boolean {
+        fun isWithinAdmissionWindow(
+            booking: Booking,
+            now: Instant,
+        ): Boolean {
             val admissionOpensAt = booking.startAt.minus(EARLY_ARRIVAL_TOLERANCE)
             return !now.isBefore(admissionOpensAt) && now.isBefore(booking.endAt)
         }

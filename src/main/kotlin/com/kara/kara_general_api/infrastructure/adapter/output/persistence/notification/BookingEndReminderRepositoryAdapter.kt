@@ -16,7 +16,6 @@ import java.util.UUID
 class BookingEndReminderRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : BookingEndReminderRepository {
-
     /**
      * Réservations CONFIRMED dont la fin tombe dans ]from, to] et sans rappel [kind] déjà enregistré
      * (NOT EXISTS). Jointure users → token FCM du client, jointure rooms → nom de la salle affiché.
@@ -59,7 +58,10 @@ class BookingEndReminderRepositoryAdapter(
         }
     }
 
-    override fun markSent(bookingId: BookingId, kind: BookingEndReminderKind) {
+    override fun markSent(
+        bookingId: BookingId,
+        kind: BookingEndReminderKind,
+    ) {
         val sql =
             """
             INSERT INTO booking_end_reminders (id, booking_id, kind, sent_at)

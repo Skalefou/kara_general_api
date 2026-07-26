@@ -13,22 +13,23 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TicketCodeTest {
-
-    private fun booking(id: BookingId, status: BookingStatus) =
-        Booking(
-            id = id,
-            roomId = RoomId(UUID.randomUUID()),
-            userId = UserId(UUID.randomUUID()),
-            startAt = Instant.now().plusSeconds(3600),
-            endAt = Instant.now().plusSeconds(7200),
-            numberOfPeople = 4,
-            selectedOptionIds = emptyList(),
-            totalPrice = BigDecimal("100.00"),
-            currency = Currency.EUR,
-            status = status,
-            createdAt = Instant.now(),
-            expiresAt = Instant.now().plusSeconds(900),
-        )
+    private fun booking(
+        id: BookingId,
+        status: BookingStatus,
+    ) = Booking(
+        id = id,
+        roomId = RoomId(UUID.randomUUID()),
+        userId = UserId(UUID.randomUUID()),
+        startAt = Instant.now().plusSeconds(3600),
+        endAt = Instant.now().plusSeconds(7200),
+        numberOfPeople = 4,
+        selectedOptionIds = emptyList(),
+        totalPrice = BigDecimal("100.00"),
+        currency = Currency.EUR,
+        status = status,
+        createdAt = Instant.now(),
+        expiresAt = Instant.now().plusSeconds(900),
+    )
 
     @Test
     fun `is deterministic for a given booking id`() {

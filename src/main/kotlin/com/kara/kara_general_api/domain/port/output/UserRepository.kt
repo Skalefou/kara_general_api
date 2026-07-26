@@ -20,7 +20,10 @@ interface UserRepository {
 
     fun findById(id: UserId): User?
 
-    fun findAll(page: Int, size: Int): List<User>
+    fun findAll(
+        page: Int,
+        size: Int,
+    ): List<User>
 
     fun count(): Long
 
@@ -30,10 +33,17 @@ interface UserRepository {
      * Enregistre l'original privé [originalKey] et bascule la photo en PROCESSING, en effaçant les clés de
      * variantes précédentes (une nouvelle photo invalide l'ancienne le temps du retraitement).
      */
-    fun markPhotoProcessing(id: UserId, originalKey: String)
+    fun markPhotoProcessing(
+        id: UserId,
+        originalKey: String,
+    )
 
     /** Marque la photo READY et enregistre les clés de variantes (idempotent : rejeu = écrasement). */
-    fun markPhotoReady(id: UserId, thumbnailKey: String, fullKey: String)
+    fun markPhotoReady(
+        id: UserId,
+        thumbnailKey: String,
+        fullKey: String,
+    )
 
     /** Marque la photo FAILED (traitement worker en échec). */
     fun markPhotoFailed(id: UserId)
@@ -44,14 +54,27 @@ interface UserRepository {
     fun anonymize(id: UserId)
 
     /** Applique un mot de passe définitif et lève le changement forcé (remet à zéro les champs temporaires). */
-    fun updatePassword(id: UserId, hashedPassword: HashedPassword)
+    fun updatePassword(
+        id: UserId,
+        hashedPassword: HashedPassword,
+    )
 
     /** Renouvelle l'invitation : nouveau mot de passe temporaire, changement forcé, nouvelle expiration. */
-    fun applyReinvitation(id: UserId, hashedPassword: HashedPassword, tempPasswordExpiresAt: Instant)
+    fun applyReinvitation(
+        id: UserId,
+        hashedPassword: HashedPassword,
+        tempPasswordExpiresAt: Instant,
+    )
 
     /** Enregistre l'identifiant client Stripe (créé paresseusement au premier paiement). Jamais logué. */
-    fun updateStripeCustomerId(id: UserId, stripeCustomerId: String)
+    fun updateStripeCustomerId(
+        id: UserId,
+        stripeCustomerId: String,
+    )
 
     /** Enregistre (ou remplace) le token d'appareil FCM utilisé pour les notifications push. */
-    fun updateFcmToken(id: UserId, token: String)
+    fun updateFcmToken(
+        id: UserId,
+        token: String,
+    )
 }

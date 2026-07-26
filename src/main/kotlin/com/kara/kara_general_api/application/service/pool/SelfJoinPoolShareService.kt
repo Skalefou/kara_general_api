@@ -30,11 +30,11 @@ class SelfJoinPoolShareService(
     private val userRepository: UserRepository,
     private val paymentGateway: PaymentGateway,
 ) : SelfJoinPoolShareUseCase {
-
     @Transactional
     override fun selfJoin(command: SelfJoinPoolShareCommand): SelfJoinPoolShareResult {
-        val pool = poolRepository.findByGlobalLinkToken(command.globalToken)
-            ?: return SelfJoinPoolShareResult.PoolNotFound
+        val pool =
+            poolRepository.findByGlobalLinkToken(command.globalToken)
+                ?: return SelfJoinPoolShareResult.PoolNotFound
         if (!pool.isOpen()) return SelfJoinPoolShareResult.PoolClosed
         if (pool.isExpired(Instant.now())) return SelfJoinPoolShareResult.PoolExpired
 
@@ -46,8 +46,9 @@ class SelfJoinPoolShareService(
         }
 
         // Verrou pessimiste AVANT lecture du montant : sérialise les auto-inscriptions concurrentes.
-        val creatorShare = poolShareRepository.findCreatorShareForUpdate(pool.id)
-            ?: return SelfJoinPoolShareResult.NoCreatorRemainder
+        val creatorShare =
+            poolShareRepository.findCreatorShareForUpdate(pool.id)
+                ?: return SelfJoinPoolShareResult.NoCreatorRemainder
         if (creatorShare.status != PoolShareStatus.PENDING) return SelfJoinPoolShareResult.RemainderLocked
         if (command.amount <= BigDecimal.ZERO) return SelfJoinPoolShareResult.InvalidAmount
         val remaining = creatorShare.amount - command.amount

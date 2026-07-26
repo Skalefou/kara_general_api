@@ -34,11 +34,20 @@ data class MessageDto(
     val reactions: List<ReactionDto>,
 ) {
     companion object {
-        fun from(view: MessageView, photoUrl: (String) -> String): MessageDto =
+        fun from(
+            view: MessageView,
+            photoUrl: (String) -> String,
+        ): MessageDto =
             MessageDto(
-                id = view.message.id.value.toString(),
-                conversationId = view.message.conversationId.value.toString(),
-                senderId = view.message.senderId.value.toString(),
+                id =
+                    view.message.id.value
+                        .toString(),
+                conversationId =
+                    view.message.conversationId.value
+                        .toString(),
+                senderId =
+                    view.message.senderId.value
+                        .toString(),
                 senderName = view.senderName,
                 senderPhotoUrl = view.senderPhotoKey?.let(photoUrl),
                 type = view.message.type,

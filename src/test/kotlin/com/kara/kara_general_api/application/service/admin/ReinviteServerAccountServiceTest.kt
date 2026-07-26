@@ -26,7 +26,6 @@ import kotlin.test.assertEquals
 private const val STAFF_PASSWORD = "Str0ng!P@sswordStr0ng!P@sswordXY"
 
 class ReinviteServerAccountServiceTest {
-
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>(relaxed = true)
     private val passwordHasher = mockk<PasswordHasher>()

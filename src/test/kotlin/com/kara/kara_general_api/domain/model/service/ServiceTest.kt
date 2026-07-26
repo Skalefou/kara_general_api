@@ -8,7 +8,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ServiceTest {
-
     private val id = ServiceId(UUID.randomUUID())
 
     @Test

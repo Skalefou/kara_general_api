@@ -23,30 +23,44 @@ class GcsImageStorageAdapter(
     @Value("\${GCS_BUCKET_PRIVATE}") private val privateBucket: String,
     @Value("\${GCS_CDN_BASE_URL}") private val cdnBaseUrl: String,
 ) : ImageStoragePort {
-
-    override fun upload(visibility: ImageVisibility, key: String, bytes: ByteArray, contentType: String) {
+    override fun upload(
+        visibility: ImageVisibility,
+        key: String,
+        bytes: ByteArray,
+        contentType: String,
+    ) {
         val blobInfo =
-            BlobInfo.newBuilder(BlobId.of(bucketFor(visibility), key))
+            BlobInfo
+                .newBuilder(BlobId.of(bucketFor(visibility), key))
                 .setContentType(contentType)
                 .build()
         storage.create(blobInfo, bytes)
     }
 
-    override fun exists(visibility: ImageVisibility, key: String): Boolean =
-        storage.get(BlobId.of(bucketFor(visibility), key)) != null
+    override fun exists(
+        visibility: ImageVisibility,
+        key: String,
+    ): Boolean = storage.get(BlobId.of(bucketFor(visibility), key)) != null
 
-    override fun delete(visibility: ImageVisibility, key: String) {
+    override fun delete(
+        visibility: ImageVisibility,
+        key: String,
+    ) {
         storage.delete(BlobId.of(bucketFor(visibility), key))
     }
 
-    override fun signedUrl(key: String, ttl: Duration): String {
+    override fun signedUrl(
+        key: String,
+        ttl: Duration,
+    ): String {
         val blobInfo = BlobInfo.newBuilder(BlobId.of(privateBucket, key)).build()
-        return storage.signUrl(
-            blobInfo,
-            ttl.toMinutes(),
-            TimeUnit.MINUTES,
-            Storage.SignUrlOption.withV4Signature(),
-        ).toString()
+        return storage
+            .signUrl(
+                blobInfo,
+                ttl.toMinutes(),
+                TimeUnit.MINUTES,
+                Storage.SignUrlOption.withV4Signature(),
+            ).toString()
     }
 
     override fun publicUrl(key: String): String = "${cdnBaseUrl.trimEnd('/')}/$key"

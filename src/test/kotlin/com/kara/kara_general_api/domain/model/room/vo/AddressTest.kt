@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
 
 class AddressTest {
-
     private fun validAddress(
         street: String = "12 rue de la Paix",
         city: String = "Paris",

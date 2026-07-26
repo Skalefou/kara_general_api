@@ -12,7 +12,6 @@ class ProductRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: ProductRowMapper,
 ) : ProductRepository {
-
     override fun save(product: Product): Product {
         val sql =
             """

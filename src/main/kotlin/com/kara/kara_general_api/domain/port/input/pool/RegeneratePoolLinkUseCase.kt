@@ -9,7 +9,9 @@ data class RegeneratePoolLinkCommand(
 )
 
 sealed interface RegeneratePoolLinkResult {
-    data class Regenerated(val globalLinkToken: String) : RegeneratePoolLinkResult
+    data class Regenerated(
+        val globalLinkToken: String,
+    ) : RegeneratePoolLinkResult
 
     data object PoolNotFound : RegeneratePoolLinkResult
 

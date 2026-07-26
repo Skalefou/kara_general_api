@@ -1,7 +1,9 @@
 package com.kara.kara_general_api.domain.model.user.vo
 
 @JvmInline
-value class PhoneNumber(val value: String) {
+value class PhoneNumber(
+    val value: String,
+) {
     init {
         require(PHONE_REGEX.matches(value)) { "Numéro de téléphone invalide" }
     }

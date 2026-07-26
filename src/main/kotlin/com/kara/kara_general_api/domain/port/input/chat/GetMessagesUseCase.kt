@@ -15,7 +15,9 @@ data class GetMessagesQuery(
 )
 
 sealed interface GetMessagesResult {
-    data class Success(val messages: List<MessageView>) : GetMessagesResult
+    data class Success(
+        val messages: List<MessageView>,
+    ) : GetMessagesResult
 
     data object ConversationNotFound : GetMessagesResult
 

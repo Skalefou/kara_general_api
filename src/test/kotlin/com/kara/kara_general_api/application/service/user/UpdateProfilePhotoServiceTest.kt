@@ -29,7 +29,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class UpdateProfilePhotoServiceTest {
-
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val imageStorage = mockk<ImageStoragePort>(relaxed = true)
     private val imageProcessing = mockk<ImageProcessingPort>(relaxed = true)

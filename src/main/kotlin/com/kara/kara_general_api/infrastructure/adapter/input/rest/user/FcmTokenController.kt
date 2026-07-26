@@ -14,7 +14,6 @@ import java.util.UUID
 class FcmTokenController(
     private val registerFcmTokenUseCase: RegisterFcmTokenUseCase,
 ) : FcmTokenApi {
-
     override fun registerFcmToken(
         request: RegisterFcmTokenRequest,
         authentication: Authentication,

@@ -26,7 +26,6 @@ class RemindPoolShareService(
     private val emailService: EmailService,
     private val notificationService: NotificationService,
 ) : RemindPoolShareUseCase {
-
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional

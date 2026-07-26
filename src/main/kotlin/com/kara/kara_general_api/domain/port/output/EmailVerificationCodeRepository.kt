@@ -4,7 +4,11 @@ import com.kara.kara_general_api.domain.model.user.vo.Email
 import java.time.Duration
 
 interface EmailVerificationCodeRepository {
-    fun save(email: Email, code: String, ttl: Duration)
+    fun save(
+        email: Email,
+        code: String,
+        ttl: Duration,
+    )
 
     fun find(email: Email): String?
 

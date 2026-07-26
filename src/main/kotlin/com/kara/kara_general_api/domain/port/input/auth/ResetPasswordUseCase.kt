@@ -10,10 +10,16 @@ data class ResetPasswordCommand(
 
 sealed interface ResetPasswordResult {
     data object Success : ResetPasswordResult
+
     data object UserNotFound : ResetPasswordResult
+
     data object CodeExpiredOrMissing : ResetPasswordResult
+
     data object InvalidCode : ResetPasswordResult
-    data class InvalidPassword(val reasons: List<String>) : ResetPasswordResult
+
+    data class InvalidPassword(
+        val reasons: List<String>,
+    ) : ResetPasswordResult
 }
 
 interface ResetPasswordUseCase {

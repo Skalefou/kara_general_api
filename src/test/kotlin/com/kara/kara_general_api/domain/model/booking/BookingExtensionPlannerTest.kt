@@ -18,7 +18,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BookingExtensionPlannerTest {
-
     private val endAt: Instant = Instant.parse("2026-07-24T20:00:00Z")
 
     private fun room(

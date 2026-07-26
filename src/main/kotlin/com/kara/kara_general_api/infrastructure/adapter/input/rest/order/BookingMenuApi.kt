@@ -17,11 +17,11 @@ import java.util.UUID
 
 @Tag(name = "Commandes", description = "Commande de produits pendant une réservation")
 interface BookingMenuApi {
-
     @Operation(
         summary = "Produits commandables d'une réservation",
-        description = "Liste les produits en stock (quantité > 0) de la salle de la réservation, que le client " +
-            "peut commander. Réservé au client propriétaire de la réservation.",
+        description =
+            "Liste les produits en stock (quantité > 0) de la salle de la réservation, que le client " +
+                "peut commander. Réservé au client propriétaire de la réservation.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

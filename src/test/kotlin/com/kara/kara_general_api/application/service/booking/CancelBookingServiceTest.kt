@@ -42,7 +42,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CancelBookingServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val poolRepository = mockk<PoolRepository>(relaxed = true)
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
@@ -93,13 +92,18 @@ class CancelBookingServiceTest {
         paymentMode = paymentMode,
     )
 
-    private fun command(requester: UserId = ownerId) =
-        CancelBookingCommand(bookingId = bookingId, requesterId = requester)
+    private fun command(requester: UserId = ownerId) = CancelBookingCommand(bookingId = bookingId, requesterId = requester)
 
     private fun openPool() =
         Pool(
-            PoolId(UUID.randomUUID()), bookingId, BigDecimal("100.00"), Currency.EUR,
-            PoolStatus.OPEN, Instant.now().plusSeconds(3600), "g", Instant.now(),
+            PoolId(UUID.randomUUID()),
+            bookingId,
+            BigDecimal("100.00"),
+            Currency.EUR,
+            PoolStatus.OPEN,
+            Instant.now().plusSeconds(3600),
+            "g",
+            Instant.now(),
         )
 
     @Test
@@ -155,8 +159,30 @@ class CancelBookingServiceTest {
         val pool = openPool()
         val shares =
             listOf(
-                PoolShare(PoolShareId(UUID.randomUUID()), pool.id, "A", null, BigDecimal("50.00"), PoolShareStatus.AUTHORIZED, "pi_a", null, null, false),
-                PoolShare(PoolShareId(UUID.randomUUID()), pool.id, "B", null, BigDecimal("50.00"), PoolShareStatus.PENDING, null, null, null, false),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    pool.id,
+                    "A",
+                    null,
+                    BigDecimal("50.00"),
+                    PoolShareStatus.AUTHORIZED,
+                    "pi_a",
+                    null,
+                    null,
+                    false,
+                ),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    pool.id,
+                    "B",
+                    null,
+                    BigDecimal("50.00"),
+                    PoolShareStatus.PENDING,
+                    null,
+                    null,
+                    null,
+                    false,
+                ),
             )
         every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.PENDING, PaymentMode.SHARED_POT)
         every { poolRepository.findByBookingId(bookingId) } returns pool
@@ -176,8 +202,14 @@ class CancelBookingServiceTest {
     fun `confirmed pay-all cancel fully refunds the captured payment`() {
         val payment =
             Payment(
-                PaymentId(UUID.randomUUID()), bookingId, ownerId, BigDecimal("100.00"),
-                Currency.EUR, PaymentStatus.PAID, "pi_pay", Instant.now(),
+                PaymentId(UUID.randomUUID()),
+                bookingId,
+                ownerId,
+                BigDecimal("100.00"),
+                Currency.EUR,
+                PaymentStatus.PAID,
+                "pi_pay",
+                Instant.now(),
             )
         every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED)
         every { poolRepository.findByBookingId(bookingId) } returns null
@@ -196,8 +228,30 @@ class CancelBookingServiceTest {
         val pool = openPool()
         val shares =
             listOf(
-                PoolShare(PoolShareId(UUID.randomUUID()), pool.id, "A", null, BigDecimal("50.00"), PoolShareStatus.CAPTURED, "pi_a", null, null, false),
-                PoolShare(PoolShareId(UUID.randomUUID()), pool.id, "B", null, BigDecimal("50.00"), PoolShareStatus.CAPTURED, "pi_b", null, null, false),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    pool.id,
+                    "A",
+                    null,
+                    BigDecimal("50.00"),
+                    PoolShareStatus.CAPTURED,
+                    "pi_a",
+                    null,
+                    null,
+                    false,
+                ),
+                PoolShare(
+                    PoolShareId(UUID.randomUUID()),
+                    pool.id,
+                    "B",
+                    null,
+                    BigDecimal("50.00"),
+                    PoolShareStatus.CAPTURED,
+                    "pi_b",
+                    null,
+                    null,
+                    false,
+                ),
             )
         every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED, PaymentMode.SHARED_POT)
         every { poolRepository.findByBookingId(bookingId) } returns pool

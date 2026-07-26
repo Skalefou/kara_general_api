@@ -21,7 +21,6 @@ import java.util.UUID
 class ChatRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
 ) : ChatRepository {
-
     private fun mapConversation(rs: ResultSet): Conversation =
         Conversation(
             id = ConversationId(rs.getObject("id", UUID::class.java)),
@@ -44,7 +43,10 @@ class ChatRepositoryAdapter(
             )
         }
 
-    override fun createConversation(conversation: Conversation, participantIds: Set<UserId>) {
+    override fun createConversation(
+        conversation: Conversation,
+        participantIds: Set<UserId>,
+    ) {
         jdbc.update(
             "INSERT INTO conversations (id, created_at, booking_id) VALUES (:id, :createdAt, :bookingId)",
             MapSqlParameterSource()
@@ -60,15 +62,19 @@ class ChatRepositoryAdapter(
         return jdbc.query(sql, mapOf("bookingId" to bookingId.value)) { rs, _ -> mapConversation(rs) }.firstOrNull()
     }
 
-    override fun addParticipants(conversationId: ConversationId, participantIds: Set<UserId>) {
+    override fun addParticipants(
+        conversationId: ConversationId,
+        participantIds: Set<UserId>,
+    ) {
         if (participantIds.isEmpty()) return
         val batch =
-            participantIds.map { userId ->
-                MapSqlParameterSource()
-                    .addValue("id", UUID.randomUUID())
-                    .addValue("conversationId", conversationId.value)
-                    .addValue("userId", userId.value)
-            }.toTypedArray()
+            participantIds
+                .map { userId ->
+                    MapSqlParameterSource()
+                        .addValue("id", UUID.randomUUID())
+                        .addValue("conversationId", conversationId.value)
+                        .addValue("userId", userId.value)
+                }.toTypedArray()
         jdbc.batchUpdate(
             """
             INSERT INTO conversation_participants (id, conversation_id, user_id, last_read_at, created_at)
@@ -139,12 +145,16 @@ class ChatRepositoryAdapter(
 
     override fun findParticipantIds(conversationId: ConversationId): Set<UserId> {
         val sql = "SELECT user_id FROM conversation_participants WHERE conversation_id = :id"
-        return jdbc.query(sql, mapOf("id" to conversationId.value)) { rs, _ ->
-            UserId(rs.getObject("user_id", UUID::class.java))
-        }.toSet()
+        return jdbc
+            .query(sql, mapOf("id" to conversationId.value)) { rs, _ ->
+                UserId(rs.getObject("user_id", UUID::class.java))
+            }.toSet()
     }
 
-    override fun isParticipant(conversationId: ConversationId, userId: UserId): Boolean {
+    override fun isParticipant(
+        conversationId: ConversationId,
+        userId: UserId,
+    ): Boolean {
         val sql =
             """
             SELECT COUNT(*) FROM conversation_participants
@@ -196,7 +206,11 @@ class ChatRepositoryAdapter(
     // Fenêtre par curseur : on prend les [limit] messages les plus récents antérieurs à :before
     // (ordre décroissant), puis on renvoie en ordre croissant attendu par le front. Le prédicat de
     // curseur n'est ajouté que si :before est fourni (évite un paramètre NULL non typable par PostgreSQL).
-    override fun findMessages(conversationId: ConversationId, limit: Int, before: Instant?): List<Message> {
+    override fun findMessages(
+        conversationId: ConversationId,
+        limit: Int,
+        before: Instant?,
+    ): List<Message> {
         val params =
             MapSqlParameterSource()
                 .addValue("conversationId", conversationId.value)
@@ -236,7 +250,11 @@ class ChatRepositoryAdapter(
         jdbc.update("DELETE FROM messages WHERE id = :id", mapOf("id" to id.value))
     }
 
-    override fun reactionExists(messageId: MessageId, userId: UserId, emoji: String): Boolean {
+    override fun reactionExists(
+        messageId: MessageId,
+        userId: UserId,
+        emoji: String,
+    ): Boolean {
         val sql =
             """
             SELECT COUNT(*) FROM message_reactions
@@ -268,7 +286,11 @@ class ChatRepositoryAdapter(
         )
     }
 
-    override fun removeReaction(messageId: MessageId, userId: UserId, emoji: String) {
+    override fun removeReaction(
+        messageId: MessageId,
+        userId: UserId,
+        emoji: String,
+    ) {
         val sql =
             """
             DELETE FROM message_reactions
@@ -298,7 +320,11 @@ class ChatRepositoryAdapter(
     }
 
     // Positionne last_read_at au plus tard entre la valeur actuelle et :at (jamais en arrière).
-    override fun markReadUpTo(conversationId: ConversationId, userId: UserId, at: Instant) {
+    override fun markReadUpTo(
+        conversationId: ConversationId,
+        userId: UserId,
+        at: Instant,
+    ) {
         val sql =
             """
             UPDATE conversation_participants
@@ -323,12 +349,17 @@ class ChatRepositoryAdapter(
             FROM conversation_participants
             WHERE conversation_id = :conversationId
             """.trimIndent()
-        return jdbc.query(sql, mapOf("conversationId" to conversationId.value)) { rs, _ ->
-            UserId(rs.getObject("user_id", UUID::class.java)) to rs.getTimestamp("last_read_at")?.toInstant()
-        }.toMap()
+        return jdbc
+            .query(sql, mapOf("conversationId" to conversationId.value)) { rs, _ ->
+                UserId(rs.getObject("user_id", UUID::class.java)) to rs.getTimestamp("last_read_at")?.toInstant()
+            }.toMap()
     }
 
-    override fun countUnread(conversationId: ConversationId, userId: UserId, since: Instant?): Int {
+    override fun countUnread(
+        conversationId: ConversationId,
+        userId: UserId,
+        since: Instant?,
+    ): Int {
         val params =
             MapSqlParameterSource()
                 .addValue("conversationId", conversationId.value)

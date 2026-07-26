@@ -22,7 +22,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ListRoomsServiceTest {
-
     private val maxResults = 200
     private val gridSize = 8
     private val roomRepository = mockk<RoomRepository>()

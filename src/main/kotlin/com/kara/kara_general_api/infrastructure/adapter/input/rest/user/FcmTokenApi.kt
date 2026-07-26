@@ -17,11 +17,11 @@ import org.springframework.web.bind.annotation.RequestBody
 
 @Tag(name = "Notifications", description = "Enregistrement des tokens d'appareil pour les notifications push")
 interface FcmTokenApi {
-
     @Operation(
         summary = "Enregistrer son token FCM",
-        description = "Enregistre (ou remplace) le token d'appareil FCM du client authentifié, utilisé pour " +
-            "lui adresser des notifications push (rappels de fin de réservation notamment).",
+        description =
+            "Enregistre (ou remplace) le token d'appareil FCM du client authentifié, utilisé pour " +
+                "lui adresser des notifications push (rappels de fin de réservation notamment).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

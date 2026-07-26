@@ -14,17 +14,18 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class InvoiceTest {
-
-    private fun invoice(id: InvoiceId, issuedAt: Instant) =
-        Invoice(
-            id = id,
-            type = InvoiceType.RESERVATION,
-            label = "Salle Étoile",
-            amount = BigDecimal("435.00"),
-            currency = Currency.EUR,
-            issuedAt = issuedAt,
-            bookingId = BookingId(UUID.randomUUID()),
-        )
+    private fun invoice(
+        id: InvoiceId,
+        issuedAt: Instant,
+    ) = Invoice(
+        id = id,
+        type = InvoiceType.RESERVATION,
+        label = "Salle Étoile",
+        amount = BigDecimal("435.00"),
+        currency = Currency.EUR,
+        issuedAt = issuedAt,
+        bookingId = BookingId(UUID.randomUUID()),
+    )
 
     @Test
     fun `invoice number is deterministic for a given source and year`() {

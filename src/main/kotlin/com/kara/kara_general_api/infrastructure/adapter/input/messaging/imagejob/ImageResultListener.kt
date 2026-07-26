@@ -22,7 +22,6 @@ import java.util.UUID
 class ImageResultListener(
     private val applyImageResultUseCase: ApplyImageResultUseCase,
 ) {
-
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @RabbitListener(queues = [RabbitConfig.RESULTS_QUEUE])

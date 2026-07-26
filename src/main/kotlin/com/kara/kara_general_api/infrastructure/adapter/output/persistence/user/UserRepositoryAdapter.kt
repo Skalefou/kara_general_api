@@ -24,7 +24,6 @@ class UserRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: UserRowMapper,
 ) : UserRepository {
-
     override fun existsByEmail(email: Email): Boolean {
         val sql = "SELECT COUNT(*) FROM users WHERE email = :email"
         val count = jdbc.queryForObject(sql, mapOf("email" to email.value), Int::class.java) ?: 0
@@ -126,7 +125,10 @@ class UserRepositoryAdapter(
         return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
     }
 
-    override fun findAll(page: Int, size: Int): List<User> {
+    override fun findAll(
+        page: Int,
+        size: Int,
+    ): List<User> {
         val sql =
             """
             SELECT $USER_COLUMNS
@@ -152,7 +154,10 @@ class UserRepositoryAdapter(
         jdbc.update(sql, mapOf("id" to id.value))
     }
 
-    override fun markPhotoProcessing(id: UserId, originalKey: String) {
+    override fun markPhotoProcessing(
+        id: UserId,
+        originalKey: String,
+    ) {
         // Nouvelle photo : on efface les variantes de l'ancienne le temps du retraitement asynchrone.
         val sql =
             """
@@ -171,7 +176,11 @@ class UserRepositoryAdapter(
         )
     }
 
-    override fun markPhotoReady(id: UserId, thumbnailKey: String, fullKey: String) {
+    override fun markPhotoReady(
+        id: UserId,
+        thumbnailKey: String,
+        fullKey: String,
+    ) {
         val sql =
             """
             UPDATE users SET
@@ -207,7 +216,10 @@ class UserRepositoryAdapter(
         jdbc.update(sql, mapOf("id" to id.value))
     }
 
-    override fun updatePassword(id: UserId, hashedPassword: HashedPassword) {
+    override fun updatePassword(
+        id: UserId,
+        hashedPassword: HashedPassword,
+    ) {
         val sql =
             """
             UPDATE users SET
@@ -219,7 +231,11 @@ class UserRepositoryAdapter(
         jdbc.update(sql, mapOf("id" to id.value, "passwordHash" to hashedPassword.value))
     }
 
-    override fun applyReinvitation(id: UserId, hashedPassword: HashedPassword, tempPasswordExpiresAt: Instant) {
+    override fun applyReinvitation(
+        id: UserId,
+        hashedPassword: HashedPassword,
+        tempPasswordExpiresAt: Instant,
+    ) {
         val sql =
             """
             UPDATE users SET
@@ -238,7 +254,10 @@ class UserRepositoryAdapter(
         )
     }
 
-    override fun updateStripeCustomerId(id: UserId, stripeCustomerId: String) {
+    override fun updateStripeCustomerId(
+        id: UserId,
+        stripeCustomerId: String,
+    ) {
         // Donnée sensible : jamais loguée (cf. règles SQL du CLAUDE.md).
         val sql = "UPDATE users SET stripe_customer_id = :stripeCustomerId WHERE id = :id AND deleted_at IS NULL"
         jdbc.update(
@@ -249,7 +268,10 @@ class UserRepositoryAdapter(
         )
     }
 
-    override fun updateFcmToken(id: UserId, token: String) {
+    override fun updateFcmToken(
+        id: UserId,
+        token: String,
+    ) {
         val sql = "UPDATE users SET fcm_token = :token WHERE id = :id AND deleted_at IS NULL"
         jdbc.update(
             sql,

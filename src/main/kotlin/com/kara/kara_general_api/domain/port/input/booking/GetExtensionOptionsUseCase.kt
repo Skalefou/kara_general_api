@@ -27,7 +27,9 @@ data class ExtensionOptions(
 )
 
 sealed interface GetExtensionOptionsResult {
-    data class Success(val options: ExtensionOptions) : GetExtensionOptionsResult
+    data class Success(
+        val options: ExtensionOptions,
+    ) : GetExtensionOptionsResult
 
     data object BookingNotFound : GetExtensionOptionsResult
 

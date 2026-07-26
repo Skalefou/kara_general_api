@@ -4,13 +4,24 @@ import com.kara.kara_general_api.domain.model.user.vo.Email
 import java.time.Instant
 
 interface EmailService {
-    fun sendVerificationCode(email: Email, code: String)
+    fun sendVerificationCode(
+        email: Email,
+        code: String,
+    )
 
     fun sendAccountDeletionConfirmation(email: Email)
 
-    fun sendPasswordResetCode(email: Email, code: String)
+    fun sendPasswordResetCode(
+        email: Email,
+        code: String,
+    )
 
-    fun sendServerInvitation(email: Email, firstName: String, temporaryPassword: String, expiresAt: Instant)
+    fun sendServerInvitation(
+        email: Email,
+        firstName: String,
+        temporaryPassword: String,
+        expiresAt: Instant,
+    )
 
     /**
      * Invite un participant à payer sa part de cagnotte via son lien unique. Rappelle que la carte n'est
@@ -25,14 +36,27 @@ interface EmailService {
     )
 
     /** Confirme au créateur que la cagnotte est complète : réservation confirmée, tous les paiements capturés. */
-    fun sendPoolConfirmation(email: Email, roomName: String, startAt: Instant)
+    fun sendPoolConfirmation(
+        email: Email,
+        roomName: String,
+        startAt: Instant,
+    )
 
     /** Informe un participant que la cagnotte a été annulée (délai échu) : aucun prélèvement effectué. */
-    fun sendPoolCancelled(email: Email, participantName: String, roomName: String)
+    fun sendPoolCancelled(
+        email: Email,
+        participantName: String,
+        roomName: String,
+    )
 
     /**
      * Confirme au client l'annulation de sa réservation (mode « payer tout »). [refunded] indique si un
      * remboursement a été émis (réservation qui était confirmée) ou non (réservation encore en attente).
      */
-    fun sendBookingCancelled(email: Email, roomName: String, startAt: Instant, refunded: Boolean)
+    fun sendBookingCancelled(
+        email: Email,
+        roomName: String,
+        startAt: Instant,
+        refunded: Boolean,
+    )
 }

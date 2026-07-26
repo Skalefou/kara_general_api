@@ -19,12 +19,12 @@ import java.util.UUID
 
 @Tag(name = "Paiements", description = "Paiement « payer tout » via Stripe (PaymentSheet) et webhook Stripe")
 interface PaymentApi {
-
     @Operation(
         summary = "Initier le paiement d'une réservation",
-        description = "Crée (paresseusement) le client Stripe, une clé éphémère et un PaymentIntent pour le montant " +
-            "total de la réservation, puis retourne les secrets nécessaires au PaymentSheet. Le paiement n'est " +
-            "confirmé que par le webhook Stripe.",
+        description =
+            "Crée (paresseusement) le client Stripe, une clé éphémère et un PaymentIntent pour le montant " +
+                "total de la réservation, puis retourne les secrets nécessaires au PaymentSheet. Le paiement n'est " +
+                "confirmé que par le webhook Stripe.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -46,8 +46,9 @@ interface PaymentApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "La réservation n'est plus en attente de paiement (PAYMENT_ALREADY_PAID) " +
-                    "ou son délai de paiement de 15 min est écoulé (BOOKING_EXPIRED)",
+                description =
+                    "La réservation n'est plus en attente de paiement (PAYMENT_ALREADY_PAID) " +
+                        "ou son délai de paiement de 15 min est écoulé (BOOKING_EXPIRED)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],
@@ -60,9 +61,10 @@ interface PaymentApi {
 
     @Operation(
         summary = "Webhook Stripe",
-        description = "Point de terminaison appelé par Stripe. La signature est vérifiée avec STRIPE_WEBHOOK_SECRET. " +
-            "Sur payment_intent.succeeded, le paiement passe PAID et la réservation CONFIRMED. Retourne 200 pour tout " +
-            "événement traité ou ignoré, 400 si la signature est invalide.",
+        description =
+            "Point de terminaison appelé par Stripe. La signature est vérifiée avec STRIPE_WEBHOOK_SECRET. " +
+                "Sur payment_intent.succeeded, le paiement passe PAID et la réservation CONFIRMED. Retourne 200 pour tout " +
+                "événement traité ou ignoré, 400 si la signature est invalide.",
     )
     @ApiResponses(
         value = [

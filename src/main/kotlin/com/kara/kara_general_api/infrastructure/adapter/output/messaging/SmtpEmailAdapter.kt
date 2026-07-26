@@ -16,8 +16,10 @@ class SmtpEmailAdapter(
     private val mailSender: JavaMailSender,
     @Value("\${MAIL_FROM}") private val fromEmail: String,
 ) : EmailService {
-
-    override fun sendVerificationCode(email: Email, code: String) {
+    override fun sendVerificationCode(
+        email: Email,
+        code: String,
+    ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, false, "UTF-8")
         helper.setFrom(fromEmail)
@@ -40,7 +42,10 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
-    override fun sendPasswordResetCode(email: Email, code: String) {
+    override fun sendPasswordResetCode(
+        email: Email,
+        code: String,
+    ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, false, "UTF-8")
         helper.setFrom(fromEmail)
@@ -54,7 +59,12 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
-    override fun sendServerInvitation(email: Email, firstName: String, temporaryPassword: String, expiresAt: Instant) {
+    override fun sendServerInvitation(
+        email: Email,
+        firstName: String,
+        temporaryPassword: String,
+        expiresAt: Instant,
+    ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, false, "UTF-8")
         helper.setFrom(fromEmail)
@@ -96,7 +106,11 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
-    override fun sendPoolConfirmation(email: Email, roomName: String, startAt: Instant) {
+    override fun sendPoolConfirmation(
+        email: Email,
+        roomName: String,
+        startAt: Instant,
+    ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, false, "UTF-8")
         helper.setFrom(fromEmail)
@@ -111,7 +125,11 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
-    override fun sendPoolCancelled(email: Email, participantName: String, roomName: String) {
+    override fun sendPoolCancelled(
+        email: Email,
+        participantName: String,
+        roomName: String,
+    ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, false, "UTF-8")
         helper.setFrom(fromEmail)
@@ -127,7 +145,12 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
-    override fun sendBookingCancelled(email: Email, roomName: String, startAt: Instant, refunded: Boolean) {
+    override fun sendBookingCancelled(
+        email: Email,
+        roomName: String,
+        startAt: Instant,
+        refunded: Boolean,
+    ) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, false, "UTF-8")
         helper.setFrom(fromEmail)
@@ -150,7 +173,8 @@ class SmtpEmailAdapter(
 
     private companion object {
         val INVITATION_DATE_FORMATTER: DateTimeFormatter =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH'h'mm", Locale.FRANCE)
+            DateTimeFormatter
+                .ofPattern("dd/MM/yyyy 'à' HH'h'mm", Locale.FRANCE)
                 .withZone(ZoneId.of("Europe/Paris"))
     }
 }

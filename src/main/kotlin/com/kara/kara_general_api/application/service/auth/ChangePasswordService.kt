@@ -17,7 +17,6 @@ class ChangePasswordService(
     private val passwordHasher: PasswordHasher,
     private val firebaseAuthGateway: FirebaseAuthGateway,
 ) : ChangePasswordUseCase {
-
     @Transactional
     override fun changePassword(command: ChangePasswordCommand): ChangePasswordResult {
         val user = userRepository.findById(command.userId) ?: return ChangePasswordResult.UserNotFound

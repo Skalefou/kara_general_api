@@ -16,7 +16,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RedisRefreshTokenAdapterTest {
-
     private val redisTemplate = mockk<StringRedisTemplate>(relaxed = true)
     private val valueOperations = mockk<ValueOperations<String, String>>()
     private val setOperations = mockk<SetOperations<String, String>>(relaxed = true)

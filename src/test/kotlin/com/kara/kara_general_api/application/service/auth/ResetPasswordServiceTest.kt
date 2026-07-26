@@ -25,7 +25,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 class ResetPasswordServiceTest {
-
     private val userRepository = mockk<UserRepository>()
     private val passwordResetCodeRepository = mockk<PasswordResetCodeRepository>(relaxed = true)
     private val passwordHasher = mockk<PasswordHasher>()

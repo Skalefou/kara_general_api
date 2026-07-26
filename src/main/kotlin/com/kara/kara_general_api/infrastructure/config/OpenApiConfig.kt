@@ -11,7 +11,6 @@ private const val BEARER_AUTH_SCHEME = "bearerAuth"
 
 @Configuration
 class OpenApiConfig {
-
     @Bean
     fun karaOpenAPI(): OpenAPI =
         OpenAPI()
@@ -20,8 +19,7 @@ class OpenApiConfig {
                     .title("Kara API")
                     .description("Documentation de l'API Kara (authentification, gestion des utilisateurs).")
                     .version("0.0.1-SNAPSHOT"),
-            )
-            .components(
+            ).components(
                 Components().addSecuritySchemes(
                     BEARER_AUTH_SCHEME,
                     SecurityScheme()

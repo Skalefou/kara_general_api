@@ -7,5 +7,8 @@ import com.kara.kara_general_api.domain.model.user.UserId
  * push.
  */
 interface RegisterFcmTokenUseCase {
-    fun registerFcmToken(userId: UserId, token: String)
+    fun registerFcmToken(
+        userId: UserId,
+        token: String,
+    )
 }

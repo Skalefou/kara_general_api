@@ -17,15 +17,18 @@ class TestController(
     private val emailVerificationCodeRepository: EmailVerificationCodeRepository,
     private val passwordResetCodeRepository: PasswordResetCodeRepository,
 ) {
-
     @GetMapping("/auth/verification-code")
-    fun getVerificationCode(@RequestParam email: String): ResponseEntity<Map<String, String?>> {
+    fun getVerificationCode(
+        @RequestParam email: String,
+    ): ResponseEntity<Map<String, String?>> {
         val code = emailVerificationCodeRepository.find(Email(email))
         return ResponseEntity.ok(mapOf("code" to code))
     }
 
     @GetMapping("/auth/reset-code")
-    fun getPasswordResetCode(@RequestParam email: String): ResponseEntity<Map<String, String?>> {
+    fun getPasswordResetCode(
+        @RequestParam email: String,
+    ): ResponseEntity<Map<String, String?>> {
         val code = passwordResetCodeRepository.find(Email(email))
         return ResponseEntity.ok(mapOf("code" to code))
     }

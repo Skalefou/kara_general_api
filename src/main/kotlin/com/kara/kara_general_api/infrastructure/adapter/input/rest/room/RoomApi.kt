@@ -30,7 +30,6 @@ import java.util.UUID
 
 @Tag(name = "Salles", description = "Gestion des salles")
 interface RoomApi {
-
     @Operation(
         summary = "Créer une salle",
         description = "Réservé aux administrateurs.",
@@ -45,8 +44,9 @@ interface RoomApi {
             ),
             ApiResponse(
                 responseCode = "400",
-                description = "Requête invalide, adresse non localisable (ADDRESS_NOT_GEOCODABLE) " +
-                    "ou service inconnu (UNKNOWN_SERVICE)",
+                description =
+                    "Requête invalide, adresse non localisable (ADDRESS_NOT_GEOCODABLE) " +
+                        "ou service inconnu (UNKNOWN_SERVICE)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(
@@ -57,17 +57,20 @@ interface RoomApi {
         ],
     )
     @PostMapping
-    fun createRoom(@Valid @RequestBody request: CreateRoomRequest): ResponseEntity<Any>
+    fun createRoom(
+        @Valid @RequestBody request: CreateRoomRequest,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Lister les salles",
-        description = "Pagination simple par défaut. Filtrage optionnel par fenêtre géographique (bbox) : " +
-            "fournir les 4 paramètres minLat/minLng/maxLat/maxLng ensemble (aucune limite de taille de bbox). " +
-            "En mode bbox, page/size sont ignorés et la réponse porte mode, totalInBbox, truncated et clusters. " +
-            "Bascule automatique : si totalInBbox <= kara.rooms.viewport.max-results (défaut 1000) la réponse " +
-            "renvoie les salles unitaires (mode \"rooms\") ; sinon elle renvoie des agrégats de clustering " +
-            "serveur sur une grille N×N (mode \"clusters\", kara.rooms.viewport.cluster-grid-size, défaut 8), " +
-            "la somme des count des clusters valant totalInBbox.",
+        description =
+            "Pagination simple par défaut. Filtrage optionnel par fenêtre géographique (bbox) : " +
+                "fournir les 4 paramètres minLat/minLng/maxLat/maxLng ensemble (aucune limite de taille de bbox). " +
+                "En mode bbox, page/size sont ignorés et la réponse porte mode, totalInBbox, truncated et clusters. " +
+                "Bascule automatique : si totalInBbox <= kara.rooms.viewport.max-results (défaut 1000) la réponse " +
+                "renvoie les salles unitaires (mode \"rooms\") ; sinon elle renvoie des agrégats de clustering " +
+                "serveur sur une grille N×N (mode \"clusters\", kara.rooms.viewport.cluster-grid-size, défaut 8), " +
+                "la somme des count des clusters valant totalInBbox.",
     )
     @ApiResponses(
         value = [
@@ -113,7 +116,9 @@ interface RoomApi {
         ],
     )
     @GetMapping("/{id}")
-    fun getRoom(@PathVariable id: UUID): ResponseEntity<Any>
+    fun getRoom(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Modifier une salle",
@@ -145,7 +150,10 @@ interface RoomApi {
         ],
     )
     @PatchMapping("/{id}")
-    fun updateRoom(@PathVariable id: UUID, @Valid @RequestBody request: UpdateRoomRequest): ResponseEntity<Any>
+    fun updateRoom(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateRoomRequest,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Supprimer une salle",
@@ -163,14 +171,17 @@ interface RoomApi {
         ],
     )
     @DeleteMapping("/{id}")
-    fun deleteRoom(@PathVariable id: UUID): ResponseEntity<Any>
+    fun deleteRoom(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Ajouter une image à une salle",
-        description = "Réservé aux administrateurs. L'original (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max) est " +
-            "stocké dans le bucket privé puis redimensionné en variantes WebP par un worker externe, de façon " +
-            "asynchrone. La réponse est immédiate (202, statut PROCESSING) ; les variantes publiques (CDN) " +
-            "apparaissent une fois l'image READY (voir GET de la salle).",
+        description =
+            "Réservé aux administrateurs. L'original (JPEG, PNG, WebP, AVIF ou HEIC, 5 Mo max) est " +
+                "stocké dans le bucket privé puis redimensionné en variantes WebP par un worker externe, de façon " +
+                "asynchrone. La réponse est immédiate (202, statut PROCESSING) ; les variantes publiques (CDN) " +
+                "apparaissent une fois l'image READY (voir GET de la salle).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

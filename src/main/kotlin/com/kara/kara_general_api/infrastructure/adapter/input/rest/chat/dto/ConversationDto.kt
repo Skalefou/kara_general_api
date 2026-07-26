@@ -15,7 +15,10 @@ data class ConversationDto(
     val unreadCount: Int,
 ) {
     companion object {
-        fun from(view: ConversationView, photoUrl: (String) -> String): ConversationDto =
+        fun from(
+            view: ConversationView,
+            photoUrl: (String) -> String,
+        ): ConversationDto =
             ConversationDto(
                 id = view.id.value.toString(),
                 bookingId = view.bookingId?.value?.toString(),

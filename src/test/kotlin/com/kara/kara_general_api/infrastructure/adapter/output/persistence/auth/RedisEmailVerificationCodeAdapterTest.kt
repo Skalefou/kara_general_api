@@ -11,7 +11,6 @@ import java.time.Duration
 import kotlin.test.assertEquals
 
 class RedisEmailVerificationCodeAdapterTest {
-
     private val redisTemplate = mockk<StringRedisTemplate>()
     private val valueOperations = mockk<ValueOperations<String, String>>()
     private val sut = RedisEmailVerificationCodeAdapter(redisTemplate)

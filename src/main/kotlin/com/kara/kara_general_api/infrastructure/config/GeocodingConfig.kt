@@ -10,7 +10,6 @@ import org.springframework.web.client.RestClient
  */
 @Configuration
 class GeocodingConfig {
-
     @Bean
     fun geocodingRestClient(
         @Value("\${GEOCODING_BASE_URL}") baseUrl: String,

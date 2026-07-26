@@ -16,7 +16,6 @@ class RegeneratePoolLinkService(
     private val bookingRepository: BookingRepository,
     private val linkTokenGenerator: LinkTokenGenerator,
 ) : RegeneratePoolLinkUseCase {
-
     @Transactional
     override fun regenerate(command: RegeneratePoolLinkCommand): RegeneratePoolLinkResult {
         val pool = poolRepository.findById(command.poolId) ?: return RegeneratePoolLinkResult.PoolNotFound

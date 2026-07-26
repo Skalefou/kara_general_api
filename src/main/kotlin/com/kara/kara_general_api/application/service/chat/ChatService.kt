@@ -14,8 +14,8 @@ import com.kara.kara_general_api.domain.model.chat.ReplyPreview
 import com.kara.kara_general_api.domain.model.chat.TypingEvent
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
-import com.kara.kara_general_api.domain.model.user.displayName
 import com.kara.kara_general_api.domain.model.user.UserRole
+import com.kara.kara_general_api.domain.model.user.displayName
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationCommand
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationResult
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationUseCase
@@ -70,7 +70,6 @@ class ChatService(
     MarkMessageReadUseCase,
     DeleteMessageUseCase,
     NotifyTypingUseCase {
-
     @Transactional
     override fun createConversation(command: CreateConversationCommand): CreateConversationResult {
         val participants = command.participantIds + command.currentUserId

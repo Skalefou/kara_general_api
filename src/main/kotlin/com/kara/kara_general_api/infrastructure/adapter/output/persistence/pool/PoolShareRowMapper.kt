@@ -13,7 +13,10 @@ import java.util.UUID
 
 @Component
 class PoolShareRowMapper : RowMapper<PoolShare> {
-    override fun mapRow(rs: ResultSet, rowNum: Int): PoolShare =
+    override fun mapRow(
+        rs: ResultSet,
+        rowNum: Int,
+    ): PoolShare =
         PoolShare(
             id = PoolShareId(rs.getObject("id", UUID::class.java)),
             poolId = PoolId(rs.getObject("pool_id", UUID::class.java)),

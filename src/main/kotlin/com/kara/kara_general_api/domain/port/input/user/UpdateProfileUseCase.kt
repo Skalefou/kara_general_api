@@ -16,7 +16,9 @@ data class UpdateProfileCommand(
 )
 
 sealed interface UpdateProfileResult {
-    data class Success(val user: User) : UpdateProfileResult
+    data class Success(
+        val user: User,
+    ) : UpdateProfileResult
 
     data object UserNotFound : UpdateProfileResult
 

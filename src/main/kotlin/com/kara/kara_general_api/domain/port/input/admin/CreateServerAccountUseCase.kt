@@ -14,7 +14,9 @@ data class CreateServerAccountCommand(
 )
 
 sealed interface CreateServerAccountResult {
-    data class Success(val user: User) : CreateServerAccountResult
+    data class Success(
+        val user: User,
+    ) : CreateServerAccountResult
 
     data object EmailAlreadyUsed : CreateServerAccountResult
 }

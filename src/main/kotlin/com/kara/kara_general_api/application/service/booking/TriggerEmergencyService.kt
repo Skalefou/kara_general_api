@@ -22,7 +22,6 @@ class TriggerEmergencyService(
     private val serverShiftRepository: ServerShiftRepository,
     private val emergencyEventPublisher: EmergencyEventPublisher,
 ) : TriggerEmergencyUseCase {
-
     override fun triggerEmergency(command: TriggerEmergencyCommand): TriggerEmergencyResult {
         val booking =
             bookingRepository.findById(command.bookingId) ?: return TriggerEmergencyResult.BookingNotFound

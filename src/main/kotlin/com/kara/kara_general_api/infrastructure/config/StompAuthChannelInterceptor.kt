@@ -20,14 +20,17 @@ import org.springframework.stereotype.Component
 class StompAuthChannelInterceptor(
     private val tokenParser: JwtAccessTokenParser,
 ) : ChannelInterceptor {
-
-    override fun preSend(message: Message<*>, channel: MessageChannel): Message<*> {
+    override fun preSend(
+        message: Message<*>,
+        channel: MessageChannel,
+    ): Message<*> {
         val accessor =
             MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor::class.java)
                 ?: return message
         if (StompCommand.CONNECT == accessor.command) {
-            val header = accessor.getFirstNativeHeader("Authorization")
-                ?: throw MessagingException("Missing Authorization header")
+            val header =
+                accessor.getFirstNativeHeader("Authorization")
+                    ?: throw MessagingException("Missing Authorization header")
             if (!header.startsWith("Bearer ")) {
                 throw MessagingException("Malformed Authorization header")
             }

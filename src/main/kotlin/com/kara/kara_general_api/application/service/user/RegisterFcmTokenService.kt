@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service
 class RegisterFcmTokenService(
     private val userRepository: UserRepository,
 ) : RegisterFcmTokenUseCase {
-
-    override fun registerFcmToken(userId: UserId, token: String) {
+    override fun registerFcmToken(
+        userId: UserId,
+        token: String,
+    ) {
         userRepository.updateFcmToken(userId, token)
     }
 }

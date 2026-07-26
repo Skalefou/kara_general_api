@@ -31,11 +31,11 @@ import java.util.UUID
     description = "Édition de l'agenda des serveurs : affectation à une salle sur un créneau (back-office, ADMIN)",
 )
 interface ServerShiftApi {
-
     @Operation(
         summary = "Lister les créneaux d'agenda",
-        description = "Retourne les créneaux de tous les serveurs, ordonnés par date de début. " +
-            "Filtres optionnels : serveur, salle et fenêtre temporelle. Réservé aux administrateurs.",
+        description =
+            "Retourne les créneaux de tous les serveurs, ordonnés par date de début. " +
+                "Filtres optionnels : serveur, salle et fenêtre temporelle. Réservé aux administrateurs.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -57,8 +57,9 @@ interface ServerShiftApi {
 
     @Operation(
         summary = "Consulter mon agenda (serveur)",
-        description = "Retourne les créneaux du serveur authentifié, enrichis du nom et de la ville de la " +
-            "salle où il doit se rendre, ordonnés par date. Réservé au rôle SERVER.",
+        description =
+            "Retourne les créneaux du serveur authentifié, enrichis du nom et de la ville de la " +
+                "salle où il doit se rendre, ordonnés par date. Réservé au rôle SERVER.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -75,9 +76,10 @@ interface ServerShiftApi {
 
     @Operation(
         summary = "Créer un créneau d'agenda",
-        description = "Affecte un serveur à une salle sur un créneau. Le serveur doit exister et avoir le " +
-            "rôle SERVER. Le créneau est rejeté (409) s'il chevauche un autre créneau du même serveur. " +
-            "Réservé aux administrateurs.",
+        description =
+            "Affecte un serveur à une salle sur un créneau. Le serveur doit exister et avoir le " +
+                "rôle SERVER. Le créneau est rejeté (409) s'il chevauche un autre créneau du même serveur. " +
+                "Réservé aux administrateurs.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -105,7 +107,9 @@ interface ServerShiftApi {
         ],
     )
     @PostMapping
-    fun createServerShift(@Valid @RequestBody request: CreateServerShiftRequest): ResponseEntity<Any>
+    fun createServerShift(
+        @Valid @RequestBody request: CreateServerShiftRequest,
+    ): ResponseEntity<Any>
 
     @Operation(
         summary = "Modifier un créneau d'agenda",
@@ -158,5 +162,7 @@ interface ServerShiftApi {
         ],
     )
     @DeleteMapping("/{id}")
-    fun deleteServerShift(@PathVariable id: UUID): ResponseEntity<Any>
+    fun deleteServerShift(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Any>
 }

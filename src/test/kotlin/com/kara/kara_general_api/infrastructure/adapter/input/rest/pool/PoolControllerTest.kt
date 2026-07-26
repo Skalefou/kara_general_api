@@ -47,7 +47,6 @@ private const val SHARE_ID = "770e8400-e29b-41d4-a716-446655440000"
 @WebMvcTest(PoolController::class)
 @Import(SecurityConfig::class)
 class PoolControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -125,7 +124,8 @@ class PoolControllerTest {
                 ),
             )
 
-        mockMvc.perform(get("/api/v1/pools"))
+        mockMvc
+            .perform(get("/api/v1/pools"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].poolId").value(POOL_ID))
             .andExpect(jsonPath("$[0].roomName").value("Salle Étoile"))
@@ -135,9 +135,10 @@ class PoolControllerTest {
 
     @Test
     fun `should return 401 when creating a pool without authentication`() {
-        mockMvc.perform(
-            post("/api/v1/pools").contentType(MediaType.APPLICATION_JSON).content(createBody),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/pools").contentType(MediaType.APPLICATION_JSON).content(createBody),
+            ).andExpect(status().isUnauthorized)
 
         verify(exactly = 0) { createPoolUseCase.create(any()) }
     }
@@ -147,10 +148,10 @@ class PoolControllerTest {
     fun `should return 201 with the pool when created`() {
         every { createPoolUseCase.create(any()) } returns CreatePoolResult.Created(poolView())
 
-        mockMvc.perform(
-            post("/api/v1/pools").contentType(MediaType.APPLICATION_JSON).content(createBody),
-        )
-            .andExpect(status().isCreated)
+        mockMvc
+            .perform(
+                post("/api/v1/pools").contentType(MediaType.APPLICATION_JSON).content(createBody),
+            ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.poolId").value(POOL_ID))
             .andExpect(jsonPath("$.globalLinkToken").value("global-token"))
             .andExpect(jsonPath("$.percentage").value(40))
@@ -162,10 +163,10 @@ class PoolControllerTest {
         every { createPoolUseCase.create(any()) } returns
             CreatePoolResult.SharesMismatch(expected = BigDecimal("100.00"), actual = BigDecimal("90.00"))
 
-        mockMvc.perform(
-            post("/api/v1/pools").contentType(MediaType.APPLICATION_JSON).content(createBody),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/pools").contentType(MediaType.APPLICATION_JSON).content(createBody),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("POOL_SHARES_MISMATCH"))
     }
 
@@ -174,7 +175,8 @@ class PoolControllerTest {
     fun `should return 403 when reading a pool the caller does not own`() {
         every { getPoolUseCase.getById(any(), any()) } returns GetPoolResult.NotOwner
 
-        mockMvc.perform(get("/api/v1/pools/$POOL_ID"))
+        mockMvc
+            .perform(get("/api/v1/pools/$POOL_ID"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("POOL_NOT_OWNER"))
     }
@@ -191,7 +193,8 @@ class PoolControllerTest {
                 shareId = UUID.fromString(SHARE_ID),
             )
 
-        mockMvc.perform(post("/api/v1/pools/$POOL_ID/shares/$SHARE_ID/payment"))
+        mockMvc
+            .perform(post("/api/v1/pools/$POOL_ID/shares/$SHARE_ID/payment"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.clientSecret").value("cs"))
             .andExpect(jsonPath("$.shareId").value(SHARE_ID))
@@ -220,7 +223,8 @@ class PoolControllerTest {
                 ),
             )
 
-        mockMvc.perform(get("/api/v1/pools/join/global-token"))
+        mockMvc
+            .perform(get("/api/v1/pools/join/global-token"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.booking.roomName").value("Salle Étoile"))
             .andExpect(jsonPath("$.message").isNotEmpty)
@@ -230,7 +234,8 @@ class PoolControllerTest {
     fun `should return 404 for an unknown share recap`() {
         every { getPoolRecapUseCase.getByShareToken("nope") } returns GetPoolRecapResult.NotFound
 
-        mockMvc.perform(get("/api/v1/pools/share/nope"))
+        mockMvc
+            .perform(get("/api/v1/pools/share/nope"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("POOL_NOT_FOUND"))
     }

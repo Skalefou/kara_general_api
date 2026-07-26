@@ -36,7 +36,6 @@ class ServerShiftController(
     private val updateServerShiftUseCase: UpdateServerShiftUseCase,
     private val deleteServerShiftUseCase: DeleteServerShiftUseCase,
 ) : ServerShiftApi {
-
     override fun listMyShifts(authentication: Authentication): ResponseEntity<Any> {
         val serverId = UserId(UUID.fromString(authentication.name))
         val shifts = listMyShiftsUseCase.listMyShifts(serverId)
@@ -81,7 +80,10 @@ class ServerShiftController(
         }
     }
 
-    override fun updateServerShift(id: UUID, request: UpdateServerShiftRequest): ResponseEntity<Any> {
+    override fun updateServerShift(
+        id: UUID,
+        request: UpdateServerShiftRequest,
+    ): ResponseEntity<Any> {
         val command =
             UpdateServerShiftCommand(
                 id = ServerShiftId(id),
@@ -108,67 +110,73 @@ class ServerShiftController(
 
     private fun serverNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun serveur ne correspond à cet identifiant.",
-            ).apply {
-                title = "Serveur introuvable"
-                setProperty("code", "SERVER_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun serveur ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Serveur introuvable"
+                    setProperty("code", "SERVER_NOT_FOUND")
+                },
         )
 
     private fun notAServer(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "Ce compte n'est pas un compte serveur.",
-            ).apply {
-                title = "Compte non serveur"
-                setProperty("code", "NOT_A_SERVER")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Ce compte n'est pas un compte serveur.",
+                ).apply {
+                    title = "Compte non serveur"
+                    setProperty("code", "NOT_A_SERVER")
+                },
         )
 
     private fun roomNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucune salle ne correspond à cet identifiant.",
-            ).apply {
-                title = "Salle introuvable"
-                setProperty("code", "ROOM_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucune salle ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Salle introuvable"
+                    setProperty("code", "ROOM_NOT_FOUND")
+                },
         )
 
     private fun invalidTimeSlot(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST,
-                "L'heure de fin doit être strictement postérieure à l'heure de début.",
-            ).apply {
-                title = "Créneau invalide"
-                setProperty("code", "INVALID_TIME_SLOT")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "L'heure de fin doit être strictement postérieure à l'heure de début.",
+                ).apply {
+                    title = "Créneau invalide"
+                    setProperty("code", "INVALID_TIME_SLOT")
+                },
         )
 
     private fun slotUnavailable(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "Ce créneau chevauche un autre créneau de ce serveur.",
-            ).apply {
-                title = "Créneau indisponible"
-                setProperty("code", "SHIFT_SLOT_UNAVAILABLE")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Ce créneau chevauche un autre créneau de ce serveur.",
+                ).apply {
+                    title = "Créneau indisponible"
+                    setProperty("code", "SHIFT_SLOT_UNAVAILABLE")
+                },
         )
 
     private fun shiftNotFound(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND,
-                "Aucun créneau ne correspond à cet identifiant.",
-            ).apply {
-                title = "Créneau introuvable"
-                setProperty("code", "SHIFT_NOT_FOUND")
-            },
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Aucun créneau ne correspond à cet identifiant.",
+                ).apply {
+                    title = "Créneau introuvable"
+                    setProperty("code", "SHIFT_NOT_FOUND")
+                },
         )
 }

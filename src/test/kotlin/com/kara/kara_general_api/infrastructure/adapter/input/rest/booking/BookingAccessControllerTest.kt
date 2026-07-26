@@ -26,7 +26,6 @@ private const val BOOKING_ID = "99999999-8888-7777-6666-555555555555"
 @WebMvcTest(BookingAccessController::class)
 @Import(SecurityConfig::class)
 class BookingAccessControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 

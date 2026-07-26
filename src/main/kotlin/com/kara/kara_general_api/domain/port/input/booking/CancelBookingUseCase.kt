@@ -15,7 +15,10 @@ sealed interface CancelBookingResult {
      * était CONFIRMED, fonds déjà capturés) ; faux si rien n'a été prélevé (PENDING, ou cagnotte ouverte
      * dont les autorisations ont simplement été levées).
      */
-    data class Cancelled(val booking: Booking, val refunded: Boolean) : CancelBookingResult
+    data class Cancelled(
+        val booking: Booking,
+        val refunded: Boolean,
+    ) : CancelBookingResult
 
     data object NotFound : CancelBookingResult
 

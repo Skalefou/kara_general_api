@@ -23,12 +23,12 @@ import java.util.UUID
 
 @Tag(name = "Extensions de réservation", description = "Prolongation payante d'une réservation en cours")
 interface BookingExtensionApi {
-
     @Operation(
         summary = "Durées de prolongation disponibles",
-        description = "Retourne la durée maximale de prolongation possible (aucune réservation suivante ni " +
-            "fermeture de la salle sur le créneau) et le prix des paliers proposés. Réservé au client " +
-            "propriétaire de la réservation, pendant celle-ci.",
+        description =
+            "Retourne la durée maximale de prolongation possible (aucune réservation suivante ni " +
+                "fermeture de la salle sur le créneau) et le prix des paliers proposés. Réservé au client " +
+                "propriétaire de la réservation, pendant celle-ci.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -62,9 +62,10 @@ interface BookingExtensionApi {
 
     @Operation(
         summary = "Demander une prolongation",
-        description = "Crée une extension PENDING pour la durée demandée. Le créneau n'est appliqué à la " +
-            "réservation qu'une fois l'extension réglée : PAY_ALL via un PaymentIntent Stripe, SHARED_POT via " +
-            "une cagnotte dédiée dont la capture n'intervient qu'à complétude.",
+        description =
+            "Crée une extension PENDING pour la durée demandée. Le créneau n'est appliqué à la " +
+                "réservation qu'une fois l'extension réglée : PAY_ALL via un PaymentIntent Stripe, SHARED_POT via " +
+                "une cagnotte dédiée dont la capture n'intervient qu'à complétude.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -89,8 +90,9 @@ interface BookingExtensionApi {
 
     @Operation(
         summary = "Régler une prolongation en payant tout",
-        description = "Initie le PaymentIntent Stripe de l'extension. La confirmation effective est faite par " +
-            "le webhook Stripe, qui repousse alors la fin de la réservation.",
+        description =
+            "Initie le PaymentIntent Stripe de l'extension. La confirmation effective est faite par " +
+                "le webhook Stripe, qui repousse alors la fin de la réservation.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -109,8 +111,9 @@ interface BookingExtensionApi {
 
     @Operation(
         summary = "Ouvrir une cagnotte pour une prolongation",
-        description = "Crée la cagnotte de l'extension. Aucun prélèvement tant que toutes les parts ne sont " +
-            "pas autorisées ; à complétude, les autorisations sont capturées et la réservation est prolongée.",
+        description =
+            "Crée la cagnotte de l'extension. Aucun prélèvement tant que toutes les parts ne sont " +
+                "pas autorisées ; à complétude, les autorisations sont capturées et la réservation est prolongée.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

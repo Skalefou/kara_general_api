@@ -15,7 +15,6 @@ class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val tokenService: TokenService,
 ) : RefreshTokenUseCase {
-
     override fun refresh(command: RefreshTokenCommand): RefreshTokenResult {
         val userId = refreshTokenRepository.redeem(command.refreshToken) ?: return RefreshTokenResult.InvalidToken
         val user = userRepository.findById(UserId(userId)) ?: return RefreshTokenResult.InvalidToken

@@ -17,7 +17,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class SendBookingEndRemindersServiceTest {
-
     private val reminderRepository = mockk<BookingEndReminderRepository>()
     private val notificationService = mockk<NotificationService>(relaxed = true)
     private val sut = SendBookingEndRemindersService(reminderRepository, notificationService)

@@ -16,14 +16,14 @@ import java.util.UUID
 
 @Tag(name = "Contrôle d'accès", description = "Validation du billet d'une réservation en face à face")
 interface BookingAccessApi {
-
     @Operation(
         summary = "Valider le billet d'un client",
-        description = "Le serveur scanne le QR du billet, qui encode l'identifiant de la réservation. " +
-            "L'accès est accordé si la réservation est confirmée, si le contrôleur est rattaché à la salle " +
-            "sur ce créneau (un administrateur contrôle partout) et si l'on se trouve dans la fenêtre " +
-            "d'admission : 30 minutes avant le début, jusqu'à la fin. L'entrée n'est tracée qu'une fois ; " +
-            "une seconde présentation du même billet renvoie 409 avec l'horodatage de la première.",
+        description =
+            "Le serveur scanne le QR du billet, qui encode l'identifiant de la réservation. " +
+                "L'accès est accordé si la réservation est confirmée, si le contrôleur est rattaché à la salle " +
+                "sur ce créneau (un administrateur contrôle partout) et si l'on se trouve dans la fenêtre " +
+                "d'admission : 30 minutes avant le début, jusqu'à la fin. L'entrée n'est tracée qu'une fois ; " +
+                "une seconde présentation du même billet renvoie 409 avec l'horodatage de la première.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -45,9 +45,10 @@ interface BookingAccessApi {
             ),
             ApiResponse(
                 responseCode = "409",
-                description = "Réservation non confirmée (BOOKING_NOT_CONFIRMED), hors fenêtre d'admission " +
-                    "(OUTSIDE_ADMISSION_WINDOW) ou billet déjà validé (BOOKING_ALREADY_CHECKED_IN). Le " +
-                    "récapitulatif de la réservation est joint dans la propriété « booking ».",
+                description =
+                    "Réservation non confirmée (BOOKING_NOT_CONFIRMED), hors fenêtre d'admission " +
+                        "(OUTSIDE_ADMISSION_WINDOW) ou billet déjà validé (BOOKING_ALREADY_CHECKED_IN). Le " +
+                        "récapitulatif de la réservation est joint dans la propriété « booking ».",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
         ],

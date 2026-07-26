@@ -25,7 +25,6 @@ import kotlin.test.assertIs
 private const val STAFF_PASSWORD = "Str0ng!P@sswordStr0ng!P@sswordXY"
 
 class ChangePasswordServiceTest {
-
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val passwordHasher = mockk<PasswordHasher>()
     private val firebaseAuthGateway = mockk<FirebaseAuthGateway>(relaxed = true)

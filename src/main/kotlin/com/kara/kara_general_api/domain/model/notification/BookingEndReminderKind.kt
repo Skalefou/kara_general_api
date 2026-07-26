@@ -7,7 +7,10 @@ import java.time.Duration
  * [lead] avant la fin du créneau (`endAt`) et le nombre de minutes correspondant [minutesBefore]
  * (repris dans le payload de la notification push).
  */
-enum class BookingEndReminderKind(val lead: Duration, val minutesBefore: Int) {
+enum class BookingEndReminderKind(
+    val lead: Duration,
+    val minutesBefore: Int,
+) {
     /** Rappel envoyé lorsqu'il reste environ 10 minutes avant la fin de la réservation. */
     TEN_MINUTES(Duration.ofMinutes(10), 10),
 

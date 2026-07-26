@@ -15,7 +15,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class BanGeocodingAdapterTest {
-
     private val address =
         Address(street = "8 boulevard du Port", city = "Amiens", postalCode = "80000", country = "France")
 
@@ -31,7 +30,8 @@ class BanGeocodingAdapterTest {
         val body = """{"features":[{"geometry":{"type":"Point","coordinates":[2.3522,48.8566]}}]}"""
         val adapter =
             adapterWith { server ->
-                server.expect(requestTo(containsString("/search/")))
+                server
+                    .expect(requestTo(containsString("/search/")))
                     .andRespond(withSuccess(body, MediaType.APPLICATION_JSON))
             }
 
@@ -45,7 +45,8 @@ class BanGeocodingAdapterTest {
     fun `should return null when no feature matches the address`() {
         val adapter =
             adapterWith { server ->
-                server.expect(requestTo(containsString("/search/")))
+                server
+                    .expect(requestTo(containsString("/search/")))
                     .andRespond(withSuccess("""{"features":[]}""", MediaType.APPLICATION_JSON))
             }
 
@@ -56,7 +57,8 @@ class BanGeocodingAdapterTest {
     fun `should throw GeocodingException when the service errors`() {
         val adapter =
             adapterWith { server ->
-                server.expect(requestTo(containsString("/search/")))
+                server
+                    .expect(requestTo(containsString("/search/")))
                     .andRespond(withServerError())
             }
 

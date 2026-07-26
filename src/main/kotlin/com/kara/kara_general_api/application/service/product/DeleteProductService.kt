@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service as SpringService
 class DeleteProductService(
     private val productRepository: ProductRepository,
 ) : DeleteProductUseCase {
-
     @Transactional
     override fun deleteProduct(id: ProductId): DeleteProductResult {
         val deleted = productRepository.deleteById(id)

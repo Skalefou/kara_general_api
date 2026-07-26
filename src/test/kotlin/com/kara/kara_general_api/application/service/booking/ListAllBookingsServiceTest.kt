@@ -26,7 +26,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ListAllBookingsServiceTest {
-
     private val bookingRepository = mockk<BookingRepository>()
     private val roomRepository = mockk<RoomRepository>()
     private val userRepository = mockk<UserRepository>()

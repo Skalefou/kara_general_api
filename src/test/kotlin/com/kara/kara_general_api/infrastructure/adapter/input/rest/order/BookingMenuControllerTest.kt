@@ -27,7 +27,6 @@ private const val BOOKING_ID = "99999999-8888-7777-6666-555555555555"
 @WebMvcTest(BookingMenuController::class)
 @Import(SecurityConfig::class)
 class BookingMenuControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -45,7 +44,8 @@ class BookingMenuControllerTest {
     fun `should return 200 with the orderable products for the owner`() {
         every { getBookingMenuUseCase.getBookingMenu(any()) } returns GetBookingMenuResult.Success(listOf(entry))
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].name").value("Coca-Cola 33cl"))
@@ -54,7 +54,8 @@ class BookingMenuControllerTest {
 
     @Test
     fun `should return 401 when unauthenticated`() {
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
             .andExpect(status().isUnauthorized)
     }
 
@@ -63,7 +64,8 @@ class BookingMenuControllerTest {
     fun `should return 403 when the booking belongs to someone else`() {
         every { getBookingMenuUseCase.getBookingMenu(any()) } returns GetBookingMenuResult.NotOwner
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("BOOKING_NOT_OWNER"))
     }
@@ -73,7 +75,8 @@ class BookingMenuControllerTest {
     fun `should return 404 when the booking is unknown`() {
         every { getBookingMenuUseCase.getBookingMenu(any()) } returns GetBookingMenuResult.BookingNotFound
 
-        mockMvc.perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID/available-products"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("BOOKING_NOT_FOUND"))
     }

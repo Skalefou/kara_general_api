@@ -17,7 +17,6 @@ class PaymentRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: PaymentRowMapper,
 ) : PaymentRepository {
-
     override fun save(payment: Payment): Payment {
         val sql =
             """
@@ -61,11 +60,12 @@ class PaymentRepositoryAdapter(
             FROM payments
             WHERE stripe_payment_intent_id = :stripePaymentIntentId
             """.trimIndent()
-        return jdbc.query(
-            sql,
-            mapOf("stripePaymentIntentId" to stripePaymentIntentId),
-            rowMapper,
-        ).firstOrNull()
+        return jdbc
+            .query(
+                sql,
+                mapOf("stripePaymentIntentId" to stripePaymentIntentId),
+                rowMapper,
+            ).firstOrNull()
     }
 
     override fun findByBookingId(bookingId: BookingId): List<Payment> {

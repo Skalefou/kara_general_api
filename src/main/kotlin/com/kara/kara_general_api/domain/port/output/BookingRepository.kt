@@ -27,13 +27,29 @@ interface BookingRepository {
      * Vrai s'il existe déjà une réservation active (PENDING ou CONFIRMED) sur la salle dont le
      * créneau chevauche [startAt, endAt).
      */
-    fun existsOverlapping(roomId: RoomId, startAt: Instant, endAt: Instant): Boolean
+    fun existsOverlapping(
+        roomId: RoomId,
+        startAt: Instant,
+        endAt: Instant,
+    ): Boolean
 
-    fun findNextStartAfter(roomId: RoomId, after: Instant, excluding: BookingId, now: Instant): Instant?
+    fun findNextStartAfter(
+        roomId: RoomId,
+        after: Instant,
+        excluding: BookingId,
+        now: Instant,
+    ): Instant?
 
-    fun updateStatus(id: BookingId, status: BookingStatus)
+    fun updateStatus(
+        id: BookingId,
+        status: BookingStatus,
+    )
 
-    fun updateEndAt(id: BookingId, endAt: Instant, totalPrice: BigDecimal)
+    fun updateEndAt(
+        id: BookingId,
+        endAt: Instant,
+        totalPrice: BigDecimal,
+    )
 
     /**
      * Annule (PENDING → CANCELLED) toutes les réservations dont la fenêtre de paiement est échue

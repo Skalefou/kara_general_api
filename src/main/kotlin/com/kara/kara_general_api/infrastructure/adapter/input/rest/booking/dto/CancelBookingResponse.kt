@@ -24,7 +24,10 @@ data class CancelBookingResponse(
     val refunded: Boolean,
 ) {
     companion object {
-        fun from(booking: Booking, refunded: Boolean): CancelBookingResponse =
+        fun from(
+            booking: Booking,
+            refunded: Boolean,
+        ): CancelBookingResponse =
             CancelBookingResponse(
                 bookingId = booking.id.value,
                 startAt = booking.startAt,

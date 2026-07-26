@@ -22,7 +22,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class DeactivateAccountServiceTest {
-
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val refreshTokenRepository = mockk<RefreshTokenRepository>(relaxed = true)
     private val sut = DeactivateAccountService(userRepository, refreshTokenRepository)

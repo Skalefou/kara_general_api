@@ -12,7 +12,6 @@ class GetRoomService(
     private val roomRepository: RoomRepository,
     private val roomOptionRepository: RoomOptionRepository,
 ) : GetRoomUseCase {
-
     override fun getRoom(id: RoomId): GetRoomResult {
         val room = roomRepository.findById(id) ?: return GetRoomResult.NotFound
         return GetRoomResult.Success(room, roomOptionRepository.findByRoomId(id))

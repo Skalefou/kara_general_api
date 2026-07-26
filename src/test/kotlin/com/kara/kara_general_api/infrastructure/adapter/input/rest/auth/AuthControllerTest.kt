@@ -46,7 +46,6 @@ import java.util.UUID
 @Import(SecurityConfig::class)
 @WithAnonymousUser
 class AuthControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -106,12 +105,12 @@ class AuthControllerTest {
             )
         every { registerUseCase.register(any()) } returns RegisterResult.Success(user)
 
-        mockMvc.perform(
-            post("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody),
-        )
-            .andExpect(status().isCreated)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody),
+            ).andExpect(status().isCreated)
             .andExpect(jsonPath("$.email").value("client@kara.app"))
     }
 
@@ -119,12 +118,12 @@ class AuthControllerTest {
     fun `should return 409 when email is already used`() {
         every { registerUseCase.register(any()) } returns RegisterResult.EmailAlreadyUsed
 
-        mockMvc.perform(
-            post("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody),
-        )
-            .andExpect(status().isConflict)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody),
+            ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"))
     }
 
@@ -162,12 +161,12 @@ class AuthControllerTest {
                 mustChangePassword = false,
             )
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").value("jwt-token"))
             .andExpect(jsonPath("$.expiresIn").value(900))
             .andExpect(jsonPath("$.refreshToken").value("refresh-token-value"))
@@ -190,12 +189,12 @@ class AuthControllerTest {
                 mustChangePassword = false,
             )
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.user.photoUrl").value("https://signed.example/photo"))
     }
 
@@ -203,12 +202,12 @@ class AuthControllerTest {
     fun `should return 403 when the account has been deactivated`() {
         every { loginUseCase.login(any()) } returns LoginResult.AccountDeactivated
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("ACCOUNT_DEACTIVATED"))
     }
 
@@ -216,12 +215,12 @@ class AuthControllerTest {
     fun `should return 403 when the temporary password has expired`() {
         every { loginUseCase.login(any()) } returns LoginResult.TempPasswordExpired
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isForbidden)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("TEMP_PASSWORD_EXPIRED"))
     }
 
@@ -229,12 +228,12 @@ class AuthControllerTest {
     fun `should return 404 when no account matches the login identifier`() {
         every { loginUseCase.login(any()) } returns LoginResult.UserNotFound
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
     }
 
@@ -242,12 +241,12 @@ class AuthControllerTest {
     fun `should return 401 when login credentials are invalid`() {
         every { loginUseCase.login(any()) } returns LoginResult.InvalidCredentials
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
     }
 
@@ -255,12 +254,12 @@ class AuthControllerTest {
     fun `should return 410 when the account has been deleted`() {
         every { loginUseCase.login(any()) } returns LoginResult.AccountDeleted
 
-        mockMvc.perform(
-            post("/api/v1/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(loginRequestBody),
-        )
-            .andExpect(status().isGone)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(loginRequestBody),
+            ).andExpect(status().isGone)
             .andExpect(jsonPath("$.code").value("ACCOUNT_DELETED"))
     }
 
@@ -280,12 +279,12 @@ class AuthControllerTest {
                 RefreshToken(value = "refresh-token-value", expiresInSeconds = 604800),
             )
 
-        mockMvc.perform(
-            post("/api/v1/auth/verify-email")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(verifyEmailRequestBody),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/verify-email")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(verifyEmailRequestBody),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").value("jwt-token"))
             .andExpect(jsonPath("$.expiresIn").value(900))
             .andExpect(jsonPath("$.refreshToken").value("refresh-token-value"))
@@ -296,12 +295,12 @@ class AuthControllerTest {
     fun `should return 400 when verification code is invalid`() {
         every { verifyEmailUseCase.verify(any()) } returns VerifyEmailResult.InvalidCode
 
-        mockMvc.perform(
-            post("/api/v1/auth/verify-email")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(verifyEmailRequestBody),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/verify-email")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(verifyEmailRequestBody),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("INVALID_VERIFICATION_CODE"))
     }
 
@@ -309,12 +308,12 @@ class AuthControllerTest {
     fun `should return 404 when no account matches the email`() {
         every { verifyEmailUseCase.verify(any()) } returns VerifyEmailResult.UserNotFound
 
-        mockMvc.perform(
-            post("/api/v1/auth/verify-email")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(verifyEmailRequestBody),
-        )
-            .andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/verify-email")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(verifyEmailRequestBody),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
     }
 
@@ -322,12 +321,12 @@ class AuthControllerTest {
     fun `should return 409 when email is already verified`() {
         every { verifyEmailUseCase.verify(any()) } returns VerifyEmailResult.AlreadyVerified
 
-        mockMvc.perform(
-            post("/api/v1/auth/verify-email")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(verifyEmailRequestBody),
-        )
-            .andExpect(status().isConflict)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/verify-email")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(verifyEmailRequestBody),
+            ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_VERIFIED"))
     }
 
@@ -335,34 +334,36 @@ class AuthControllerTest {
     fun `should return 204 when forgot password request is sent`() {
         every { forgotPasswordUseCase.requestReset(any()) } returns ForgotPasswordResult.Success
 
-        mockMvc.perform(
-            post("/api/v1/auth/forgot-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email": "client@kara.app"}"""),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/forgot-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "client@kara.app"}"""),
+            ).andExpect(status().isNoContent)
     }
 
     @Test
     fun `should return 204 when password is reset successfully`() {
         every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.Success
 
-        mockMvc.perform(
-            post("/api/v1/auth/reset-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email": "client@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "client@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
+            ).andExpect(status().isNoContent)
     }
 
     @Test
     fun `should return 400 when reset code is expired`() {
         every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.CodeExpiredOrMissing
 
-        mockMvc.perform(
-            post("/api/v1/auth/reset-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email": "client@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "client@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("RESET_CODE_EXPIRED"))
     }
 
@@ -370,12 +371,12 @@ class AuthControllerTest {
     fun `should return 400 when reset code is invalid`() {
         every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.InvalidCode
 
-        mockMvc.perform(
-            post("/api/v1/auth/reset-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email": "client@kara.app", "code": "000000", "newPassword": "Azerty123"}"""),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "client@kara.app", "code": "000000", "newPassword": "Azerty123"}"""),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("INVALID_RESET_CODE"))
     }
 
@@ -383,12 +384,12 @@ class AuthControllerTest {
     fun `should return 404 when user is not found during reset`() {
         every { resetPasswordUseCase.resetPassword(any()) } returns ResetPasswordResult.UserNotFound
 
-        mockMvc.perform(
-            post("/api/v1/auth/reset-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email": "unknown@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
-        )
-            .andExpect(status().isNotFound)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "unknown@kara.app", "code": "123456", "newPassword": "Azerty123"}"""),
+            ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
     }
 
@@ -400,12 +401,12 @@ class AuthControllerTest {
                 RefreshToken(value = "new-refresh-token", expiresInSeconds = 604800),
             )
 
-        mockMvc.perform(
-            post("/api/v1/auth/refresh")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"refreshToken": "old-refresh-token"}"""),
-        )
-            .andExpect(status().isOk)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"refreshToken": "old-refresh-token"}"""),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").value("new-jwt-token"))
             .andExpect(jsonPath("$.expiresIn").value(900))
             .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"))
@@ -416,12 +417,12 @@ class AuthControllerTest {
     fun `should return 401 when refresh token is invalid`() {
         every { refreshTokenUseCase.refresh(any()) } returns RefreshTokenResult.InvalidToken
 
-        mockMvc.perform(
-            post("/api/v1/auth/refresh")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"refreshToken": "unknown-token"}"""),
-        )
-            .andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/refresh")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"refreshToken": "unknown-token"}"""),
+            ).andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
     }
 
@@ -429,11 +430,12 @@ class AuthControllerTest {
     fun `should return 204 when logout is called`() {
         every { logoutUseCase.logout(any()) } returns Unit
 
-        mockMvc.perform(
-            post("/api/v1/auth/logout")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"refreshToken": "some-refresh-token"}"""),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/logout")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"refreshToken": "some-refresh-token"}"""),
+            ).andExpect(status().isNoContent)
     }
 
     private val changePasswordRequestBody =
@@ -444,11 +446,12 @@ class AuthControllerTest {
     fun `should return 204 when password is changed successfully`() {
         every { changePasswordUseCase.changePassword(any()) } returns ChangePasswordResult.Success
 
-        mockMvc.perform(
-            post("/api/v1/auth/change-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(changePasswordRequestBody),
-        ).andExpect(status().isNoContent)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/change-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(changePasswordRequestBody),
+            ).andExpect(status().isNoContent)
     }
 
     @Test
@@ -456,12 +459,12 @@ class AuthControllerTest {
     fun `should return 401 when the current password is incorrect`() {
         every { changePasswordUseCase.changePassword(any()) } returns ChangePasswordResult.InvalidCurrentPassword
 
-        mockMvc.perform(
-            post("/api/v1/auth/change-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(changePasswordRequestBody),
-        )
-            .andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/change-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(changePasswordRequestBody),
+            ).andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("INVALID_CURRENT_PASSWORD"))
     }
 
@@ -471,21 +474,22 @@ class AuthControllerTest {
         every { changePasswordUseCase.changePassword(any()) } returns
             ChangePasswordResult.WeakPassword(listOf("Le mot de passe doit contenir au moins 8 caractères"))
 
-        mockMvc.perform(
-            post("/api/v1/auth/change-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(changePasswordRequestBody),
-        )
-            .andExpect(status().isBadRequest)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/change-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(changePasswordRequestBody),
+            ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("WEAK_PASSWORD"))
     }
 
     @Test
     fun `should return 401 when changing password unauthenticated`() {
-        mockMvc.perform(
-            post("/api/v1/auth/change-password")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(changePasswordRequestBody),
-        ).andExpect(status().isUnauthorized)
+        mockMvc
+            .perform(
+                post("/api/v1/auth/change-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(changePasswordRequestBody),
+            ).andExpect(status().isUnauthorized)
     }
 }

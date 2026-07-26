@@ -1,9 +1,9 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.room
 
 import com.kara.kara_general_api.domain.model.room.Room
+import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomImage
-import com.kara.kara_general_api.domain.model.room.RoomCluster
 import com.kara.kara_general_api.domain.model.room.RoomImageId
 import com.kara.kara_general_api.domain.model.room.RoomImageStatus
 import com.kara.kara_general_api.domain.model.room.RoomImageVariant
@@ -21,7 +21,6 @@ class RoomRepositoryAdapter(
     private val jdbc: NamedParameterJdbcTemplate,
     private val rowMapper: RoomRowMapper,
 ) : RoomRepository {
-
     private val variantRowMapper =
         RowMapper { rs, _ ->
             rs.getObject("image_id", UUID::class.java) to
@@ -104,7 +103,10 @@ class RoomRepositoryAdapter(
         return room.copy(images = findImages(id))
     }
 
-    override fun findAll(page: Int, size: Int): List<Room> {
+    override fun findAll(
+        page: Int,
+        size: Int,
+    ): List<Room> {
         val sql =
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
@@ -127,7 +129,10 @@ class RoomRepositoryAdapter(
 
     // Filtre viewport : le BETWEEN sur (latitude, longitude) est servi par l'index idx_rooms_lat_lng.
     // TODO: ne gère pas l'antiméridien (bbox à cheval sur ±180°) — hors scope.
-    override fun findInBbox(bbox: BoundingBox, limit: Int): List<Room> {
+    override fun findInBbox(
+        bbox: BoundingBox,
+        limit: Int,
+    ): List<Room> {
         val sql =
             """
             SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
@@ -174,7 +179,10 @@ class RoomRepositoryAdapter(
     // buckets calculés à partir de lat/lng, puis agrégée (centroïde AVG + COUNT) en SQL — pas de
     // chargement en mémoire. Le WHERE bbox est servi par idx_rooms_lat_lng. NULLIF évite une
     // division par zéro sur une bbox dégénérée (hauteur/largeur nulle) : tout tombe dans un groupe NULL.
-    override fun clustersInBbox(bbox: BoundingBox, gridSize: Int): List<RoomCluster> {
+    override fun clustersInBbox(
+        bbox: BoundingBox,
+        gridSize: Int,
+    ): List<RoomCluster> {
         val cellHeight = (bbox.maxLat - bbox.minLat) / gridSize
         val cellWidth = (bbox.maxLng - bbox.minLng) / gridSize
         val sql =
@@ -211,7 +219,10 @@ class RoomRepositoryAdapter(
         return rows > 0
     }
 
-    override fun addImage(roomId: RoomId, image: RoomImage): RoomImage {
+    override fun addImage(
+        roomId: RoomId,
+        image: RoomImage,
+    ): RoomImage {
         // image_id = id : identité unique de l'image, reprise dans les clés de variantes et corrélée au worker.
         val sql =
             """
@@ -232,7 +243,10 @@ class RoomRepositoryAdapter(
         return image
     }
 
-    override fun removeImage(roomId: RoomId, imageId: RoomImageId): Boolean {
+    override fun removeImage(
+        roomId: RoomId,
+        imageId: RoomImageId,
+    ): Boolean {
         // Les variantes sont supprimées par la FK ON DELETE CASCADE (image_id).
         val sql = "DELETE FROM room_images WHERE id = :id AND room_id = :roomId"
         val rows =
@@ -243,7 +257,10 @@ class RoomRepositoryAdapter(
         return rows > 0
     }
 
-    override fun markImageReady(imageId: UUID, variants: List<RoomImageVariant>) {
+    override fun markImageReady(
+        imageId: UUID,
+        variants: List<RoomImageVariant>,
+    ) {
         val updated =
             jdbc.update(
                 "UPDATE room_images SET status = 'READY', error_code = NULL WHERE image_id = :imageId",
@@ -273,7 +290,10 @@ class RoomRepositoryAdapter(
         }
     }
 
-    override fun markImageFailed(imageId: UUID, errorCode: String) {
+    override fun markImageFailed(
+        imageId: UUID,
+        errorCode: String,
+    ) {
         jdbc.update(
             "UPDATE room_images SET status = 'FAILED', error_code = :errorCode WHERE image_id = :imageId",
             mapOf("imageId" to imageId, "errorCode" to errorCode),
@@ -335,7 +355,8 @@ class RoomRepositoryAdapter(
             WHERE image_id IN (:imageIds)
             ORDER BY name ASC
             """.trimIndent()
-        return jdbc.query(sql, mapOf("imageIds" to imageIds), variantRowMapper)
+        return jdbc
+            .query(sql, mapOf("imageIds" to imageIds), variantRowMapper)
             .groupBy({ it.first }, { it.second })
     }
 }

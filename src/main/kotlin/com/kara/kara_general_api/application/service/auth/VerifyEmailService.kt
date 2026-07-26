@@ -16,7 +16,6 @@ class VerifyEmailService(
     private val tokenService: TokenService,
     private val refreshTokenRepository: RefreshTokenRepository,
 ) : VerifyEmailUseCase {
-
     override fun verify(command: VerifyEmailCommand): VerifyEmailResult {
         val user = userRepository.findByEmail(command.email) ?: return VerifyEmailResult.UserNotFound
 

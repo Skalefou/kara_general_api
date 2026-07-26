@@ -57,8 +57,10 @@ data class Pool(
          * Garantit une échéance bien inférieure à 7 jours (validité des autorisations Stripe) tout en
          * laissant une marge avant la réservation pour capturer ou annuler.
          */
-        fun defaultDeadline(now: Instant, reservationStart: Instant): Instant =
-            minOf(now.plus(MAX_WINDOW), reservationStart.minus(PRE_RESERVATION_MARGIN))
+        fun defaultDeadline(
+            now: Instant,
+            reservationStart: Instant,
+        ): Instant = minOf(now.plus(MAX_WINDOW), reservationStart.minus(PRE_RESERVATION_MARGIN))
 
         /**
          * Crée une cagnotte OPEN. [targetAmount] est figé (= prix total de la réservation) ; le token de lien

@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 
 class BoundingBoxTest {
-
     @Test
     fun `should build a valid bounding box`() {
         assertDoesNotThrow { BoundingBox(minLat = 48.8, minLng = 2.2, maxLat = 48.9, maxLng = 2.4) }

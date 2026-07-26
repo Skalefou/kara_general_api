@@ -9,7 +9,9 @@ data class CreateConversationCommand(
 )
 
 sealed interface CreateConversationResult {
-    data class Success(val conversation: ConversationView) : CreateConversationResult
+    data class Success(
+        val conversation: ConversationView,
+    ) : CreateConversationResult
 }
 
 interface CreateConversationUseCase {

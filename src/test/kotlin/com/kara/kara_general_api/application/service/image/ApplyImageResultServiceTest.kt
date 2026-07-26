@@ -18,7 +18,6 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class ApplyImageResultServiceTest {
-
     private val correlationRepository = mockk<ImageJobCorrelationRepository>(relaxed = true)
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
