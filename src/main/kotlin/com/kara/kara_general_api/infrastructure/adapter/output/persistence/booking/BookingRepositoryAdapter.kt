@@ -3,8 +3,12 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.book
 import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
+import com.kara.kara_general_api.domain.model.booking.UserBooking
+import com.kara.kara_general_api.domain.model.booking.UserBookingOption
+import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomOptionId
+import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
@@ -18,6 +22,9 @@ import java.util.UUID
 private const val BOOKING_COLUMNS =
     "id, room_id, user_id, start_at, end_at, number_of_people, total_price, currency, status, " +
         "payment_mode, created_at, expires_at"
+
+/** Libellé de repli lorsque la salle d'une réservation n'existe plus. */
+private const val UNKNOWN_ROOM_NAME = "Salle"
 
 @Component
 class BookingRepositoryAdapter(
@@ -165,6 +172,78 @@ class BookingRepositoryAdapter(
             ORDER BY start_at DESC
             """.trimIndent()
         return jdbc.query(sql, emptyMap<String, Any>(), rowMapper)
+    }
+
+    override fun findByUserId(userId: UserId): List<UserBooking> {
+        // « Mes réservations » : tous les statuts, du plus récent créneau au plus ancien. La salle est
+        // jointe en LEFT JOIN pour survivre à une salle supprimée (nom retombant sur un libellé neutre).
+        val sql =
+            """
+            SELECT b.id, b.room_id, b.user_id, b.start_at, b.end_at, b.number_of_people,
+                   b.total_price, b.currency, b.status, b.payment_mode, b.created_at, b.expires_at,
+                   r.name AS room_name, r.street AS room_street, r.city AS room_city,
+                   r.postal_code AS room_postal_code, r.country AS room_country
+            FROM bookings b
+            LEFT JOIN rooms r ON r.id = b.room_id
+            WHERE b.user_id = :userId
+            ORDER BY b.start_at DESC
+            """.trimIndent()
+        val rows =
+            jdbc.query(sql, mapOf("userId" to userId.value)) { rs, rowNum ->
+                UserBooking(
+                    booking = rowMapper.mapRow(rs, rowNum),
+                    roomName = rs.getString("room_name") ?: UNKNOWN_ROOM_NAME,
+                    roomAddress =
+                        rs.getString("room_street")?.let { street ->
+                            Address(
+                                street = street,
+                                city = rs.getString("room_city"),
+                                postalCode = rs.getString("room_postal_code"),
+                                country = rs.getString("room_country"),
+                            )
+                        },
+                    options = emptyList(),
+                )
+            }
+        // Aucune réservation ⇒ aucune requête supplémentaire.
+        if (rows.isEmpty()) return emptyList()
+        val optionsByBooking = findOptionsByBookingIds(rows.map { it.booking.id })
+        return rows.map { row ->
+            val options = optionsByBooking[row.booking.id].orEmpty()
+            row.copy(
+                booking = row.booking.copy(selectedOptionIds = options.map { it.optionId }),
+                options = options,
+            )
+        }
+    }
+
+    /**
+     * Options de **toutes** les réservations demandées en une seule requête (`IN (:bookingIds)`) : les
+     * identifiants figés dans `booking_options` sont joints au catalogue `services` pour leur libellé et
+     * leur prix forfaitaire. Évite une requête par réservation (N+1).
+     */
+    private fun findOptionsByBookingIds(bookingIds: List<BookingId>): Map<BookingId, List<UserBookingOption>> {
+        if (bookingIds.isEmpty()) return emptyMap()
+        val sql =
+            """
+            SELECT bo.booking_id AS booking_id, s.id AS option_id, s.label AS label,
+                   s.price AS price, s.currency AS currency
+            FROM booking_options bo
+            JOIN services s ON s.id = bo.option_id
+            WHERE bo.booking_id IN (:bookingIds)
+            ORDER BY bo.created_at ASC
+            """.trimIndent()
+        val params = MapSqlParameterSource().addValue("bookingIds", bookingIds.map { it.value })
+        return jdbc
+            .query(sql, params) { rs, _ ->
+                BookingId(rs.getObject("booking_id", UUID::class.java)) to
+                    UserBookingOption(
+                        optionId = RoomOptionId(rs.getObject("option_id", UUID::class.java)),
+                        label = rs.getString("label"),
+                        price = rs.getBigDecimal("price"),
+                        currency = Currency.valueOf(rs.getString("currency")),
+                    )
+            }.groupBy({ it.first }, { it.second })
     }
 
     override fun updateStatus(

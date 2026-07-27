@@ -45,6 +45,42 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- ---------------------------------------------------------------------------
+-- Authentification à deux facteurs (A2F) — secret TOTP (RFC 6238) du compte.
+-- Un compte porte au plus un secret (clé primaire = user_id). secret_cipher est TOUJOURS la forme
+-- chiffrée (AES-256-GCM) du secret : jamais de secret en clair en base ni dans les logs.
+-- status ∈ {PENDING, ACTIVE} : PENDING = QR code affiché mais activation non confirmée ; ACTIVE = un
+-- premier code valide a été saisi, l'A2F est exigée à chaque connexion.
+-- last_used_step = dernier pas de temps TOTP consommé (anti-rejeu).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_two_factor (
+    user_id        UUID PRIMARY KEY,
+    secret_cipher  VARCHAR(512) NOT NULL,
+    status         VARCHAR(20)  NOT NULL,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    activated_at   TIMESTAMPTZ,
+    last_used_step BIGINT
+);
+
+-- Codes de secours à usage unique (perte de l'application d'authentification). Seul le haché bcrypt est
+-- stocké : le code en clair n'est affiché qu'une seule fois, à sa génération. used_at non nul = consommé.
+CREATE TABLE IF NOT EXISTS user_recovery_codes (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL,
+    code_hash  VARCHAR(255) NOT NULL,
+    used_at    TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_recovery_codes_user_id ON user_recovery_codes(user_id);
+
+ALTER TABLE user_two_factor DROP CONSTRAINT IF EXISTS fk_user_two_factor_user;
+ALTER TABLE user_two_factor ADD CONSTRAINT fk_user_two_factor_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE user_recovery_codes DROP CONSTRAINT IF EXISTS fk_user_recovery_codes_user;
+ALTER TABLE user_recovery_codes ADD CONSTRAINT fk_user_recovery_codes_user
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- ---------------------------------------------------------------------------
 -- Salles louables à l'heure.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS rooms (

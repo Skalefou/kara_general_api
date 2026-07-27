@@ -9,9 +9,11 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.C
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.ServerBookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.UserBookingResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -47,9 +49,27 @@ interface BookingApi {
                 responseCode = "400",
                 description =
                     "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
-                        "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
-                        "(UNKNOWN_ROOM_OPTION)",
-                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+                        "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT), durée inférieure à une heure " +
+                        "(BOOKING_DURATION_TOO_SHORT) ou option étrangère à la salle (UNKNOWN_ROOM_OPTION)",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ProblemDetail::class),
+                        examples = [
+                            ExampleObject(
+                                name = "BOOKING_DURATION_TOO_SHORT",
+                                value = """
+                                    {
+                                      "title": "Durée trop courte",
+                                      "status": 400,
+                                      "detail": "Une réservation doit durer au minimum 60 minutes.",
+                                      "code": "BOOKING_DURATION_TOO_SHORT",
+                                      "minimumMinutes": 60
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
             ),
             ApiResponse(
                 responseCode = "404",
@@ -82,9 +102,27 @@ interface BookingApi {
                 responseCode = "400",
                 description =
                     "Requête invalide : moins de 2 personnes (TOO_FEW_PEOPLE), capacité dépassée " +
-                        "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT) ou option étrangère à la salle " +
-                        "(UNKNOWN_ROOM_OPTION)",
-                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+                        "(CAPACITY_EXCEEDED), créneau invalide (INVALID_TIME_SLOT), durée inférieure à une heure " +
+                        "(BOOKING_DURATION_TOO_SHORT) ou option étrangère à la salle (UNKNOWN_ROOM_OPTION)",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ProblemDetail::class),
+                        examples = [
+                            ExampleObject(
+                                name = "BOOKING_DURATION_TOO_SHORT",
+                                value = """
+                                    {
+                                      "title": "Durée trop courte",
+                                      "status": 400,
+                                      "detail": "Une réservation doit durer au minimum 60 minutes.",
+                                      "code": "BOOKING_DURATION_TOO_SHORT",
+                                      "minimumMinutes": 60
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
             ),
             ApiResponse(
                 responseCode = "404",
@@ -123,6 +161,108 @@ interface BookingApi {
     )
     @GetMapping("/me/assigned")
     fun listMyAssignedBookings(authentication: Authentication): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Consulter mes réservations (client)",
+        description =
+            "Retourne toutes les réservations dont l'utilisateur authentifié est le propriétaire, " +
+                "quel que soit son rôle. **Aucun statut n'est filtré** (PENDING, CONFIRMED, CANCELLED) : " +
+                "c'est le front qui étiquette et regroupe. Chaque réservation porte " +
+                "l'horaire, le nombre de personnes, les services retenus et, en mode SHARED_POT uniquement, la " +
+                "cagnotte incluse en ligne avec la liste nominative des parts — le front n'a donc pas à " +
+                "interroger une cagnotte par réservation. En mode PAY_ALL, `pool` vaut null : le modèle ne " +
+                "connaît aucun nom de participant, seulement `numberOfPeople`. Tri par date de début " +
+                "décroissante.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Réservations de l'utilisateur (liste éventuellement vide)",
+                content = [
+                    Content(
+                        array = ArraySchema(schema = Schema(implementation = UserBookingResponse::class)),
+                        examples = [
+                            ExampleObject(
+                                name = "Une cagnotte et une réservation payée en solo",
+                                value = """
+                                    [
+                                      {
+                                        "bookingId": "9f1c4f0e-1f4a-4c2b-9a3d-1b2c3d4e5f60",
+                                        "roomId": "550e8400-e29b-41d4-a716-446655440000",
+                                        "roomName": "Salle Étoile",
+                                        "roomAddress": "12 rue de Paris, 69002 Lyon, France",
+                                        "startAt": "2026-08-01T18:00:00Z",
+                                        "endAt": "2026-08-01T21:00:00Z",
+                                        "status": "PENDING",
+                                        "paymentMode": "SHARED_POT",
+                                        "numberOfPeople": 8,
+                                        "totalPrice": 435.00,
+                                        "currency": "EUR",
+                                        "expiresAt": "2026-08-01T16:00:00Z",
+                                        "options": [
+                                          {
+                                            "optionId": "c0ffee00-0000-4000-8000-000000000001",
+                                            "label": "Ménage fin de soirée",
+                                            "price": 60.00,
+                                            "currency": "EUR"
+                                          }
+                                        ],
+                                        "pool": {
+                                          "poolId": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+                                          "status": "OPEN",
+                                          "targetAmount": 435.00,
+                                          "collectedAmount": 217.50,
+                                          "currency": "EUR",
+                                          "percentage": 50,
+                                          "deadline": "2026-08-01T16:00:00Z",
+                                          "shares": [
+                                            {
+                                              "shareId": "11111111-1111-4111-8111-111111111111",
+                                              "participantName": "Jeanne Martin",
+                                              "email": "jeanne@example.com",
+                                              "amount": 217.50,
+                                              "status": "AUTHORIZED"
+                                            },
+                                            {
+                                              "shareId": "22222222-2222-4222-8222-222222222222",
+                                              "participantName": "Karim Belkacem",
+                                              "email": null,
+                                              "amount": 217.50,
+                                              "status": "PENDING"
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "bookingId": "7d2b8a10-3c4d-4e5f-9a0b-1c2d3e4f5a6b",
+                                        "roomId": "550e8400-e29b-41d4-a716-446655440000",
+                                        "roomName": "Salle Étoile",
+                                        "roomAddress": "12 rue de Paris, 69002 Lyon, France",
+                                        "startAt": "2026-07-04T19:00:00Z",
+                                        "endAt": "2026-07-04T23:00:00Z",
+                                        "status": "CONFIRMED",
+                                        "paymentMode": "PAY_ALL",
+                                        "numberOfPeople": 4,
+                                        "totalPrice": 280.00,
+                                        "currency": "EUR",
+                                        "expiresAt": "2026-07-01T10:15:00Z",
+                                        "options": [],
+                                        "pool": null
+                                      }
+                                    ]
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(responseCode = "401", description = "Requête non authentifiée"),
+        ],
+    )
+    @GetMapping("/me")
+    fun listMyBookings(authentication: Authentication): ResponseEntity<Any>
 
     @Operation(
         summary = "Consulter toutes les réservations (admin)",

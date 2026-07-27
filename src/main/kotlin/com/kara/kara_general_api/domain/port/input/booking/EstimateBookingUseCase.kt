@@ -29,6 +29,14 @@ sealed interface EstimateBookingResult {
 
     data object InvalidTimeSlot : EstimateBookingResult
 
+    /**
+     * Le créneau est cohérent (fin après début) mais plus court que la durée minimale d'une réservation.
+     * [minimumMinutes] porte cette durée minimale exigée, en minutes.
+     */
+    data class DurationTooShort(
+        val minimumMinutes: Long,
+    ) : EstimateBookingResult
+
     /** Au moins un identifiant d'option ne correspond à aucune option de la salle. */
     data class UnknownOptions(
         val optionIds: List<UUID>,

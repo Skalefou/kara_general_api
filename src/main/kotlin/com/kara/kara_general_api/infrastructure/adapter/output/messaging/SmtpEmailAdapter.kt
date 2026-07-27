@@ -59,6 +59,42 @@ class SmtpEmailAdapter(
         mailSender.send(message)
     }
 
+    override fun sendTwoFactorEnabled(email: Email) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Authentification forte activée sur votre compte Kara")
+        helper.setText(
+            "<p>L'authentification à deux facteurs vient d'être <strong>activée</strong> sur votre compte Kara.</p>" +
+                "<p>À chaque connexion, un code à usage unique vous sera désormais demandé après votre " +
+                "mot de passe.</p>" +
+                "<p>Conservez précieusement vos codes de secours : ils sont la seule façon de récupérer " +
+                "votre compte si vous perdez l'accès à votre téléphone.</p>" +
+                "<p>Si vous n'êtes pas à l'origine de cette action, changez immédiatement votre mot de passe.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
+
+    override fun sendTwoFactorDisabled(email: Email) {
+        val message = mailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, false, "UTF-8")
+        helper.setFrom(fromEmail)
+        helper.setTo(email.value)
+        helper.setSubject("Authentification forte désactivée sur votre compte Kara")
+        helper.setText(
+            "<p>L'authentification à deux facteurs vient d'être <strong>désactivée</strong> sur votre " +
+                "compte Kara.</p>" +
+                "<p>La clé secrète et l'ensemble des codes de secours restants ont été invalidés.</p>" +
+                "<p><strong>Votre compte est désormais moins protégé</strong> : il n'est plus défendu que par " +
+                "votre mot de passe. Nous vous recommandons de réactiver l'authentification forte.</p>" +
+                "<p>Si vous n'êtes pas à l'origine de cette action, changez immédiatement votre mot de passe.</p>",
+            true,
+        )
+        mailSender.send(message)
+    }
+
     override fun sendServerInvitation(
         email: Email,
         firstName: String,

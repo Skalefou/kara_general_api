@@ -16,6 +16,15 @@ interface EmailService {
         code: String,
     )
 
+    /** Notifie l'activation de l'authentification à deux facteurs sur le compte. */
+    fun sendTwoFactorEnabled(email: Email)
+
+    /**
+     * Notifie la désactivation de l'authentification à deux facteurs — que ce soit à la demande explicite
+     * de l'utilisateur ou parce qu'un code de secours a été consommé pour se connecter.
+     */
+    fun sendTwoFactorDisabled(email: Email)
+
     fun sendServerInvitation(
         email: Email,
         firstName: String,

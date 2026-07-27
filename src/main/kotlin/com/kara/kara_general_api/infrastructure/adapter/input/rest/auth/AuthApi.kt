@@ -5,11 +5,14 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.Forg
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LogoutRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RecoveryCodeLoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.TwoFactorChallengeResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.TwoFactorLoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.common.dto.ApiErrorResponse
@@ -60,14 +63,54 @@ interface AuthApi {
 
     @Operation(
         summary = "Se connecter",
-        description = "Authentifie un utilisateur via email ou téléphone (`isEmail`) et mot de passe, et délivre un access token JWT.",
+        description =
+            "Authentifie un utilisateur via email ou téléphone (`isEmail`) et mot de passe. Deux formes de " +
+                "réponse 200 : `LoginResponse` (connexion terminée, access token délivré) ou " +
+                "`TwoFactorChallengeResponse` (le compte exige un second facteur : aucun token n'est délivré, " +
+                "il faut rejouer le `mfaToken` sur /api/v1/auth/login/2fa ou /api/v1/auth/login/2fa/recovery). " +
+                "Le front discrimine sur le champ `twoFactorRequired`, présent dans les deux schémas.",
     )
     @ApiResponses(
         value = [
             ApiResponse(
                 responseCode = "200",
-                description = "Authentification réussie, access token délivré",
-                content = [Content(schema = Schema(implementation = LoginResponse::class))],
+                description =
+                    "Authentification réussie (access token délivré) OU second facteur exigé " +
+                        "(`twoFactorRequired: true`)",
+                content = [
+                    Content(
+                        schema =
+                            Schema(
+                                oneOf = [LoginResponse::class, TwoFactorChallengeResponse::class],
+                            ),
+                        examples = [
+                            ExampleObject(
+                                name = "LoginResponse",
+                                value = """
+                                    {
+                                      "accessToken": "eyJhbGciOiJSUzI1NiJ9...",
+                                      "expiresIn": 900,
+                                      "refreshToken": "hR8s...",
+                                      "refreshTokenExpiresIn": 604800,
+                                      "mustChangePassword": false,
+                                      "twoFactorRequired": false,
+                                      "twoFactorDisabled": false
+                                    }
+                                """,
+                            ),
+                            ExampleObject(
+                                name = "TwoFactorChallengeResponse",
+                                value = """
+                                    {
+                                      "twoFactorRequired": true,
+                                      "mfaToken": "Zm9vYmFyLXRva2Vu...",
+                                      "expiresIn": 300
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
             ),
             ApiResponse(
                 responseCode = "401",
@@ -178,6 +221,163 @@ interface AuthApi {
     @PostMapping("/login")
     fun login(
         @Valid @RequestBody request: LoginRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Valider le second facteur (code TOTP) et terminer la connexion",
+        description =
+            "Consomme le `mfaToken` délivré par /api/v1/auth/login et vérifie le code à usage unique. " +
+                "Le challenge est à usage unique et un code déjà utilisé est refusé (anti-rejeu).",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Second facteur validé, access token délivré",
+                content = [Content(schema = Schema(implementation = LoginResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Code invalide, ou challenge inconnu / expiré / déjà consommé",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "INVALID_TWO_FACTOR_CODE",
+                                value = """
+                                    {
+                                      "title": "Code invalide",
+                                      "status": 400,
+                                      "detail": "Le code à usage unique est incorrect ou a déjà été utilisé.",
+                                      "instance": "/api/v1/auth/login/2fa",
+                                      "code": "INVALID_TWO_FACTOR_CODE"
+                                    }
+                                """,
+                            ),
+                            ExampleObject(
+                                name = "TWO_FACTOR_CHALLENGE_EXPIRED",
+                                value = """
+                                    {
+                                      "title": "Session de vérification expirée",
+                                      "status": 400,
+                                      "detail": "La session de vérification a expiré. Merci de vous reconnecter.",
+                                      "instance": "/api/v1/auth/login/2fa",
+                                      "code": "TWO_FACTOR_CHALLENGE_EXPIRED"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "429",
+                description = "Trop de tentatives : le challenge a été détruit, il faut se reconnecter",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "TWO_FACTOR_TOO_MANY_ATTEMPTS",
+                                value = """
+                                    {
+                                      "title": "Trop de tentatives",
+                                      "status": 429,
+                                      "detail": "Trop de codes incorrects ont été saisis. Merci de vous reconnecter.",
+                                      "instance": "/api/v1/auth/login/2fa",
+                                      "code": "TWO_FACTOR_TOO_MANY_ATTEMPTS"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @PostMapping("/login/2fa")
+    fun loginTwoFactor(
+        @Valid @RequestBody request: TwoFactorLoginRequest,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Se connecter avec un code de secours (perte de l'application d'authentification)",
+        description =
+            "Consomme le `mfaToken` et un code de secours à usage unique. **Effet de bord majeur** : " +
+                "l'A2F du compte est désactivée (clé secrète et codes restants invalidés), la réponse porte " +
+                "`twoFactorDisabled: true` et un email de notification est envoyé.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Code de secours accepté, A2F désactivée, access token délivré",
+                content = [Content(schema = Schema(implementation = LoginResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Code de secours inconnu ou déjà consommé, ou challenge expiré",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "INVALID_RECOVERY_CODE",
+                                value = """
+                                    {
+                                      "title": "Code de secours invalide",
+                                      "status": 400,
+                                      "detail": "Ce code de secours est invalide ou a déjà été utilisé.",
+                                      "instance": "/api/v1/auth/login/2fa/recovery",
+                                      "code": "INVALID_RECOVERY_CODE"
+                                    }
+                                """,
+                            ),
+                            ExampleObject(
+                                name = "TWO_FACTOR_CHALLENGE_EXPIRED",
+                                value = """
+                                    {
+                                      "title": "Session de vérification expirée",
+                                      "status": 400,
+                                      "detail": "La session de vérification a expiré. Merci de vous reconnecter.",
+                                      "instance": "/api/v1/auth/login/2fa/recovery",
+                                      "code": "TWO_FACTOR_CHALLENGE_EXPIRED"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            ApiResponse(
+                responseCode = "429",
+                description = "Trop de tentatives : le challenge a été détruit, il faut se reconnecter",
+                content = [
+                    Content(
+                        schema = Schema(implementation = ApiErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "TWO_FACTOR_TOO_MANY_ATTEMPTS",
+                                value = """
+                                    {
+                                      "title": "Trop de tentatives",
+                                      "status": 429,
+                                      "detail": "Trop de codes incorrects ont été saisis. Merci de vous reconnecter.",
+                                      "instance": "/api/v1/auth/login/2fa/recovery",
+                                      "code": "TWO_FACTOR_TOO_MANY_ATTEMPTS"
+                                    }
+                                """,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+    @PostMapping("/login/2fa/recovery")
+    fun loginWithRecoveryCode(
+        @Valid @RequestBody request: RecoveryCodeLoginRequest,
     ): ResponseEntity<Any>
 
     @Operation(

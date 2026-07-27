@@ -16,6 +16,12 @@ interface PoolShareRepository {
     fun findByPoolId(poolId: PoolId): List<PoolShare>
 
     /**
+     * Parts de plusieurs cagnottes en **une seule** requête (évite le N+1 sur une liste de cagnottes).
+     * Retourne une liste vide sans interroger la base si [poolIds] est vide.
+     */
+    fun findByPoolIds(poolIds: List<PoolId>): List<PoolShare>
+
+    /**
      * Verrou pessimiste (`SELECT ... FOR UPDATE`) sur la part reliquat du créateur d'une cagnotte. Sérialise
      * les auto-inscriptions concurrentes : tant que la transaction détentrice n'a pas commité, toute autre
      * lecture verrouillée du même reliquat attend, garantissant l'invariant somme(parts) == cible. À appeler

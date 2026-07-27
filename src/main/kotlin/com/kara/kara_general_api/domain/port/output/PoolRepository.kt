@@ -18,6 +18,12 @@ interface PoolRepository {
 
     fun findByExtensionId(extensionId: BookingExtensionId): Pool?
 
+    /**
+     * Cagnottes de réservation (hors cagnottes d'extension) rattachées à [bookingIds], en **une seule**
+     * requête. Retourne une liste vide sans interroger la base si [bookingIds] est vide.
+     */
+    fun findByBookingIds(bookingIds: List<BookingId>): List<Pool>
+
     /** Retrouve la cagnotte par son token de lien global (recap public « rejoindre la cagnotte »). */
     fun findByGlobalLinkToken(token: String): Pool?
 

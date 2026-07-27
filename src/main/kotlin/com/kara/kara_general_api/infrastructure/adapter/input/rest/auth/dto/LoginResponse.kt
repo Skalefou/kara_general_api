@@ -19,4 +19,18 @@ data class LoginResponse(
         example = "false",
     )
     val mustChangePassword: Boolean,
+    @field:Schema(
+        description =
+            "Toujours `false` sur ce schéma. Champ commun avec `TwoFactorChallengeResponse` : le front " +
+                "discrimine les deux formes du 200 de /api/v1/auth/login sur ce seul champ.",
+        example = "false",
+    )
+    val twoFactorRequired: Boolean = false,
+    @field:Schema(
+        description =
+            "Vrai uniquement sur /api/v1/auth/login/2fa/recovery : la consommation du code de secours a " +
+                "désactivé l'A2F du compte, qui devra être reconfigurée.",
+        example = "false",
+    )
+    val twoFactorDisabled: Boolean = false,
 )

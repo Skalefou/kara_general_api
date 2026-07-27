@@ -26,17 +26,26 @@ import com.kara.kara_general_api.domain.port.input.auth.ResetPasswordUseCase
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailCommand
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailResult
 import com.kara.kara_general_api.domain.port.input.auth.VerifyEmailUseCase
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.ConsumeRecoveryCodeCommand
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.ConsumeRecoveryCodeResult
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.ConsumeRecoveryCodeUseCase
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.VerifyTwoFactorChallengeCommand
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.VerifyTwoFactorChallengeResult
+import com.kara.kara_general_api.domain.port.input.auth.twofactor.VerifyTwoFactorChallengeUseCase
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ChangePasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ForgotPasswordRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LoginResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.LogoutRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RecoveryCodeLoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RefreshTokenResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.RegisterResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.ResetPasswordRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.TwoFactorChallengeResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.TwoFactorLoginRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.auth.dto.VerifyEmailResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.user.dto.UserResponse
@@ -62,6 +71,8 @@ class AuthController(
     private val refreshTokenUseCase: RefreshTokenUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val changePasswordUseCase: ChangePasswordUseCase,
+    private val verifyTwoFactorChallengeUseCase: VerifyTwoFactorChallengeUseCase,
+    private val consumeRecoveryCodeUseCase: ConsumeRecoveryCodeUseCase,
     private val imageStorage: ImageStoragePort,
 ) : AuthApi {
     private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
@@ -195,8 +206,113 @@ class AuthController(
                             setProperty("code", "TEMP_PASSWORD_EXPIRED")
                         },
                 )
+
+            is LoginResult.TwoFactorRequired ->
+                ResponseEntity.ok(
+                    TwoFactorChallengeResponse(
+                        mfaToken = result.mfaToken,
+                        expiresIn = result.expiresInSeconds,
+                    ),
+                )
         }
     }
+
+    override fun loginTwoFactor(request: TwoFactorLoginRequest): ResponseEntity<Any> {
+        val command =
+            VerifyTwoFactorChallengeCommand(mfaToken = request.mfaToken, code = request.code)
+
+        return when (val result = verifyTwoFactorChallengeUseCase.verify(command)) {
+            is VerifyTwoFactorChallengeResult.Success ->
+                ResponseEntity.ok(
+                    LoginResponse(
+                        accessToken = result.accessToken.value,
+                        expiresIn = result.accessToken.expiresInSeconds,
+                        refreshToken = result.refreshToken.value,
+                        refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
+                        user = UserResponse.from(result.user, ::signedPhotoUrl),
+                        mustChangePassword = result.mustChangePassword,
+                    ),
+                )
+
+            VerifyTwoFactorChallengeResult.ChallengeExpired -> challengeExpiredProblem()
+
+            VerifyTwoFactorChallengeResult.InvalidCode ->
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "Le code à usage unique est incorrect ou a déjà été utilisé.",
+                        ).apply {
+                            title = "Code invalide"
+                            setProperty("code", "INVALID_TWO_FACTOR_CODE")
+                        },
+                )
+
+            VerifyTwoFactorChallengeResult.TooManyAttempts -> tooManyAttemptsProblem()
+        }
+    }
+
+    override fun loginWithRecoveryCode(request: RecoveryCodeLoginRequest): ResponseEntity<Any> {
+        val command =
+            ConsumeRecoveryCodeCommand(mfaToken = request.mfaToken, recoveryCode = request.recoveryCode)
+
+        return when (val result = consumeRecoveryCodeUseCase.consume(command)) {
+            is ConsumeRecoveryCodeResult.Success ->
+                ResponseEntity.ok(
+                    LoginResponse(
+                        accessToken = result.accessToken.value,
+                        expiresIn = result.accessToken.expiresInSeconds,
+                        refreshToken = result.refreshToken.value,
+                        refreshTokenExpiresIn = result.refreshToken.expiresInSeconds,
+                        user = UserResponse.from(result.user, ::signedPhotoUrl),
+                        mustChangePassword = result.mustChangePassword,
+                        twoFactorDisabled = true,
+                    ),
+                )
+
+            ConsumeRecoveryCodeResult.ChallengeExpired -> challengeExpiredProblem()
+
+            // Code inconnu et code déjà consommé partagent volontairement le même code d'erreur et le même
+            // message : ne rien révéler sur l'existence d'un code.
+            ConsumeRecoveryCodeResult.InvalidRecoveryCode ->
+                ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    ProblemDetail
+                        .forStatusAndDetail(
+                            HttpStatus.BAD_REQUEST,
+                            "Ce code de secours est invalide ou a déjà été utilisé.",
+                        ).apply {
+                            title = "Code de secours invalide"
+                            setProperty("code", "INVALID_RECOVERY_CODE")
+                        },
+                )
+
+            ConsumeRecoveryCodeResult.TooManyAttempts -> tooManyAttemptsProblem()
+        }
+    }
+
+    private fun challengeExpiredProblem(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "La session de vérification a expiré. Merci de vous reconnecter.",
+                ).apply {
+                    title = "Session de vérification expirée"
+                    setProperty("code", "TWO_FACTOR_CHALLENGE_EXPIRED")
+                },
+        )
+
+    private fun tooManyAttemptsProblem(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Trop de codes incorrects ont été saisis. Merci de vous reconnecter.",
+                ).apply {
+                    title = "Trop de tentatives"
+                    setProperty("code", "TWO_FACTOR_TOO_MANY_ATTEMPTS")
+                },
+        )
 
     override fun changePassword(
         request: ChangePasswordRequest,

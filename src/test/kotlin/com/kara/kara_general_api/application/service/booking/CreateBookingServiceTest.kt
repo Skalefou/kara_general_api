@@ -95,6 +95,18 @@ class CreateBookingServiceTest {
     }
 
     @Test
+    fun `should return DurationTooShort when the slot is shorter than one hour`() {
+        every { roomRepository.findById(roomId) } returns room
+        every { roomOptionRepository.findByRoomId(roomId) } returns emptyList()
+
+        val result = sut.createBooking(command().copy(endAt = start.plusSeconds(30 * 60)))
+
+        val tooShort = assertIs<CreateBookingResult.DurationTooShort>(result)
+        assertEquals(60L, tooShort.minimumMinutes)
+        verify(exactly = 0) { bookingRepository.save(any()) }
+    }
+
+    @Test
     fun `should return UnknownOptions when an option does not belong to the room`() {
         val stranger = RoomOptionId(UUID.randomUUID())
         every { roomRepository.findById(roomId) } returns room
