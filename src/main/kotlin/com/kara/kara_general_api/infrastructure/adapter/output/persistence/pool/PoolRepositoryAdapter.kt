@@ -68,6 +68,21 @@ class PoolRepositoryAdapter(
         return jdbc.query(sql, mapOf("extensionId" to extensionId.value), rowMapper).firstOrNull()
     }
 
+    override fun findByBookingIds(bookingIds: List<BookingId>): List<Pool> {
+        if (bookingIds.isEmpty()) return emptyList()
+        // Cagnottes de réservation uniquement (extension_id IS NULL) : les cagnottes d'extension ne
+        // représentent pas le règlement initial de la réservation.
+        val sql =
+            """
+            SELECT $POOL_COLUMNS
+            FROM pools
+            WHERE booking_id IN (:bookingIds)
+              AND extension_id IS NULL
+            """.trimIndent()
+        val params = MapSqlParameterSource().addValue("bookingIds", bookingIds.map { it.value })
+        return jdbc.query(sql, params, rowMapper)
+    }
+
     override fun findByGlobalLinkToken(token: String): Pool? {
         val sql = "SELECT $POOL_COLUMNS FROM pools WHERE global_link_token = :token"
         return jdbc.query(sql, mapOf("token" to token), rowMapper).firstOrNull()

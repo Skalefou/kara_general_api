@@ -45,6 +45,7 @@ class CreateBookingService(
                 EstimateBookingResult.TooFewPeople -> return CreateBookingResult.TooFewPeople
                 is EstimateBookingResult.CapacityExceeded -> return CreateBookingResult.CapacityExceeded(result.maxCapacity)
                 EstimateBookingResult.InvalidTimeSlot -> return CreateBookingResult.InvalidTimeSlot
+                is EstimateBookingResult.DurationTooShort -> return CreateBookingResult.DurationTooShort(result.minimumMinutes)
                 is EstimateBookingResult.UnknownOptions -> return CreateBookingResult.UnknownOptions(result.optionIds)
             }
 

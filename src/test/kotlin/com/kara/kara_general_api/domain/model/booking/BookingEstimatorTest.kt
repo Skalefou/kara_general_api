@@ -141,6 +141,52 @@ class BookingEstimatorTest {
     }
 
     @Test
+    fun `should reject a slot shorter than the minimum duration`() {
+        val result =
+            BookingEstimator.estimate(
+                room = room(),
+                roomOptions = emptyList(),
+                numberOfPeople = 4,
+                startAt = start,
+                endAt = start.plusSeconds(30 * 60),
+                requestedOptionIds = emptyList(),
+            )
+
+        assertEquals(EstimateBookingResult.DurationTooShort(60), result)
+    }
+
+    @Test
+    fun `should accept a slot of exactly the minimum duration`() {
+        val result =
+            BookingEstimator.estimate(
+                room = room(pricePerPersonPerHour = "10.00"),
+                roomOptions = emptyList(),
+                numberOfPeople = 4,
+                startAt = start,
+                endAt = start.plus(Booking.MIN_DURATION),
+                requestedOptionIds = emptyList(),
+            )
+
+        val success = assertIs<EstimateBookingResult.Success>(result)
+        assertEquals(BigDecimal("40.00"), success.estimate.totalPrice)
+    }
+
+    @Test
+    fun `should keep InvalidTimeSlot when the interval is reversed`() {
+        val result =
+            BookingEstimator.estimate(
+                room = room(),
+                roomOptions = emptyList(),
+                numberOfPeople = 4,
+                startAt = start,
+                endAt = start.minusSeconds(30 * 60),
+                requestedOptionIds = emptyList(),
+            )
+
+        assertEquals(EstimateBookingResult.InvalidTimeSlot, result)
+    }
+
+    @Test
     fun `should reject an option that does not belong to the room`() {
         val known = RoomOptionId(UUID.randomUUID())
         val foreign = RoomOptionId(UUID.randomUUID())

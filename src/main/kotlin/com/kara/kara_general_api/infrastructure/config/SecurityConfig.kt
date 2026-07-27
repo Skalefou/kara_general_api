@@ -52,6 +52,10 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/stripe/webhook", permitAll)
                 // Réservations rattachées au serveur (via son agenda) : réservées au rôle SERVER.
                 authorize(HttpMethod.GET, "/api/v1/bookings/me/assigned", hasRole(UserRole.SERVER.name))
+                // Mes réservations (propriétaire) : tout utilisateur authentifié, quel que soit son rôle.
+                // Doit précéder la règle ADMIN sur /api/v1/bookings ci-dessous ; la propriété est garantie
+                // par le use case, qui ne lit que les réservations dont user_id est l'appelant.
+                authorize(HttpMethod.GET, "/api/v1/bookings/me", authenticated)
                 authorize(
                     HttpMethod.POST,
                     "/api/v1/bookings/*/validate-access",

@@ -29,6 +29,9 @@ object BookingEstimator {
         if (numberOfPeople < Room.MIN_CAPACITY) return EstimateBookingResult.TooFewPeople
         if (numberOfPeople > room.maxCapacity) return EstimateBookingResult.CapacityExceeded(room.maxCapacity)
         if (!endAt.isAfter(startAt)) return EstimateBookingResult.InvalidTimeSlot
+        if (Duration.between(startAt, endAt) < Booking.MIN_DURATION) {
+            return EstimateBookingResult.DurationTooShort(Booking.MIN_DURATION.toMinutes())
+        }
 
         val optionsById = roomOptions.associateBy { it.id }
         val requested = requestedOptionIds.distinct()

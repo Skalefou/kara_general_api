@@ -3,6 +3,7 @@ package com.kara.kara_general_api.domain.port.output
 import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
+import com.kara.kara_general_api.domain.model.booking.UserBooking
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.user.UserId
 import java.math.BigDecimal
@@ -22,6 +23,16 @@ interface BookingRepository {
 
     /** Toutes les réservations (supervision admin), ordonnées par date de début décroissante. */
     fun findAllBookings(): List<Booking>
+
+    /**
+     * Réservations appartenant à [userId] (**tous** les statuts), enrichies du nom et de l'adresse de la
+     * salle ainsi que des services retenus (libellé + prix). Ordonnées par date de début décroissante.
+     *
+     * Coût fixe, indépendant du nombre de réservations : une requête pour les réservations, une seconde
+     * pour les options de l'ensemble des réservations. Aucune requête supplémentaire si l'utilisateur n'a
+     * aucune réservation.
+     */
+    fun findByUserId(userId: UserId): List<UserBooking>
 
     /**
      * Vrai s'il existe déjà une réservation active (PENDING ou CONFIRMED) sur la salle dont le

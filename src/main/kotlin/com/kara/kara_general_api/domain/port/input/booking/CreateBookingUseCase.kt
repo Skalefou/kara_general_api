@@ -33,6 +33,14 @@ sealed interface CreateBookingResult {
 
     data object InvalidTimeSlot : CreateBookingResult
 
+    /**
+     * Le créneau est cohérent (fin après début) mais plus court que la durée minimale d'une réservation.
+     * [minimumMinutes] porte cette durée minimale exigée, en minutes.
+     */
+    data class DurationTooShort(
+        val minimumMinutes: Long,
+    ) : CreateBookingResult
+
     /** Au moins un identifiant d'option ne correspond à aucune option de la salle. */
     data class UnknownOptions(
         val optionIds: List<UUID>,

@@ -17,6 +17,9 @@ import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailResul
 import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailUseCase
 import com.kara.kara_general_api.domain.port.input.booking.ListAllBookingsUseCase
 import com.kara.kara_general_api.domain.port.input.booking.ListServerBookingsUseCase
+import com.kara.kara_general_api.domain.port.input.booking.ListUserBookingsCommand
+import com.kara.kara_general_api.domain.port.input.booking.ListUserBookingsResult
+import com.kara.kara_general_api.domain.port.input.booking.ListUserBookingsUseCase
 import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyCommand
 import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyResult
 import com.kara.kara_general_api.domain.port.input.booking.TriggerEmergencyUseCase
@@ -32,6 +35,7 @@ import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.C
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.EstimateBookingResponse
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.ServerBookingResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.booking.dto.UserBookingResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -46,6 +50,7 @@ class BookingController(
     private val estimateBookingUseCase: EstimateBookingUseCase,
     private val createBookingUseCase: CreateBookingUseCase,
     private val listServerBookingsUseCase: ListServerBookingsUseCase,
+    private val listUserBookingsUseCase: ListUserBookingsUseCase,
     private val listAllBookingsUseCase: ListAllBookingsUseCase,
     private val openBookingConversationUseCase: OpenBookingConversationUseCase,
     private val triggerEmergencyUseCase: TriggerEmergencyUseCase,
@@ -66,6 +71,14 @@ class BookingController(
             is TriggerEmergencyResult.Success -> ResponseEntity.noContent().build()
             TriggerEmergencyResult.BookingNotFound -> bookingNotFound()
             TriggerEmergencyResult.NotAuthorized -> notAuthorized()
+        }
+    }
+
+    override fun listMyBookings(authentication: Authentication): ResponseEntity<Any> {
+        val command = ListUserBookingsCommand(userId = UserId(UUID.fromString(authentication.name)))
+        return when (val result = listUserBookingsUseCase.listForUser(command)) {
+            is ListUserBookingsResult.Success ->
+                ResponseEntity.ok(result.bookings.map { UserBookingResponse.from(it) })
         }
     }
 
@@ -209,6 +222,7 @@ class BookingController(
             CreateBookingResult.TooFewPeople -> tooFewPeople()
             is CreateBookingResult.CapacityExceeded -> capacityExceeded(result.maxCapacity)
             CreateBookingResult.InvalidTimeSlot -> invalidTimeSlot()
+            is CreateBookingResult.DurationTooShort -> durationTooShort(result.minimumMinutes)
             is CreateBookingResult.UnknownOptions -> unknownOptions(result.optionIds)
             CreateBookingResult.SlotUnavailable -> slotUnavailable()
         }
@@ -230,6 +244,7 @@ class BookingController(
             EstimateBookingResult.TooFewPeople -> tooFewPeople()
             is EstimateBookingResult.CapacityExceeded -> capacityExceeded(result.maxCapacity)
             EstimateBookingResult.InvalidTimeSlot -> invalidTimeSlot()
+            is EstimateBookingResult.DurationTooShort -> durationTooShort(result.minimumMinutes)
             is EstimateBookingResult.UnknownOptions -> unknownOptions(result.optionIds)
         }
     }
@@ -279,6 +294,19 @@ class BookingController(
                 ).apply {
                     title = "Créneau invalide"
                     setProperty("code", "INVALID_TIME_SLOT")
+                },
+        )
+
+    private fun durationTooShort(minimumMinutes: Long): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Une réservation doit durer au minimum $minimumMinutes minutes.",
+                ).apply {
+                    title = "Durée trop courte"
+                    setProperty("code", "BOOKING_DURATION_TOO_SHORT")
+                    setProperty("minimumMinutes", minimumMinutes)
                 },
         )
 

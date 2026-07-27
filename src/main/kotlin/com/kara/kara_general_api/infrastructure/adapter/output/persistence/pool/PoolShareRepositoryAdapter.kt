@@ -44,6 +44,19 @@ class PoolShareRepositoryAdapter(
         return jdbc.query(sql, mapOf("poolId" to poolId.value), rowMapper)
     }
 
+    override fun findByPoolIds(poolIds: List<PoolId>): List<PoolShare> {
+        if (poolIds.isEmpty()) return emptyList()
+        val sql =
+            """
+            SELECT $POOL_SHARE_COLUMNS
+            FROM pool_shares
+            WHERE pool_id IN (:poolIds)
+            ORDER BY created_at ASC
+            """.trimIndent()
+        val params = MapSqlParameterSource().addValue("poolIds", poolIds.map { it.value })
+        return jdbc.query(sql, params, rowMapper)
+    }
+
     override fun findCreatorShareForUpdate(poolId: PoolId): PoolShare? {
         // Verrou pessimiste sur la ligne du reliquat créateur : sérialise les auto-inscriptions concurrentes.
         val sql =

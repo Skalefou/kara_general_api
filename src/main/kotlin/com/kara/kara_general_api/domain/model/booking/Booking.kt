@@ -34,6 +34,9 @@ data class Booking(
     fun cancel(): Booking = copy(status = BookingStatus.CANCELLED)
 
     companion object {
+        /** Durée minimale d'une réservation : une heure (borne incluse). */
+        val MIN_DURATION: Duration = Duration.ofHours(1)
+
         /** Durée de la fenêtre de paiement d'une réservation PENDING en mode PAY_ALL. */
         val PAYMENT_WINDOW: Duration = Duration.ofMinutes(15)
 

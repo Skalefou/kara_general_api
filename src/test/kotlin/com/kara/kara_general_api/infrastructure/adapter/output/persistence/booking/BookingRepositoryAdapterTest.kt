@@ -5,6 +5,7 @@ import com.kara.kara_general_api.TestcontainersConfiguration
 import com.kara.kara_general_api.domain.model.booking.Booking
 import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
+import com.kara.kara_general_api.domain.model.payment.PoolId
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.RoomOptionId
@@ -12,6 +13,8 @@ import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
 import com.kara.kara_general_api.domain.port.output.NotificationService
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
+import com.kara.kara_general_api.infrastructure.adapter.output.persistence.pool.PoolRepositoryAdapter
+import com.kara.kara_general_api.infrastructure.adapter.output.persistence.pool.PoolShareRepositoryAdapter
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -48,6 +51,12 @@ class BookingRepositoryAdapterTest {
     private lateinit var adapter: BookingRepositoryAdapter
 
     @Autowired
+    private lateinit var poolAdapter: PoolRepositoryAdapter
+
+    @Autowired
+    private lateinit var poolShareAdapter: PoolShareRepositoryAdapter
+
+    @Autowired
     private lateinit var jdbc: NamedParameterJdbcTemplate
 
     private val roomId = RoomId(UUID.randomUUID())
@@ -57,6 +66,8 @@ class BookingRepositoryAdapterTest {
 
     @BeforeEach
     fun setUp() {
+        jdbc.update("DELETE FROM pool_shares", emptyMap<String, Any>())
+        jdbc.update("DELETE FROM pools", emptyMap<String, Any>())
         jdbc.update("DELETE FROM booking_options", emptyMap<String, Any>())
         jdbc.update("DELETE FROM payments", emptyMap<String, Any>())
         jdbc.update("DELETE FROM bookings", emptyMap<String, Any>())
@@ -189,6 +200,79 @@ class BookingRepositoryAdapterTest {
     }
 
     @Test
+    fun `findByUserId returns only the bookings of the requested user`() {
+        val otherUserId = UserId(UUID.randomUUID())
+        insertUser(otherUserId)
+        val mine = booking()
+        val theirs =
+            booking(
+                startAt = Instant.parse("2026-09-01T18:00:00Z"),
+                endAt = Instant.parse("2026-09-01T21:00:00Z"),
+            ).copy(userId = otherUserId)
+        adapter.save(mine)
+        adapter.save(theirs)
+
+        val found = adapter.findByUserId(userId)
+
+        assertEquals(listOf(mine.id), found.map { it.booking.id })
+        assertEquals(listOf(theirs.id), adapter.findByUserId(otherUserId).map { it.booking.id })
+    }
+
+    @Test
+    fun `findByUserId assembles the room the two options and the pool shares of a booking`() {
+        val cleaning = insertService("Ménage")
+        val security = insertService("Sécurité")
+        val saved = booking(status = BookingStatus.CONFIRMED, optionIds = listOf(cleaning, security))
+        adapter.save(saved)
+        val poolId = insertPool(saved.id)
+        insertPoolShare(poolId, "Jeanne Martin", "jeanne@example.com", "217.50", "AUTHORIZED")
+        insertPoolShare(poolId, "Karim Belkacem", null, "217.50", "PENDING")
+
+        val record = adapter.findByUserId(userId).single()
+        val shares = poolShareAdapter.findByPoolIds(listOf(poolId))
+
+        assertEquals("Salle", record.roomName)
+        assertEquals("rue", record.roomAddress?.street)
+        assertEquals("Paris", record.roomAddress?.city)
+        assertEquals("75002", record.roomAddress?.postalCode)
+        assertEquals(setOf("Ménage", "Sécurité"), record.options.map { it.label }.toSet())
+        assertEquals(setOf(cleaning, security), record.options.map { it.optionId }.toSet())
+        assertEquals(BigDecimal("25.00"), record.options.first().price)
+        assertEquals(setOf(cleaning, security), record.booking.selectedOptionIds.toSet())
+        assertEquals(listOf(poolId), poolAdapter.findByBookingIds(listOf(saved.id)).map { it.id })
+        assertEquals(setOf("Jeanne Martin", "Karim Belkacem"), shares.map { it.participantName }.toSet())
+    }
+
+    @Test
+    fun `findByUserId returns every status ordered by start date descending`() {
+        val past =
+            booking(
+                startAt = Instant.parse("2026-06-01T18:00:00Z"),
+                endAt = Instant.parse("2026-06-01T21:00:00Z"),
+                status = BookingStatus.CANCELLED,
+            )
+        val future =
+            booking(
+                startAt = Instant.parse("2026-09-01T18:00:00Z"),
+                endAt = Instant.parse("2026-09-01T21:00:00Z"),
+                status = BookingStatus.CONFIRMED,
+            )
+        adapter.save(past)
+        adapter.save(booking())
+        adapter.save(future)
+
+        val found = adapter.findByUserId(userId)
+
+        assertEquals(3, found.size)
+        assertEquals(listOf(future.id, past.id), listOf(found.first().booking.id, found.last().booking.id))
+    }
+
+    @Test
+    fun `findByUserId returns empty when the user has no booking`() {
+        assertTrue(adapter.findByUserId(UserId(UUID.randomUUID())).isEmpty())
+    }
+
+    @Test
     fun `updateStatus changes the booking status`() {
         val saved = booking()
         adapter.save(saved)
@@ -226,6 +310,45 @@ class BookingRepositoryAdapterTest {
                     10.00, 'EUR', 50, true, false, false, 'OPEN', NOW())
             """.trimIndent()
         jdbc.update(sql, mapOf("id" to id.value))
+    }
+
+    private fun insertPool(bookingId: BookingId): PoolId {
+        val id = UUID.randomUUID()
+        val sql =
+            """
+            INSERT INTO pools (id, booking_id, extension_id, target_amount, currency, status, deadline,
+                               global_link_token, created_at)
+            VALUES (:id, :bookingId, NULL, 435.00, 'EUR', 'OPEN', NOW() + INTERVAL '1 day',
+                    :token, NOW())
+            """.trimIndent()
+        jdbc.update(sql, mapOf("id" to id, "bookingId" to bookingId.value, "token" to "tok_$id"))
+        return PoolId(id)
+    }
+
+    private fun insertPoolShare(
+        poolId: PoolId,
+        name: String,
+        email: String?,
+        amount: String,
+        status: String,
+    ) {
+        val sql =
+            """
+            INSERT INTO pool_shares (id, pool_id, participant_name, email, amount, status,
+                                     is_creator_share, created_at)
+            VALUES (:id, :poolId, :name, :email, :amount, :status, false, NOW())
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            mapOf(
+                "id" to UUID.randomUUID(),
+                "poolId" to poolId.value,
+                "name" to name,
+                "email" to email,
+                "amount" to BigDecimal(amount),
+                "status" to status,
+            ),
+        )
     }
 
     private fun insertService(label: String): RoomOptionId {
