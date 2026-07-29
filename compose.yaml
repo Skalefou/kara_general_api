@@ -44,8 +44,10 @@ services:
     # service `rabbitmq` (le localhost du .env ne vaut que hors conteneur).
     environment:
       RABBITMQ_URL: 'amqp://guest:guest@rabbitmq:5672/%2f'
+    # Les ports 91xx côté hôte sont pris par l'outillage Dart/Flutter en local
+    # (un port par session `flutter run`) : on publie les métriques sur 19100.
     ports:
-      - '9100:9100'
+      - '19100:9100'
 
 volumes:
   postgres_data:

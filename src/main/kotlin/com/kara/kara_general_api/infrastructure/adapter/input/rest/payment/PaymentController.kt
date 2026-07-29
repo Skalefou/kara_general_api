@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.payment
 
 import com.kara.kara_general_api.domain.model.booking.BookingId
+import com.kara.kara_general_api.domain.model.payment.PaymentId
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.payment.HandleStripeWebhookUseCase
 import com.kara.kara_general_api.domain.port.input.payment.InitiateBookingPaymentCommand
@@ -8,7 +9,11 @@ import com.kara.kara_general_api.domain.port.input.payment.InitiateBookingPaymen
 import com.kara.kara_general_api.domain.port.input.payment.InitiateBookingPaymentUseCase
 import com.kara.kara_general_api.domain.port.input.payment.StripeWebhookCommand
 import com.kara.kara_general_api.domain.port.input.payment.StripeWebhookResult
+import com.kara.kara_general_api.domain.port.input.payment.SyncBookingPaymentCommand
+import com.kara.kara_general_api.domain.port.input.payment.SyncBookingPaymentResult
+import com.kara.kara_general_api.domain.port.input.payment.SyncBookingPaymentUseCase
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.payment.dto.InitiateBookingPaymentResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.payment.dto.SyncBookingPaymentResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.ResponseEntity
@@ -19,6 +24,7 @@ import java.util.UUID
 @RestController
 class PaymentController(
     private val initiateBookingPaymentUseCase: InitiateBookingPaymentUseCase,
+    private val syncBookingPaymentUseCase: SyncBookingPaymentUseCase,
     private val handleStripeWebhookUseCase: HandleStripeWebhookUseCase,
 ) : PaymentApi {
     override fun initiatePayment(
@@ -37,6 +43,32 @@ class PaymentController(
             InitiateBookingPaymentResult.NotOwner -> notOwner()
             InitiateBookingPaymentResult.AlreadyPaid -> alreadyPaid()
             InitiateBookingPaymentResult.BookingExpired -> bookingExpired()
+        }
+    }
+
+    override fun syncPayment(
+        bookingId: UUID,
+        paymentId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val command =
+            SyncBookingPaymentCommand(
+                bookingId = BookingId(bookingId),
+                paymentId = PaymentId(paymentId),
+                userId = UserId(UUID.fromString(authentication.name)),
+            )
+        return when (val result = syncBookingPaymentUseCase.sync(command)) {
+            is SyncBookingPaymentResult.Synced ->
+                ResponseEntity.ok(
+                    SyncBookingPaymentResponse(
+                        bookingId = bookingId,
+                        paymentId = paymentId,
+                        bookingStatus = result.bookingStatus,
+                        paymentStatus = result.paymentStatus,
+                    ),
+                )
+            SyncBookingPaymentResult.NotOwner -> notOwner()
+            SyncBookingPaymentResult.NotFound -> bookingNotFound()
         }
     }
 

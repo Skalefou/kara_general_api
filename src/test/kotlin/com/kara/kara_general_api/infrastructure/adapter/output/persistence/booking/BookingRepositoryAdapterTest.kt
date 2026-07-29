@@ -200,6 +200,49 @@ class BookingRepositoryAdapterTest {
     }
 
     @Test
+    fun `cancelExpiredPending spares an expired booking that has already been paid`() {
+        val paidButPending =
+            booking(
+                startAt = Instant.parse("2026-08-05T18:00:00Z"),
+                endAt = Instant.parse("2026-08-05T21:00:00Z"),
+                status = BookingStatus.PENDING,
+                expiresAt = Instant.now().minusSeconds(60),
+            )
+        val unpaid =
+            booking(
+                startAt = Instant.parse("2026-08-06T18:00:00Z"),
+                endAt = Instant.parse("2026-08-06T21:00:00Z"),
+                status = BookingStatus.PENDING,
+                expiresAt = Instant.now().minusSeconds(60),
+            )
+        adapter.save(paidButPending)
+        adapter.save(unpaid)
+        insertPayment(paidButPending.id, "PAID")
+
+        val cancelledCount = adapter.cancelExpiredPending(Instant.now())
+
+        assertEquals(1, cancelledCount)
+        assertEquals(BookingStatus.PENDING, adapter.findById(paidButPending.id)!!.status)
+        assertEquals(BookingStatus.CANCELLED, adapter.findById(unpaid.id)!!.status)
+    }
+
+    @Test
+    fun `cancelExpiredPending still cancels an expired booking whose payment is only pending`() {
+        val expired =
+            booking(
+                startAt = Instant.parse("2026-08-07T18:00:00Z"),
+                endAt = Instant.parse("2026-08-07T21:00:00Z"),
+                status = BookingStatus.PENDING,
+                expiresAt = Instant.now().minusSeconds(60),
+            )
+        adapter.save(expired)
+        insertPayment(expired.id, "PENDING")
+
+        assertEquals(1, adapter.cancelExpiredPending(Instant.now()))
+        assertEquals(BookingStatus.CANCELLED, adapter.findById(expired.id)!!.status)
+    }
+
+    @Test
     fun `findByUserId returns only the bookings of the requested user`() {
         val otherUserId = UserId(UUID.randomUUID())
         insertUser(otherUserId)
@@ -310,6 +353,29 @@ class BookingRepositoryAdapterTest {
                     10.00, 'EUR', 50, true, false, false, 'OPEN', NOW())
             """.trimIndent()
         jdbc.update(sql, mapOf("id" to id.value))
+    }
+
+    private fun insertPayment(
+        bookingId: BookingId,
+        status: String,
+    ) {
+        val id = UUID.randomUUID()
+        val sql =
+            """
+            INSERT INTO payments (id, booking_id, extension_id, user_id, amount, currency, status,
+                                  stripe_payment_intent_id, created_at)
+            VALUES (:id, :bookingId, NULL, :userId, 435.00, 'EUR', :status, :intentId, NOW())
+            """.trimIndent()
+        jdbc.update(
+            sql,
+            mapOf(
+                "id" to id,
+                "bookingId" to bookingId.value,
+                "userId" to userId.value,
+                "status" to status,
+                "intentId" to "pi_$id",
+            ),
+        )
     }
 
     private fun insertPool(bookingId: BookingId): PoolId {

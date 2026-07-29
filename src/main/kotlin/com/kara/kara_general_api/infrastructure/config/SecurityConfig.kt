@@ -67,6 +67,9 @@ class SecurityConfig {
                 // Création de réservation et initiation de paiement : réservées au client authentifié.
                 authorize(HttpMethod.POST, "/api/v1/bookings", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/payments", authenticated)
+                // Réconciliation d'un paiement avec Stripe : authentifiée ; la propriété du paiement est
+                // vérifiée dans le use case.
+                authorize(HttpMethod.POST, "/api/v1/bookings/*/payments/*/sync", authenticated)
                 // Commande d'un produit pendant une réservation active : réservée au client authentifié.
                 // L'autorisation propriétaire (réservation appartenant au client) est vérifiée dans le use case.
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/orders", authenticated)

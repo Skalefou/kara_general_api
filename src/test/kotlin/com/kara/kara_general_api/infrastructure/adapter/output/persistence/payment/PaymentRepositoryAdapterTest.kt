@@ -134,6 +134,24 @@ class PaymentRepositoryAdapterTest {
         assertEquals(emptyList<Payment>(), adapter.findByBookingId(BookingId(UUID.randomUUID())))
     }
 
+    @Test
+    fun `findPendingByBookingId returns the pending payment of the booking`() {
+        adapter.save(payment(intentId = "pi_paid", status = PaymentStatus.PAID))
+        adapter.save(payment(intentId = "pi_pending"))
+
+        val found = adapter.findPendingByBookingId(bookingId)
+
+        assertNotNull(found)
+        assertEquals("pi_pending", found!!.stripePaymentIntentId)
+    }
+
+    @Test
+    fun `findPendingByBookingId returns null when no payment is pending`() {
+        adapter.save(payment(intentId = "pi_paid", status = PaymentStatus.PAID))
+
+        assertNull(adapter.findPendingByBookingId(bookingId))
+    }
+
     private fun insertUser(id: UserId) {
         val sql =
             """

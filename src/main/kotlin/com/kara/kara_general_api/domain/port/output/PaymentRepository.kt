@@ -15,4 +15,10 @@ interface PaymentRepository {
 
     /** Tous les paiements « payer tout » d'une réservation (0..n : chaque initiation crée une ligne). */
     fun findByBookingId(bookingId: BookingId): List<Payment>
+
+    /**
+     * Dernier paiement PENDING de la réservation elle-même (les paiements d'extension sont exclus).
+     * Permet de réutiliser un PaymentIntent déjà créé au lieu d'en ouvrir un second.
+     */
+    fun findPendingByBookingId(bookingId: BookingId): Payment?
 }

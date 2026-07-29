@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.payment
 
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.payment.dto.InitiateBookingPaymentResponse
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.payment.dto.SyncBookingPaymentResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -56,6 +57,43 @@ interface PaymentApi {
     @PostMapping("/api/v1/bookings/{id}/payments")
     fun initiatePayment(
         @PathVariable id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
+        summary = "Réconcilier le paiement d'une réservation",
+        description =
+            "Interroge Stripe pour connaître le statut réel du PaymentIntent du paiement indiqué. Si le " +
+                "paiement a réussi, le paiement passe PAID et la réservation CONFIRMED (mêmes effets que le webhook, " +
+                "de façon idempotente) ; sinon rien n'est modifié. À appeler par le front après le PaymentSheet pour " +
+                "ne pas dépendre de la seule arrivée du webhook. Réservé au propriétaire de la réservation.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Statuts à jour de la réservation et du paiement",
+                content = [Content(schema = Schema(implementation = SyncBookingPaymentResponse::class))],
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Le paiement n'appartient pas à l'utilisateur (PAYMENT_NOT_OWNER)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description =
+                    "Paiement ou réservation introuvable, ou paiement rattaché à une autre réservation " +
+                        "(PAYMENT_BOOKING_NOT_FOUND)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/api/v1/bookings/{bookingId}/payments/{paymentId}/sync")
+    fun syncPayment(
+        @PathVariable bookingId: UUID,
+        @PathVariable paymentId: UUID,
         authentication: Authentication,
     ): ResponseEntity<Any>
 

@@ -78,4 +78,20 @@ class PaymentRepositoryAdapter(
             """.trimIndent()
         return jdbc.query(sql, mapOf("bookingId" to bookingId.value), rowMapper)
     }
+
+    override fun findPendingByBookingId(bookingId: BookingId): Payment? {
+        // extension_id IS NULL : la table porte aussi les paiements d'extension de la même réservation, qui
+        // ne doivent jamais être réutilisés pour régler la réservation elle-même. Le plus récent gagne.
+        val sql =
+            """
+            SELECT $PAYMENT_COLUMNS
+            FROM payments
+            WHERE booking_id = :bookingId
+              AND extension_id IS NULL
+              AND status = 'PENDING'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """.trimIndent()
+        return jdbc.query(sql, mapOf("bookingId" to bookingId.value), rowMapper).firstOrNull()
+    }
 }

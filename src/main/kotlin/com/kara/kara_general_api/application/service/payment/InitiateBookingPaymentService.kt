@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.application.service.payment
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.booking.BookingStatus
 import com.kara.kara_general_api.domain.model.payment.Payment
 import com.kara.kara_general_api.domain.port.input.payment.InitiateBookingPaymentCommand
@@ -12,12 +13,19 @@ import com.kara.kara_general_api.domain.port.output.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.util.UUID
 
 /**
  * Initie un paiement « payer tout » sur une réservation PENDING appartenant au client. Crée
  * paresseusement le client Stripe, la clé éphémère et le PaymentIntent, puis persiste un [Payment]
- * PENDING. Les secrets retournés alimentent le PaymentSheet côté front. La confirmation effective
- * (PAID + réservation CONFIRMED) est faite par le webhook Stripe.
+ * PENDING. Les secrets retournés alimentent le PaymentSheet côté front.
+ *
+ * Un PaymentIntent déjà ouvert pour cette réservation et encore payable est **réutilisé** (avec sa ligne
+ * `payments`) : deux appuis sur « Payer » ne laissent donc pas deux intents payables. Une clé d'idempotence
+ * couvre le cas de la création concurrente côté Stripe.
+ *
+ * La confirmation effective (PAID + réservation CONFIRMED) est faite par le webhook Stripe, ou à défaut par
+ * la réconciliation explicite du client (cf. SyncBookingPaymentService).
  */
 @Service
 class InitiateBookingPaymentService(
@@ -43,7 +51,18 @@ class InitiateBookingPaymentService(
         }
 
         val ephemeralKeySecret = paymentGateway.createEphemeralKey(customerId)
-        val intent = paymentGateway.createPaymentIntent(booking.totalPrice, booking.currency, customerId)
+
+        reusableIntent(booking.id)?.let { (existingPayment, clientSecret) ->
+            return ready(clientSecret, ephemeralKeySecret, customerId, existingPayment.id.value)
+        }
+
+        val intent =
+            paymentGateway.createPaymentIntent(
+                amount = booking.totalPrice,
+                currency = booking.currency,
+                customerId = customerId,
+                idempotencyKey = "booking-payment-${booking.id.value}",
+            )
 
         val payment =
             paymentRepository.save(
@@ -56,12 +75,32 @@ class InitiateBookingPaymentService(
                 ),
             )
 
-        return InitiateBookingPaymentResult.Ready(
-            clientSecret = intent.clientSecret,
+        return ready(intent.clientSecret, ephemeralKeySecret, customerId, payment.id.value)
+    }
+
+    /**
+     * Paiement PENDING déjà ouvert pour cette réservation dont l'intent Stripe est encore payable, avec le
+     * client secret à re-servir. Null s'il n'y en a pas (ou si l'intent n'est plus exploitable).
+     */
+    private fun reusableIntent(bookingId: BookingId): Pair<Payment, String>? {
+        val existing = paymentRepository.findPendingByBookingId(bookingId) ?: return null
+        val snapshot = paymentGateway.retrievePaymentIntent(existing.stripePaymentIntentId) ?: return null
+        if (!snapshot.status.isReusableForPayment()) return null
+        val clientSecret = snapshot.clientSecret ?: return null
+        return existing to clientSecret
+    }
+
+    private fun ready(
+        clientSecret: String,
+        ephemeralKeySecret: String,
+        customerId: String,
+        paymentId: UUID,
+    ): InitiateBookingPaymentResult.Ready =
+        InitiateBookingPaymentResult.Ready(
+            clientSecret = clientSecret,
             ephemeralKeySecret = ephemeralKeySecret,
             customerId = customerId,
             publishableKey = paymentGateway.publishableKey(),
-            paymentId = payment.id.value,
+            paymentId = paymentId,
         )
-    }
 }

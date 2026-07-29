@@ -300,6 +300,8 @@ class BookingRepositoryAdapter(
         // Annule les réservations PENDING en mode PAY_ALL dont la fenêtre de paiement (15 min) est échue.
         // Les réservations en mode SHARED_POT sont EXCLUES : c'est le délai de la cagnotte qui gouverne leur
         // annulation (cf. PoolDeadlineScheduler / CancelExpiredPoolsService).
+        // Le NOT EXISTS protège une réservation effectivement payée dont la confirmation n'a pas encore été
+        // appliquée (webhook Stripe non arrivé) : on ne doit jamais annuler un créneau déjà encaissé.
         val sql =
             """
             UPDATE bookings
@@ -307,6 +309,7 @@ class BookingRepositoryAdapter(
             WHERE status = 'PENDING'
               AND payment_mode = 'PAY_ALL'
               AND expires_at <= :now
+              AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.booking_id = bookings.id AND p.status = 'PAID')
             """.trimIndent()
         return jdbc.update(sql, MapSqlParameterSource().addValue("now", Timestamp.from(now)))
     }

@@ -30,13 +30,18 @@ class StripeWebhookServiceTest {
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val poolSettlementService = mockk<PoolSettlementService>(relaxed = true)
     private val applyBookingExtensionService = mockk<ApplyBookingExtensionService>(relaxed = true)
+
+    // Le service de confirmation est branché « en vrai » : c'est lui qui porte l'effet observable du
+    // webhook (paiement PAID + réservation CONFIRMED), et le test doit vérifier cet effet de bout en bout.
+    private val confirmPayAllPaymentService =
+        ConfirmPayAllPaymentService(paymentRepository, bookingRepository, applyBookingExtensionService)
+
     private val sut =
         StripeWebhookService(
             paymentGateway,
             paymentRepository,
-            bookingRepository,
             poolSettlementService,
-            applyBookingExtensionService,
+            confirmPayAllPaymentService,
         )
 
     private val bookingId = BookingId(UUID.randomUUID())
@@ -131,15 +136,42 @@ class StripeWebhookServiceTest {
     }
 
     @Test
-    fun `should be idempotent when the payment is already PAID`() {
+    fun `should reconfirm the booking when replayed on an already PAID payment`() {
         every { paymentGateway.verifyAndParseWebhook("{}", "sig") } returns
             StripeWebhookEvent(type = "payment_intent.succeeded", paymentIntentId = "pi_1")
         every { paymentRepository.findByStripePaymentIntentId("pi_1") } returns payment(status = PaymentStatus.PAID)
 
         val result = sut.handle(StripeWebhookCommand(payload = "{}", signature = "sig"))
 
+        // L'idempotence porte sur l'écriture du paiement, pas sur la confirmation : un rejeu doit rattraper
+        // une réservation restée PENDING alors que son paiement est PAID.
         assertEquals(StripeWebhookResult.Handled, result)
+        verify(exactly = 1) { bookingRepository.updateStatus(bookingId, BookingStatus.CONFIRMED) }
+        verify(exactly = 0) { paymentRepository.save(any()) }
+    }
+
+    @Test
+    fun `should mark the payment FAILED on payment_intent payment_failed without touching the booking`() {
+        every { paymentGateway.verifyAndParseWebhook("{}", "sig") } returns
+            StripeWebhookEvent(type = "payment_intent.payment_failed", paymentIntentId = "pi_1")
+        every { paymentRepository.findByStripePaymentIntentId("pi_1") } returns payment()
+
+        val result = sut.handle(StripeWebhookCommand(payload = "{}", signature = "sig"))
+
+        assertEquals(StripeWebhookResult.Handled, result)
+        verify(exactly = 1) { paymentRepository.save(match { it.status == PaymentStatus.FAILED }) }
         verify(exactly = 0) { bookingRepository.updateStatus(any(), any()) }
+    }
+
+    @Test
+    fun `should not downgrade an already PAID payment on payment_intent payment_failed`() {
+        every { paymentGateway.verifyAndParseWebhook("{}", "sig") } returns
+            StripeWebhookEvent(type = "payment_intent.payment_failed", paymentIntentId = "pi_1")
+        every { paymentRepository.findByStripePaymentIntentId("pi_1") } returns payment(status = PaymentStatus.PAID)
+
+        val result = sut.handle(StripeWebhookCommand(payload = "{}", signature = "sig"))
+
+        assertEquals(StripeWebhookResult.Handled, result)
         verify(exactly = 0) { paymentRepository.save(any()) }
     }
 }

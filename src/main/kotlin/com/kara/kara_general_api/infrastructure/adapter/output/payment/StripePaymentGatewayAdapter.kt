@@ -4,6 +4,8 @@ import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PaymentIntentResult
+import com.kara.kara_general_api.domain.port.output.PaymentIntentSnapshot
+import com.kara.kara_general_api.domain.port.output.PaymentIntentStatus
 import com.kara.kara_general_api.domain.port.output.StripeWebhookEvent
 import com.stripe.exception.SignatureVerificationException
 import com.stripe.model.Customer
@@ -11,11 +13,13 @@ import com.stripe.model.EphemeralKey
 import com.stripe.model.Event
 import com.stripe.model.PaymentIntent
 import com.stripe.model.Refund
+import com.stripe.net.RequestOptions
 import com.stripe.net.Webhook
 import com.stripe.param.CustomerCreateParams
 import com.stripe.param.EphemeralKeyCreateParams
 import com.stripe.param.PaymentIntentCreateParams
 import com.stripe.param.RefundCreateParams
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
@@ -36,6 +40,8 @@ class StripePaymentGatewayAdapter(
     // serveur : la clé éphémère doit être scellée sur cette version, sinon la PaymentSheet la rejette.
     @Value("\${kara.stripe.mobile-api-version}") private val mobileApiVersion: String,
 ) : PaymentGateway {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     override fun ensureCustomer(user: User): String {
         user.stripeCustomerId?.let { return it }
         val params =
@@ -63,12 +69,32 @@ class StripePaymentGatewayAdapter(
         amount: BigDecimal,
         currency: Currency,
         customerId: String,
+        idempotencyKey: String?,
     ): PaymentIntentResult {
         val params =
             basePaymentIntentParams(amount, currency, customerId).build()
-        val intent = PaymentIntent.create(params)
+        // Clé d'idempotence : Stripe rejoue le même intent (au lieu d'en créer un second) si l'appelant
+        // réémet la même demande, ce qui évite deux intents payables pour la même réservation.
+        val options =
+            RequestOptions
+                .builder()
+                .setIdempotencyKey(idempotencyKey)
+                .build()
+        val intent = PaymentIntent.create(params, options)
         return PaymentIntentResult(clientSecret = intent.clientSecret, paymentIntentId = intent.id)
     }
+
+    override fun retrievePaymentIntent(paymentIntentId: String): PaymentIntentSnapshot? =
+        runCatching { PaymentIntent.retrieve(paymentIntentId) }
+            .onFailure { logger.warn("Failed to retrieve a Stripe payment intent", it) }
+            .getOrNull()
+            ?.let { intent ->
+                PaymentIntentSnapshot(
+                    paymentIntentId = intent.id,
+                    status = PaymentIntentStatus.from(intent.status),
+                    clientSecret = intent.clientSecret,
+                )
+            }
 
     override fun createManualCapturePaymentIntent(
         amount: BigDecimal,
@@ -125,6 +151,7 @@ class StripePaymentGatewayAdapter(
             val event = Webhook.constructEvent(payload, signature, webhookSecret)
             StripeWebhookEvent(type = event.type, paymentIntentId = extractPaymentIntentId(event))
         } catch (_: SignatureVerificationException) {
+            logger.warn("Stripe webhook signature verification failed")
             null
         }
 
@@ -136,8 +163,16 @@ class StripePaymentGatewayAdapter(
             if (deserializer.getObject().isPresent) {
                 deserializer.getObject().get()
             } else {
-                runCatching { deserializer.deserializeUnsafe() }.getOrNull()
+                // La désérialisation échoue typiquement quand la version d'API de l'événement diffère de
+                // celle du SDK : sans ce log, l'événement était silencieusement ignoré (réponse 200).
+                runCatching { deserializer.deserializeUnsafe() }
+                    .onFailure { logger.warn("Failed to deserialize the data object of Stripe event type={}", event.type, it) }
+                    .getOrNull()
             }
-        return (stripeObject as? PaymentIntent)?.id
+        val paymentIntentId = (stripeObject as? PaymentIntent)?.id
+        if (paymentIntentId == null) {
+            logger.warn("No payment intent id could be extracted from Stripe event type={}", event.type)
+        }
+        return paymentIntentId
     }
 }

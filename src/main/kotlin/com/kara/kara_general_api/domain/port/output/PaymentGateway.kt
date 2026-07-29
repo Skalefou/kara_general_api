@@ -19,6 +19,39 @@ data class StripeWebhookEvent(
     val paymentIntentId: String?,
 )
 
+/**
+ * Statut d'un PaymentIntent chez la passerelle, réduit à ce dont l'application a besoin. Le domaine
+ * ne connaît que cet énuméré : aucune chaîne brute de la passerelle ne circule au-delà de l'adaptateur.
+ */
+enum class PaymentIntentStatus {
+    REQUIRES_PAYMENT_METHOD,
+    REQUIRES_CONFIRMATION,
+    REQUIRES_ACTION,
+    PROCESSING,
+    REQUIRES_CAPTURE,
+    SUCCEEDED,
+    CANCELED,
+
+    /** Statut non reconnu (passerelle en avance sur le contrat) : traité comme non exploitable. */
+    UNKNOWN,
+    ;
+
+    /** Intent encore payable en l'état : son client secret peut être re-servi au front. */
+    fun isReusableForPayment(): Boolean = this == REQUIRES_PAYMENT_METHOD || this == REQUIRES_CONFIRMATION
+
+    companion object {
+        /** Mappe le statut brut de la passerelle (`requires_payment_method`, `succeeded`, …). */
+        fun from(raw: String?): PaymentIntentStatus = entries.firstOrNull { it.name.equals(raw, ignoreCase = true) } ?: UNKNOWN
+    }
+}
+
+/** Instantané d'un PaymentIntent relu chez la passerelle (statut réel + client secret réutilisable). */
+data class PaymentIntentSnapshot(
+    val paymentIntentId: String,
+    val status: PaymentIntentStatus,
+    val clientSecret: String?,
+)
+
 /** Port secondaire vers Stripe (paiement « payer tout » façon PaymentSheet). */
 interface PaymentGateway {
     /**
@@ -30,12 +63,25 @@ interface PaymentGateway {
     /** Crée une clé éphémère pour le client et retourne son secret (requis par le PaymentSheet). */
     fun createEphemeralKey(customerId: String): String
 
-    /** Crée un PaymentIntent rattaché au client Stripe et retourne son client secret + identifiant. */
+    /**
+     * Crée un PaymentIntent rattaché au client Stripe et retourne son client secret + identifiant.
+     *
+     * [idempotencyKey] : clé d'idempotence transmise à la passerelle. Deux appels successifs avec la même
+     * clé retournent le **même** intent au lieu d'en créer deux (double appui sur « Payer »).
+     */
     fun createPaymentIntent(
         amount: BigDecimal,
         currency: Currency,
         customerId: String,
+        idempotencyKey: String? = null,
     ): PaymentIntentResult
+
+    /**
+     * Relit un PaymentIntent existant chez la passerelle (statut réel + client secret). Retourne null si
+     * l'intent est introuvable ou si la passerelle est injoignable. Sert à la réconciliation d'un paiement
+     * dont le webhook n'est jamais arrivé, et à la réutilisation d'un intent encore payable.
+     */
+    fun retrievePaymentIntent(paymentIntentId: String): PaymentIntentSnapshot?
 
     /**
      * Crée un PaymentIntent en **capture manuelle** (autorisation seule, aucun prélèvement) pour une part de

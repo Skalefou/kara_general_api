@@ -17,10 +17,13 @@ import com.kara.kara_general_api.domain.port.input.payment.InitiateBookingPaymen
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PaymentIntentResult
+import com.kara.kara_general_api.domain.port.output.PaymentIntentSnapshot
+import com.kara.kara_general_api.domain.port.output.PaymentIntentStatus
 import com.kara.kara_general_api.domain.port.output.PaymentRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -112,8 +115,10 @@ class InitiateBookingPaymentServiceTest {
         every { paymentGateway.ensureCustomer(any()) } returns "cus_123"
         every { userRepository.updateStripeCustomerId(userId, "cus_123") } returns Unit
         every { paymentGateway.createEphemeralKey("cus_123") } returns "ek_secret"
-        every { paymentGateway.createPaymentIntent(BigDecimal("435.00"), Currency.EUR, "cus_123") } returns
-            PaymentIntentResult(clientSecret = "pi_secret", paymentIntentId = "pi_1")
+        every { paymentRepository.findPendingByBookingId(bookingId) } returns null
+        every {
+            paymentGateway.createPaymentIntent(BigDecimal("435.00"), Currency.EUR, "cus_123", any())
+        } returns PaymentIntentResult(clientSecret = "pi_secret", paymentIntentId = "pi_1")
         every { paymentGateway.publishableKey() } returns "pk_test"
         every { paymentRepository.save(any()) } answers { firstArg<Payment>() }
 
@@ -129,12 +134,26 @@ class InitiateBookingPaymentServiceTest {
     }
 
     @Test
+    fun `should send a deterministic idempotency key when creating the payment intent`() {
+        stubNewIntentFlow()
+        val keySlot = slot<String>()
+        every {
+            paymentGateway.createPaymentIntent(any(), any(), any(), capture(keySlot))
+        } returns PaymentIntentResult(clientSecret = "pi_secret", paymentIntentId = "pi_1")
+
+        sut.initiate(command())
+
+        assertEquals("booking-payment-${bookingId.value}", keySlot.captured)
+    }
+
+    @Test
     fun `should reuse the existing stripe customer without persisting again`() {
         every { bookingRepository.findById(bookingId) } returns booking()
         every { userRepository.findById(userId) } returns user(stripeCustomerId = "cus_existing")
         every { paymentGateway.ensureCustomer(any()) } returns "cus_existing"
         every { paymentGateway.createEphemeralKey("cus_existing") } returns "ek_secret"
-        every { paymentGateway.createPaymentIntent(any(), any(), any()) } returns
+        every { paymentRepository.findPendingByBookingId(bookingId) } returns null
+        every { paymentGateway.createPaymentIntent(any(), any(), any(), any()) } returns
             PaymentIntentResult(clientSecret = "pi_secret", paymentIntentId = "pi_1")
         every { paymentGateway.publishableKey() } returns "pk_test"
         every { paymentRepository.save(any()) } answers { firstArg<Payment>() }
@@ -142,5 +161,65 @@ class InitiateBookingPaymentServiceTest {
         sut.initiate(command())
 
         verify(exactly = 0) { userRepository.updateStripeCustomerId(any(), any()) }
+    }
+
+    @Test
+    fun `should reuse the pending payment intent instead of creating a second one`() {
+        stubNewIntentFlow()
+        val existing = pendingPayment()
+        every { paymentRepository.findPendingByBookingId(bookingId) } returns existing
+        every { paymentGateway.retrievePaymentIntent("pi_existing") } returns
+            PaymentIntentSnapshot(
+                paymentIntentId = "pi_existing",
+                status = PaymentIntentStatus.REQUIRES_PAYMENT_METHOD,
+                clientSecret = "pi_existing_secret",
+            )
+
+        val ready = assertIs<InitiateBookingPaymentResult.Ready>(sut.initiate(command()))
+
+        assertEquals("pi_existing_secret", ready.clientSecret)
+        assertEquals(existing.id.value, ready.paymentId)
+        verify(exactly = 0) { paymentGateway.createPaymentIntent(any(), any(), any(), any()) }
+        verify(exactly = 0) { paymentRepository.save(any()) }
+    }
+
+    @Test
+    fun `should create a new payment intent when the pending one is no longer payable`() {
+        stubNewIntentFlow()
+        every { paymentRepository.findPendingByBookingId(bookingId) } returns pendingPayment()
+        every { paymentGateway.retrievePaymentIntent("pi_existing") } returns
+            PaymentIntentSnapshot(
+                paymentIntentId = "pi_existing",
+                status = PaymentIntentStatus.CANCELED,
+                clientSecret = "pi_existing_secret",
+            )
+
+        val ready = assertIs<InitiateBookingPaymentResult.Ready>(sut.initiate(command()))
+
+        assertEquals("pi_secret", ready.clientSecret)
+        verify(exactly = 1) { paymentGateway.createPaymentIntent(any(), any(), any(), any()) }
+        verify(exactly = 1) { paymentRepository.save(any()) }
+    }
+
+    private fun pendingPayment() =
+        Payment.pending(
+            bookingId = bookingId,
+            userId = userId,
+            amount = BigDecimal("435.00"),
+            currency = Currency.EUR,
+            stripePaymentIntentId = "pi_existing",
+        )
+
+    /** Chemin nominal : client Stripe connu, aucun intent réutilisable, création d'un nouvel intent. */
+    private fun stubNewIntentFlow() {
+        every { bookingRepository.findById(bookingId) } returns booking()
+        every { userRepository.findById(userId) } returns user(stripeCustomerId = "cus_existing")
+        every { paymentGateway.ensureCustomer(any()) } returns "cus_existing"
+        every { paymentGateway.createEphemeralKey("cus_existing") } returns "ek_secret"
+        every { paymentRepository.findPendingByBookingId(bookingId) } returns null
+        every { paymentGateway.createPaymentIntent(any(), any(), any(), any()) } returns
+            PaymentIntentResult(clientSecret = "pi_secret", paymentIntentId = "pi_1")
+        every { paymentGateway.publishableKey() } returns "pk_test"
+        every { paymentRepository.save(any()) } answers { firstArg<Payment>() }
     }
 }
