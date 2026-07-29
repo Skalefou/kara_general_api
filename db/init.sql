@@ -198,6 +198,20 @@ CREATE TABLE IF NOT EXISTS room_products (
 CREATE INDEX IF NOT EXISTS idx_room_products_room_id ON room_products (room_id);
 CREATE INDEX IF NOT EXISTS idx_room_products_product_id ON room_products (product_id);
 
+-- Lieux favoris : liaison utilisateur↔salle. Un couple (user_id, room_id) est unique, l'ajout d'un favori
+-- déjà présent est un no-op (ON CONFLICT DO NOTHING). La suppression d'un compte ou d'une salle purge
+-- les favoris associés par cascade.
+CREATE TABLE IF NOT EXISTS room_favorites (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_id    UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_room_favorites_user_room UNIQUE (user_id, room_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_favorites_user_id ON room_favorites (user_id);
+CREATE INDEX IF NOT EXISTS idx_room_favorites_room_id ON room_favorites (room_id);
+
 -- ============================================================================
 -- Chat (messagerie temps réel) — MVP texte
 -- ============================================================================

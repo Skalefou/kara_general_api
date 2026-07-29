@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.kara.kara_general_api.TestcontainersConfiguration
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.model.room.Room
+import com.kara.kara_general_api.domain.model.room.RoomId
 import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.room.vo.BoundingBox
 import com.kara.kara_general_api.domain.model.room.vo.Coordinates
@@ -22,6 +23,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import java.math.BigDecimal
+import java.util.UUID
 
 // Le schéma est généré par Hibernate depuis les @Entity (RoomEntity porte l'index idx_rooms_lat_lng) :
 // le profil test ne fixe pas ddl-auto, on l'impose ici pour matérialiser les tables dans le conteneur.
@@ -114,6 +116,24 @@ class RoomRepositoryAdapterTest {
         val found = adapter.findById(saved.id)
 
         assertEquals(50, found?.maxCapacity)
+    }
+
+    @Test
+    fun `findByIds returns only the requested rooms and ignores unknown ids`() {
+        val first = saveRoom("Salle Une", latitude = 48.85, longitude = 2.30)
+        val second = saveRoom("Salle Deux", latitude = 48.86, longitude = 2.31)
+        saveRoom("Salle Trois", latitude = 48.87, longitude = 2.32)
+
+        val found = adapter.findByIds(listOf(first.id, second.id, RoomId(UUID.randomUUID())))
+
+        assertEquals(setOf(first.id, second.id), found.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `findByIds returns an empty list when no id is requested`() {
+        saveRoom("Salle Une", latitude = 48.85, longitude = 2.30)
+
+        assertTrue(adapter.findByIds(emptyList()).isEmpty())
     }
 
     private fun saveRoom(

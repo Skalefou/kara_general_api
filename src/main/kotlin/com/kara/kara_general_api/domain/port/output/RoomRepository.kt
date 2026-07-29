@@ -19,6 +19,9 @@ interface RoomRepository {
         size: Int,
     ): List<Room>
 
+    /** Salles correspondant aux identifiants fournis, images incluses. L'ordre du retour n'est pas garanti. */
+    fun findByIds(ids: List<RoomId>): List<Room>
+
     fun count(): Long
 
     /** Salles dont les coordonnées tombent dans la bbox, plafonnées à [limit]. */

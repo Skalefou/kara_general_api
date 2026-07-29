@@ -122,6 +122,22 @@ class RoomRepositoryAdapter(
         return rooms.map { it.copy(images = imagesByRoom[it.id.value].orEmpty()) }
     }
 
+    override fun findByIds(ids: List<RoomId>): List<Room> {
+        if (ids.isEmpty()) return emptyList()
+        val sql =
+            """
+            SELECT id, name, description, street, city, postal_code, country, price_per_person_per_hour, currency,
+                   max_capacity, is_there_wifi, is_there_sono_pro, is_there_air_conditioning,
+                   latitude, longitude, status, opens_at, closes_at, time_zone, created_at
+            FROM rooms
+            WHERE id IN (:ids)
+            """.trimIndent()
+        val rooms = jdbc.query(sql, mapOf("ids" to ids.map { it.value }), rowMapper)
+        if (rooms.isEmpty()) return rooms
+        val imagesByRoom = findImagesByRoomIds(rooms.map { it.id.value })
+        return rooms.map { it.copy(images = imagesByRoom[it.id.value].orEmpty()) }
+    }
+
     override fun count(): Long {
         val sql = "SELECT COUNT(*) FROM rooms"
         return jdbc.queryForObject(sql, emptyMap<String, Any>(), Long::class.java) ?: 0
