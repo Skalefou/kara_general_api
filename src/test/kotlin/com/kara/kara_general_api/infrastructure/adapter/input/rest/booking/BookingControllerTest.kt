@@ -276,6 +276,8 @@ class BookingControllerTest {
         bookingId = UUID.fromString(BOOKING_ID),
         roomName = "Salle Étoile",
         roomAddress = "12 rue de Paris, 69002 Lyon, France",
+        roomLatitude = 45.7578,
+        roomLongitude = 4.8320,
         startAt = Instant.parse("2026-08-01T18:00:00Z"),
         endAt = Instant.parse("2026-08-01T21:00:00Z"),
         numberOfPeople = 8,
@@ -305,6 +307,8 @@ class BookingControllerTest {
             .andExpect(jsonPath("$.status").value("CONFIRMED"))
             .andExpect(jsonPath("$.ticketCode").value("KARA-TKT-3F7Q2K9A"))
             .andExpect(jsonPath("$.roomAddress").value("12 rue de Paris, 69002 Lyon, France"))
+            .andExpect(jsonPath("$.roomLatitude").value(45.7578))
+            .andExpect(jsonPath("$.roomLongitude").value(4.8320))
     }
 
     @Test

@@ -31,6 +31,8 @@ class GetBookingDetailService(
                 bookingId = booking.id.value,
                 roomName = room?.name ?: "Salle",
                 roomAddress = room?.let { formatAddress(it) },
+                roomLatitude = room?.latitude,
+                roomLongitude = room?.longitude,
                 startAt = booking.startAt,
                 endAt = booking.endAt,
                 numberOfPeople = booking.numberOfPeople,

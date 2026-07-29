@@ -15,6 +15,16 @@ data class BookingDetailResponse(
     val roomName: String,
     @field:Schema(description = "Adresse formatée de la salle (nulle si la salle est introuvable)")
     val roomAddress: String?,
+    @field:Schema(
+        description = "Latitude de la salle (nulle si la salle est introuvable ou non géolocalisée)",
+        example = "48.8566",
+    )
+    val roomLatitude: Double?,
+    @field:Schema(
+        description = "Longitude de la salle (nulle si la salle est introuvable ou non géolocalisée)",
+        example = "2.3522",
+    )
+    val roomLongitude: Double?,
     val startAt: Instant,
     val endAt: Instant,
     val numberOfPeople: Int,
@@ -34,6 +44,8 @@ data class BookingDetailResponse(
                 bookingId = view.bookingId,
                 roomName = view.roomName,
                 roomAddress = view.roomAddress,
+                roomLatitude = view.roomLatitude,
+                roomLongitude = view.roomLongitude,
                 startAt = view.startAt,
                 endAt = view.endAt,
                 numberOfPeople = view.numberOfPeople,

@@ -14,6 +14,8 @@ data class BookingDetailView(
     val bookingId: UUID,
     val roomName: String,
     val roomAddress: String?,
+    val roomLatitude: Double?,
+    val roomLongitude: Double?,
     val startAt: Instant,
     val endAt: Instant,
     val numberOfPeople: Int,

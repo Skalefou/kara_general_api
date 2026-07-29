@@ -65,6 +65,8 @@ class GetBookingDetailServiceTest {
             isThereAirConditioning = false,
             createdAt = Instant.now(),
             status = RoomStatus.OPEN,
+            latitude = 48.8566,
+            longitude = 2.3522,
         )
 
     @Test
@@ -96,6 +98,28 @@ class GetBookingDetailServiceTest {
     }
 
     @Test
+    fun `exposes the room coordinates so the client can build a ride pickup`() {
+        every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED)
+        every { roomRepository.findById(roomId) } returns room()
+
+        val result = assertInstanceOf<GetBookingDetailResult.Found>(sut.getDetail(bookingId, ownerId))
+
+        assertEquals(48.8566, result.view.roomLatitude)
+        assertEquals(2.3522, result.view.roomLongitude)
+    }
+
+    @Test
+    fun `exposes null coordinates when the room is not geolocated`() {
+        every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED)
+        every { roomRepository.findById(roomId) } returns room().copy(latitude = null, longitude = null)
+
+        val result = assertInstanceOf<GetBookingDetailResult.Found>(sut.getDetail(bookingId, ownerId))
+
+        assertNull(result.view.roomLatitude)
+        assertNull(result.view.roomLongitude)
+    }
+
+    @Test
     fun `hides the ticket code when the booking is not confirmed`() {
         every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.PENDING)
         every { roomRepository.findById(roomId) } returns room()
@@ -114,5 +138,7 @@ class GetBookingDetailServiceTest {
 
         assertEquals("Salle", result.view.roomName)
         assertNull(result.view.roomAddress)
+        assertNull(result.view.roomLatitude)
+        assertNull(result.view.roomLongitude)
     }
 }
