@@ -1,5 +1,6 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.pool
 
+import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
 import com.kara.kara_general_api.domain.model.payment.PoolStatus
 import com.kara.kara_general_api.domain.model.room.Currency
 import com.kara.kara_general_api.domain.port.input.pool.AddPoolShareUseCase
@@ -13,8 +14,10 @@ import com.kara.kara_general_api.domain.port.input.pool.GetPoolResult
 import com.kara.kara_general_api.domain.port.input.pool.GetPoolUseCase
 import com.kara.kara_general_api.domain.port.input.pool.ListUserPoolsUseCase
 import com.kara.kara_general_api.domain.port.input.pool.PoolRecapView
+import com.kara.kara_general_api.domain.port.input.pool.PoolShareView
 import com.kara.kara_general_api.domain.port.input.pool.PoolSummaryView
 import com.kara.kara_general_api.domain.port.input.pool.PoolView
+import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkResult
 import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkUseCase
 import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareResult
@@ -43,6 +46,11 @@ private const val USER_ID = "11111111-2222-3333-4444-555555555555"
 private const val BOOKING_ID = "550e8400-e29b-41d4-a716-446655440000"
 private const val POOL_ID = "660e8400-e29b-41d4-a716-446655440000"
 private const val SHARE_ID = "770e8400-e29b-41d4-a716-446655440000"
+private const val CREATOR_SHARE_ID = "880e8400-e29b-41d4-a716-446655440000"
+
+// Base des liens de partage : les vues portent déjà les URLs construites côté application,
+// le contrôleur ne fait que les recopier dans la réponse.
+private const val LINK_BASE_URL = "https://link.karapi.fr"
 
 @WebMvcTest(PoolController::class)
 @Import(SecurityConfig::class)
@@ -91,7 +99,30 @@ class PoolControllerTest {
             percentage = 40,
             deadline = Instant.parse("2026-08-01T12:00:00Z"),
             globalLinkToken = "global-token",
-            shares = emptyList(),
+            globalShareUrl = "$LINK_BASE_URL/join/global-token",
+            shares =
+                listOf(
+                    PoolShareView(
+                        shareId = UUID.fromString(SHARE_ID),
+                        participantName = "Bob",
+                        email = "bob@example.com",
+                        amount = BigDecimal("40.00"),
+                        status = PoolShareStatus.PENDING,
+                        isCreatorShare = false,
+                        uniqueLinkToken = "share-token",
+                        shareUrl = "$LINK_BASE_URL/p/share-token",
+                    ),
+                    PoolShareView(
+                        shareId = UUID.fromString(CREATOR_SHARE_ID),
+                        participantName = "Moi",
+                        email = null,
+                        amount = BigDecimal("60.00"),
+                        status = PoolShareStatus.PENDING,
+                        isCreatorShare = true,
+                        uniqueLinkToken = null,
+                        shareUrl = null,
+                    ),
+                ),
         )
 
     private val createBody =
@@ -155,6 +186,57 @@ class PoolControllerTest {
             .andExpect(jsonPath("$.poolId").value(POOL_ID))
             .andExpect(jsonPath("$.globalLinkToken").value("global-token"))
             .andExpect(jsonPath("$.percentage").value(40))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should expose the server-built global share url alongside the global token`() {
+        every { getPoolUseCase.getById(any(), any()) } returns GetPoolResult.Found(poolView())
+
+        mockMvc
+            .perform(get("/api/v1/pools/$POOL_ID"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.globalLinkToken").value("global-token"))
+            .andExpect(jsonPath("$.globalShareUrl").value("$LINK_BASE_URL/join/global-token"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should expose the server-built share url for a share that has a unique token`() {
+        every { getPoolUseCase.getById(any(), any()) } returns GetPoolResult.Found(poolView())
+
+        mockMvc
+            .perform(get("/api/v1/pools/$POOL_ID"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.shares[0].uniqueLinkToken").value("share-token"))
+            .andExpect(jsonPath("$.shares[0].shareUrl").value("$LINK_BASE_URL/p/share-token"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return a null share url for a share without a unique token`() {
+        every { getPoolUseCase.getById(any(), any()) } returns GetPoolResult.Found(poolView())
+
+        mockMvc
+            .perform(get("/api/v1/pools/$POOL_ID"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.shares[1].shareUrl").doesNotExist())
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return the regenerated global token with its share url`() {
+        every { regeneratePoolLinkUseCase.regenerate(any()) } returns
+            RegeneratePoolLinkResult.Regenerated(
+                globalLinkToken = "new-global-token",
+                globalShareUrl = "$LINK_BASE_URL/join/new-global-token",
+            )
+
+        mockMvc
+            .perform(post("/api/v1/pools/$POOL_ID/regenerate-link"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.globalLinkToken").value("new-global-token"))
+            .andExpect(jsonPath("$.globalShareUrl").value("$LINK_BASE_URL/join/new-global-token"))
     }
 
     @Test
@@ -228,6 +310,38 @@ class PoolControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.booking.roomName").value("Salle Étoile"))
             .andExpect(jsonPath("$.message").isNotEmpty)
+    }
+
+    @Test
+    fun `should resolve a pool from a unique share token without authentication`() {
+        every { getPoolRecapUseCase.getByShareToken("share-token") } returns
+            GetPoolRecapResult.Found(
+                PoolRecapView(
+                    poolId = UUID.fromString(POOL_ID),
+                    status = PoolStatus.OPEN,
+                    roomName = "Salle Étoile",
+                    startAt = Instant.parse("2026-08-01T18:00:00Z"),
+                    endAt = Instant.parse("2026-08-01T21:00:00Z"),
+                    numberOfPeople = 4,
+                    targetAmount = BigDecimal("100.00"),
+                    collectedAmount = BigDecimal("40.00"),
+                    currency = Currency.EUR,
+                    percentage = 40,
+                    deadline = Instant.parse("2026-08-01T12:00:00Z"),
+                    shareId = UUID.fromString(SHARE_ID),
+                    shareParticipantName = "Bob",
+                    shareAmount = BigDecimal("40.00"),
+                    shareStatus = PoolShareStatus.PENDING,
+                ),
+            )
+
+        mockMvc
+            .perform(get("/api/v1/pools/share/share-token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.poolId").value(POOL_ID))
+            .andExpect(jsonPath("$.booking.roomName").value("Salle Étoile"))
+            .andExpect(jsonPath("$.share.shareId").value(SHARE_ID))
+            .andExpect(jsonPath("$.share.participantName").value("Bob"))
     }
 
     @Test

@@ -11,6 +11,8 @@ data class RegeneratePoolLinkCommand(
 sealed interface RegeneratePoolLinkResult {
     data class Regenerated(
         val globalLinkToken: String,
+        /** Lien de partage global régénéré, prêt à l'emploi : `{base}/join/{globalLinkToken}`. */
+        val globalShareUrl: String,
     ) : RegeneratePoolLinkResult
 
     data object PoolNotFound : RegeneratePoolLinkResult

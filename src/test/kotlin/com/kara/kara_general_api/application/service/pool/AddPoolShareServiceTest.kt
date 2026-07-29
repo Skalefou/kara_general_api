@@ -38,6 +38,7 @@ class AddPoolShareServiceTest {
     private val roomRepository = mockk<RoomRepository>()
     private val linkTokenGenerator = mockk<LinkTokenGenerator>()
     private val emailService = mockk<EmailService>(relaxed = true)
+    private val poolLinkBuilder = FakePoolLinkBuilder()
     private val sut =
         AddPoolShareService(
             poolRepository,
@@ -46,6 +47,7 @@ class AddPoolShareServiceTest {
             roomRepository,
             linkTokenGenerator,
             emailService,
+            poolLinkBuilder,
         )
 
     private val poolId = PoolId(UUID.randomUUID())

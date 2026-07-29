@@ -30,6 +30,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 class CreatePoolServiceTest {
     private val bookingRepository = mockk<BookingRepository>()
@@ -38,6 +39,7 @@ class CreatePoolServiceTest {
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val linkTokenGenerator = mockk<LinkTokenGenerator>()
     private val emailService = mockk<EmailService>(relaxed = true)
+    private val poolLinkBuilder = FakePoolLinkBuilder()
     private val sut =
         CreatePoolService(
             bookingRepository,
@@ -46,6 +48,7 @@ class CreatePoolServiceTest {
             poolShareRepository,
             linkTokenGenerator,
             emailService,
+            poolLinkBuilder,
         )
 
     private val bookingId = BookingId(UUID.randomUUID())
@@ -185,5 +188,42 @@ class CreatePoolServiceTest {
         verify(exactly = 1) {
             emailService.sendPoolInvitation(Email("bob@example.com"), "Bob", "Salle Étoile", any(), any())
         }
+    }
+
+    @Test
+    fun `exposes the server-built global share url on the created pool view`() {
+        every { bookingRepository.findById(bookingId) } returns booking()
+        stubHappyDependencies()
+
+        val result =
+            sut.create(
+                command(
+                    CreatePoolShareInput("Alice (moi)", null, BigDecimal("60.00"), isCreatorShare = true),
+                    CreatePoolShareInput("Bob", "bob@example.com", BigDecimal("40.00")),
+                ),
+            )
+
+        val created = assertIs<CreatePoolResult.Created>(result)
+        assertEquals("$TEST_LINK_BASE_URL/join/global", created.view.globalShareUrl)
+    }
+
+    @Test
+    fun `exposes a share url only for shares that carry a unique link token`() {
+        every { bookingRepository.findById(bookingId) } returns booking()
+        stubHappyDependencies()
+
+        val result =
+            sut.create(
+                command(
+                    CreatePoolShareInput("Alice (moi)", null, BigDecimal("60.00"), isCreatorShare = true),
+                    CreatePoolShareInput("Bob", "bob@example.com", BigDecimal("40.00")),
+                ),
+            )
+
+        val created = assertIs<CreatePoolResult.Created>(result)
+        val creatorShare = created.view.shares.single { it.isCreatorShare }
+        val invitedShare = created.view.shares.single { !it.isCreatorShare }
+        assertNull(creatorShare.shareUrl)
+        assertEquals("$TEST_LINK_BASE_URL/p/${invitedShare.uniqueLinkToken}", invitedShare.shareUrl)
     }
 }

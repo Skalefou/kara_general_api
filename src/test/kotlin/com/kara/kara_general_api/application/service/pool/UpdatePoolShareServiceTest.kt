@@ -29,7 +29,9 @@ class UpdatePoolShareServiceTest {
     private val poolRepository = mockk<PoolRepository>()
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>()
-    private val sut = UpdatePoolShareService(poolRepository, poolShareRepository, bookingRepository)
+    private val poolLinkBuilder = FakePoolLinkBuilder()
+    private val sut =
+        UpdatePoolShareService(poolRepository, poolShareRepository, bookingRepository, poolLinkBuilder)
 
     private val poolId = PoolId(UUID.randomUUID())
     private val bookingId = BookingId(UUID.randomUUID())

@@ -36,6 +36,7 @@ class CreateExtensionPoolServiceTest {
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val linkTokenGenerator = mockk<LinkTokenGenerator>()
     private val emailService = mockk<EmailService>(relaxed = true)
+    private val poolLinkBuilder = FakePoolLinkBuilder()
     private val sut =
         CreateExtensionPoolService(
             bookingExtensionRepository,
@@ -45,6 +46,7 @@ class CreateExtensionPoolServiceTest {
             poolShareRepository,
             linkTokenGenerator,
             emailService,
+            poolLinkBuilder,
         )
 
     private val ownerId = UserId(UUID.randomUUID())

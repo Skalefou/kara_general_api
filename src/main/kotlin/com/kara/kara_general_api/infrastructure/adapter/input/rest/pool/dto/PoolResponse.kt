@@ -24,6 +24,11 @@ data class PoolResponse(
     val percentage: Int,
     val deadline: Instant,
     val globalLinkToken: String,
+    @field:Schema(
+        description = "Lien de partage global prêt à l'emploi (construit par le serveur, à partager tel quel)",
+        example = "https://link.karapi.fr/join/8f14e45fceea167a5a36dedd4bea2543",
+    )
+    val globalShareUrl: String,
     val shares: List<PoolShareResponse>,
 ) {
     companion object {
@@ -38,6 +43,7 @@ data class PoolResponse(
                 percentage = view.percentage,
                 deadline = view.deadline,
                 globalLinkToken = view.globalLinkToken,
+                globalShareUrl = view.globalShareUrl,
                 shares = view.shares.map { PoolShareResponse.from(it) },
             )
     }
@@ -85,6 +91,13 @@ data class PoolShareResponse(
     val isCreatorShare: Boolean,
     @field:Schema(description = "Token de lien unique (présent seulement si un email a été fourni)")
     val uniqueLinkToken: String?,
+    @field:Schema(
+        description =
+            "Lien de partage unique de la part, prêt à l'emploi (construit par le serveur). " +
+                "Null quand la part n'a pas de token de lien unique.",
+        example = "https://link.karapi.fr/p/c4ca4238a0b923820dcc509a6f75849b",
+    )
+    val shareUrl: String?,
 ) {
     companion object {
         fun from(view: PoolShareView): PoolShareResponse =
@@ -96,6 +109,7 @@ data class PoolShareResponse(
                 status = view.status,
                 isCreatorShare = view.isCreatorShare,
                 uniqueLinkToken = view.uniqueLinkToken,
+                shareUrl = view.shareUrl,
             )
     }
 }

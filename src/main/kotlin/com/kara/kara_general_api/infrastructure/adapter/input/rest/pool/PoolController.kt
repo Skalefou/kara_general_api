@@ -293,7 +293,7 @@ class PoolController(
         val command = RegeneratePoolLinkCommand(poolId = PoolId(poolId), requesterId = callerId(authentication))
         return when (val result = regeneratePoolLinkUseCase.regenerate(command)) {
             is RegeneratePoolLinkResult.Regenerated ->
-                ResponseEntity.ok(RegeneratePoolLinkResponse(globalLinkToken = result.globalLinkToken))
+                ResponseEntity.ok(RegeneratePoolLinkResponse.from(result))
             RegeneratePoolLinkResult.PoolNotFound -> poolNotFound()
             RegeneratePoolLinkResult.NotOwner -> notOwner()
             RegeneratePoolLinkResult.PoolClosed -> poolClosed()

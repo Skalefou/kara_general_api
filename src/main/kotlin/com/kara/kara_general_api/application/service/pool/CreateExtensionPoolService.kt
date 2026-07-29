@@ -12,6 +12,7 @@ import com.kara.kara_general_api.domain.port.output.BookingExtensionRepository
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.EmailService
 import com.kara.kara_general_api.domain.port.output.LinkTokenGenerator
+import com.kara.kara_general_api.domain.port.output.PoolLinkBuilder
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
@@ -29,6 +30,7 @@ class CreateExtensionPoolService(
     private val poolShareRepository: PoolShareRepository,
     private val linkTokenGenerator: LinkTokenGenerator,
     private val emailService: EmailService,
+    private val poolLinkBuilder: PoolLinkBuilder,
 ) : CreateExtensionPoolUseCase {
     @Transactional
     override fun createForExtension(command: CreateExtensionPoolCommand): CreateExtensionPoolResult {
@@ -96,6 +98,6 @@ class CreateExtensionPoolService(
                 )
             }
 
-        return CreateExtensionPoolResult.Created(PoolView.of(pool, shares))
+        return CreateExtensionPoolResult.Created(PoolView.of(pool, shares, poolLinkBuilder))
     }
 }

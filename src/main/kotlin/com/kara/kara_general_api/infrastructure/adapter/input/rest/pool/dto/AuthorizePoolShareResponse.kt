@@ -1,6 +1,7 @@
 package com.kara.kara_general_api.infrastructure.adapter.input.rest.pool.dto
 
 import com.kara.kara_general_api.domain.port.input.pool.AuthorizePoolShareResult
+import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
@@ -28,7 +29,20 @@ data class AuthorizePoolShareResponse(
     }
 }
 
-/** Nouveau token de lien global après régénération. */
+/** Nouveau token de lien global après régénération, et le lien de partage complet correspondant. */
 data class RegeneratePoolLinkResponse(
     val globalLinkToken: String,
-)
+    @field:Schema(
+        description = "Lien de partage global régénéré, prêt à l'emploi (construit par le serveur)",
+        example = "https://link.karapi.fr/join/8f14e45fceea167a5a36dedd4bea2543",
+    )
+    val globalShareUrl: String,
+) {
+    companion object {
+        fun from(regenerated: RegeneratePoolLinkResult.Regenerated): RegeneratePoolLinkResponse =
+            RegeneratePoolLinkResponse(
+                globalLinkToken = regenerated.globalLinkToken,
+                globalShareUrl = regenerated.globalShareUrl,
+            )
+    }
+}

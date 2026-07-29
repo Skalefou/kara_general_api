@@ -5,6 +5,7 @@ import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkResult
 import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkUseCase
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.LinkTokenGenerator
+import com.kara.kara_general_api.domain.port.output.PoolLinkBuilder
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,6 +16,7 @@ class RegeneratePoolLinkService(
     private val poolRepository: PoolRepository,
     private val bookingRepository: BookingRepository,
     private val linkTokenGenerator: LinkTokenGenerator,
+    private val poolLinkBuilder: PoolLinkBuilder,
 ) : RegeneratePoolLinkUseCase {
     @Transactional
     override fun regenerate(command: RegeneratePoolLinkCommand): RegeneratePoolLinkResult {
@@ -25,6 +27,9 @@ class RegeneratePoolLinkService(
 
         val token = linkTokenGenerator.generate()
         poolRepository.updateGlobalLinkToken(pool.id, token)
-        return RegeneratePoolLinkResult.Regenerated(token)
+        return RegeneratePoolLinkResult.Regenerated(
+            globalLinkToken = token,
+            globalShareUrl = poolLinkBuilder.globalShareUrl(token),
+        )
     }
 }

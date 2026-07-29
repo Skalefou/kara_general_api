@@ -10,6 +10,7 @@ import com.kara.kara_general_api.domain.port.input.pool.PoolView
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.EmailService
 import com.kara.kara_general_api.domain.port.output.LinkTokenGenerator
+import com.kara.kara_general_api.domain.port.output.PoolLinkBuilder
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
@@ -29,6 +30,7 @@ class AddPoolShareService(
     private val roomRepository: RoomRepository,
     private val linkTokenGenerator: LinkTokenGenerator,
     private val emailService: EmailService,
+    private val poolLinkBuilder: PoolLinkBuilder,
 ) : AddPoolShareUseCase {
     @Transactional
     override fun addShare(command: AddPoolShareCommand): AddPoolShareResult {
@@ -67,6 +69,6 @@ class AddPoolShareService(
             deadline = pool.deadline,
         )
 
-        return AddPoolShareResult.Added(PoolView.of(pool, poolShareRepository.findByPoolId(pool.id)))
+        return AddPoolShareResult.Added(PoolView.of(pool, poolShareRepository.findByPoolId(pool.id), poolLinkBuilder))
     }
 }

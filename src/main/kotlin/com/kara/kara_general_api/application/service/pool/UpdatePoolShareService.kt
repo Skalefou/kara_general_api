@@ -6,6 +6,7 @@ import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareCommand
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareUseCase
 import com.kara.kara_general_api.domain.port.output.BookingRepository
+import com.kara.kara_general_api.domain.port.output.PoolLinkBuilder
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import org.springframework.stereotype.Service
@@ -22,6 +23,7 @@ class UpdatePoolShareService(
     private val poolRepository: PoolRepository,
     private val poolShareRepository: PoolShareRepository,
     private val bookingRepository: BookingRepository,
+    private val poolLinkBuilder: PoolLinkBuilder,
 ) : UpdatePoolShareUseCase {
     @Transactional
     override fun updateShare(command: UpdatePoolShareCommand): UpdatePoolShareResult {
@@ -48,6 +50,6 @@ class UpdatePoolShareService(
         poolShareRepository.save(creatorShare.updateAmount(newCreatorAmount))
         poolShareRepository.save(target.updateAmount(command.newAmount))
 
-        return UpdatePoolShareResult.Updated(PoolView.of(pool, poolShareRepository.findByPoolId(pool.id)))
+        return UpdatePoolShareResult.Updated(PoolView.of(pool, poolShareRepository.findByPoolId(pool.id), poolLinkBuilder))
     }
 }

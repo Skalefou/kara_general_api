@@ -14,6 +14,10 @@ spring:
     init:
       mode: never
 
+# Deep links de partage de cagnotte : domaine public réel en production (jamais de slash final).
+app:
+  public-link-base-url: ${APP_PUBLIC_LINK_BASE_URL:https://link.karapi.fr}
+
 # Actuator / observability — production.
 # Only health, info and prometheus are exposed; every other actuator endpoint stays off.
 # Public reachability is further restricted by Caddy (403 on /actuator*) and the host firewall

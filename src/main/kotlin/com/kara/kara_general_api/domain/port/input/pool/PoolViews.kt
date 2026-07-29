@@ -5,6 +5,7 @@ import com.kara.kara_general_api.domain.model.payment.PoolShare
 import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
 import com.kara.kara_general_api.domain.model.payment.PoolStatus
 import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.port.output.PoolLinkBuilder
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
@@ -21,12 +22,15 @@ data class PoolView(
     val percentage: Int,
     val deadline: Instant,
     val globalLinkToken: String,
+    /** Lien de partage global prêt à l'emploi, construit par le serveur : `{base}/join/{globalLinkToken}`. */
+    val globalShareUrl: String,
     val shares: List<PoolShareView>,
 ) {
     companion object {
         fun of(
             pool: Pool,
             shares: List<PoolShare>,
+            links: PoolLinkBuilder,
         ): PoolView {
             val collected = collectedAmount(shares)
             return PoolView(
@@ -39,7 +43,8 @@ data class PoolView(
                 percentage = percentage(collected, pool.targetAmount),
                 deadline = pool.deadline,
                 globalLinkToken = pool.globalLinkToken,
-                shares = shares.map { PoolShareView.of(it) },
+                globalShareUrl = links.globalShareUrl(pool.globalLinkToken),
+                shares = shares.map { PoolShareView.of(it, links) },
             )
         }
     }
@@ -53,9 +58,17 @@ data class PoolShareView(
     val status: PoolShareStatus,
     val isCreatorShare: Boolean,
     val uniqueLinkToken: String?,
+    /**
+     * Lien de partage unique de la part, construit par le serveur : `{base}/p/{uniqueLinkToken}`.
+     * `null` quand la part n'a pas de token de lien unique (part reliquat du créateur).
+     */
+    val shareUrl: String?,
 ) {
     companion object {
-        fun of(share: PoolShare): PoolShareView =
+        fun of(
+            share: PoolShare,
+            links: PoolLinkBuilder,
+        ): PoolShareView =
             PoolShareView(
                 shareId = share.id.value,
                 participantName = share.participantName,
@@ -64,6 +77,7 @@ data class PoolShareView(
                 status = share.status,
                 isCreatorShare = share.isCreatorShare,
                 uniqueLinkToken = share.uniqueLinkToken,
+                shareUrl = share.uniqueLinkToken?.let { links.shareUrl(it) },
             )
     }
 }

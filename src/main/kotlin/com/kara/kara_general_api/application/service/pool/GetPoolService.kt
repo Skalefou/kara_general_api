@@ -9,6 +9,7 @@ import com.kara.kara_general_api.domain.port.input.pool.GetPoolResult
 import com.kara.kara_general_api.domain.port.input.pool.GetPoolUseCase
 import com.kara.kara_general_api.domain.port.input.pool.PoolView
 import com.kara.kara_general_api.domain.port.output.BookingRepository
+import com.kara.kara_general_api.domain.port.output.PoolLinkBuilder
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import org.springframework.stereotype.Service
@@ -20,6 +21,7 @@ class GetPoolService(
     private val poolRepository: PoolRepository,
     private val poolShareRepository: PoolShareRepository,
     private val bookingRepository: BookingRepository,
+    private val poolLinkBuilder: PoolLinkBuilder,
 ) : GetPoolUseCase {
     @Transactional(readOnly = true)
     override fun getById(
@@ -55,6 +57,6 @@ class GetPoolService(
         val booking = bookingRepository.findById(pool.bookingId) ?: return GetPoolResult.NotFound
         if (booking.userId != requesterId) return GetPoolResult.NotOwner
         val shares = poolShareRepository.findByPoolId(pool.id)
-        return GetPoolResult.Found(PoolView.of(pool, shares))
+        return GetPoolResult.Found(PoolView.of(pool, shares, poolLinkBuilder))
     }
 }
