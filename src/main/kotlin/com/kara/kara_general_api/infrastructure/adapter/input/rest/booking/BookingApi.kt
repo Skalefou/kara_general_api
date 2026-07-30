@@ -165,14 +165,17 @@ interface BookingApi {
     @Operation(
         summary = "Consulter mes réservations (client)",
         description =
-            "Retourne toutes les réservations dont l'utilisateur authentifié est le propriétaire, " +
-                "quel que soit son rôle. **Aucun statut n'est filtré** (PENDING, CONFIRMED, CANCELLED) : " +
-                "c'est le front qui étiquette et regroupe. Chaque réservation porte " +
-                "l'horaire, le nombre de personnes, les services retenus et, en mode SHARED_POT uniquement, la " +
-                "cagnotte incluse en ligne avec la liste nominative des parts — le front n'a donc pas à " +
-                "interroger une cagnotte par réservation. En mode PAY_ALL, `pool` vaut null : le modèle ne " +
-                "connaît aucun nom de participant, seulement `numberOfPeople`. Tri par date de début " +
-                "décroissante.",
+            "Retourne toutes les réservations auxquelles l'utilisateur authentifié participe : celles dont " +
+                "il est l'organisateur **et** celles dont il détient une part de cagnotte (il a payé sa part " +
+                "d'un événement créé par quelqu'un d'autre). `isCreator` distingue les deux rôles ; un " +
+                "participant est en lecture seule sur la réservation. **Aucun statut n'est filtré** " +
+                "(PENDING, CONFIRMED, CANCELLED) : c'est le front qui étiquette et regroupe. Chaque " +
+                "réservation porte l'horaire, le nombre de personnes, les services retenus et, en mode " +
+                "SHARED_POT uniquement, la cagnotte incluse en ligne — le front n'a donc pas à interroger une " +
+                "cagnotte par réservation. La liste nominative des parts n'est complète que pour " +
+                "l'organisateur : un participant ne voit que ses propres parts, sans email. En mode PAY_ALL, " +
+                "`pool` vaut null : le modèle ne connaît aucun nom de participant, seulement " +
+                "`numberOfPeople`. Tri par date de début décroissante.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -185,7 +188,7 @@ interface BookingApi {
                         array = ArraySchema(schema = Schema(implementation = UserBookingResponse::class)),
                         examples = [
                             ExampleObject(
-                                name = "Une cagnotte et une réservation payée en solo",
+                                name = "Deux événements organisés et un événement rejoint via sa cagnotte",
                                 value = """
                                     [
                                       {
@@ -233,7 +236,8 @@ interface BookingApi {
                                               "status": "PENDING"
                                             }
                                           ]
-                                        }
+                                        },
+                                        "isCreator": true
                                       },
                                       {
                                         "bookingId": "7d2b8a10-3c4d-4e5f-9a0b-1c2d3e4f5a6b",
@@ -249,7 +253,42 @@ interface BookingApi {
                                         "currency": "EUR",
                                         "expiresAt": "2026-07-01T10:15:00Z",
                                         "options": [],
-                                        "pool": null
+                                        "pool": null,
+                                        "isCreator": true
+                                      },
+                                      {
+                                        "bookingId": "4e5f6a70-8b9c-4d0e-9f1a-2b3c4d5e6f70",
+                                        "roomId": "550e8400-e29b-41d4-a716-446655440000",
+                                        "roomName": "Salle Étoile",
+                                        "roomAddress": "12 rue de Paris, 69002 Lyon, France",
+                                        "startAt": "2026-06-20T20:00:00Z",
+                                        "endAt": "2026-06-20T23:00:00Z",
+                                        "status": "CONFIRMED",
+                                        "paymentMode": "SHARED_POT",
+                                        "numberOfPeople": 6,
+                                        "totalPrice": 300.00,
+                                        "currency": "EUR",
+                                        "expiresAt": "2026-06-18T10:15:00Z",
+                                        "options": [],
+                                        "pool": {
+                                          "poolId": "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+                                          "status": "COMPLETED",
+                                          "targetAmount": 300.00,
+                                          "collectedAmount": 300.00,
+                                          "currency": "EUR",
+                                          "percentage": 100,
+                                          "deadline": "2026-06-18T10:15:00Z",
+                                          "shares": [
+                                            {
+                                              "shareId": "33333333-3333-4333-8333-333333333333",
+                                              "participantName": "Moi",
+                                              "email": null,
+                                              "amount": 50.00,
+                                              "status": "CAPTURED"
+                                            }
+                                          ]
+                                        },
+                                        "isCreator": false
                                       }
                                     ]
                                 """,
@@ -286,9 +325,11 @@ interface BookingApi {
     @Operation(
         summary = "Détail d'une réservation (+ billet)",
         description =
-            "Détail complet d'une réservation pour son propriétaire, incluant le code de billet " +
-                "(ticketCode) rendu en QR par le front. ticketCode est non-null uniquement lorsque la réservation " +
-                "est CONFIRMED.",
+            "Détail complet d'une réservation, accessible à son organisateur **et** à tout participant " +
+                "détenant une part de sa cagnotte ; `isCreator` distingue les deux rôles et un participant " +
+                "reste en lecture seule. Tout autre utilisateur reçoit 403 BOOKING_NOT_OWNER. Inclut le code " +
+                "de billet (ticketCode) rendu en QR par le front ; ticketCode est non-null uniquement " +
+                "lorsque la réservation est CONFIRMED.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -300,7 +341,9 @@ interface BookingApi {
             ),
             ApiResponse(
                 responseCode = "403",
-                description = "La réservation n'appartient pas à l'utilisateur (BOOKING_NOT_OWNER)",
+                description =
+                    "L'utilisateur n'est ni l'organisateur de la réservation ni détenteur d'une part de sa " +
+                        "cagnotte (BOOKING_NOT_OWNER)",
                 content = [Content(schema = Schema(implementation = ProblemDetail::class))],
             ),
             ApiResponse(

@@ -87,6 +87,23 @@ class PoolRepositoryAdapterTest {
     }
 
     @Test
+    fun `findByIdForUpdate returns the pool and locks its row`() {
+        val saved = pool()
+        adapter.save(saved)
+
+        val found = adapter.findByIdForUpdate(saved.id)
+
+        assertNotNull(found)
+        assertEquals(saved.id, found!!.id)
+        assertEquals(BigDecimal("100.00"), found.targetAmount)
+    }
+
+    @Test
+    fun `findByIdForUpdate returns null for an unknown pool`() {
+        assertNull(adapter.findByIdForUpdate(PoolId(UUID.randomUUID())))
+    }
+
+    @Test
     fun `findByBookingId and findByGlobalLinkToken locate the pool`() {
         val saved = pool(token = "lookup-token")
         adapter.save(saved)

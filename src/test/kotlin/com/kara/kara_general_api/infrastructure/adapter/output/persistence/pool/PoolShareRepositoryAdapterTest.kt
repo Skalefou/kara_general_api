@@ -2,6 +2,7 @@ package com.kara.kara_general_api.infrastructure.adapter.output.persistence.pool
 
 import com.google.firebase.auth.FirebaseAuth
 import com.kara.kara_general_api.TestcontainersConfiguration
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.PoolId
 import com.kara.kara_general_api.domain.model.payment.PoolShare
 import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
@@ -12,8 +13,10 @@ import com.kara.kara_general_api.domain.port.output.NotificationService
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.ninjasquad.springmockk.MockkBean
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,6 +51,7 @@ class PoolShareRepositoryAdapterTest {
 
     private val poolId = PoolId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
+    private val bookingId = BookingId(UUID.randomUUID())
 
     @BeforeEach
     fun setUp() {
@@ -60,9 +64,8 @@ class PoolShareRepositoryAdapterTest {
         insertUser(userId)
         val roomId = UUID.randomUUID()
         insertRoom(roomId)
-        val bookingId = UUID.randomUUID()
-        insertBooking(bookingId, roomId, userId.value)
-        insertPool(poolId.value, bookingId)
+        insertBooking(bookingId.value, roomId, userId.value)
+        insertPool(poolId.value, bookingId.value)
     }
 
     private fun share(
@@ -124,6 +127,107 @@ class PoolShareRepositoryAdapterTest {
         assertEquals(s.id, adapter.findByUniqueLinkToken("unique-token")!!.id)
         assertEquals(s.id, adapter.findByStripePaymentIntentId("pi_lookup")!!.id)
         assertNull(adapter.findByStripePaymentIntentId("absent"))
+    }
+
+    @Test
+    fun `findByPoolIdAndPayerUserId returns the share of that payer`() {
+        val mine = share(name = "Alice", token = "mine").withAuthorizationIntent("pi_mine", userId)
+        adapter.save(mine)
+
+        assertEquals(mine.id, adapter.findByPoolIdAndPayerUserId(poolId, userId)!!.id)
+    }
+
+    @Test
+    fun `findByPoolIdAndPayerUserId returns null when the payer holds no share`() {
+        adapter.save(share(name = "Alice", token = "someone-else").withAuthorizationIntent("pi_a", userId))
+
+        val stranger = UserId(UUID.randomUUID())
+        insertUser(stranger)
+
+        assertNull(adapter.findByPoolIdAndPayerUserId(poolId, stranger))
+    }
+
+    @Test
+    fun `findByPoolIdAndPayerUserId never returns the share of another payer`() {
+        // Le filtrage est fait en SQL sur payer_user_id : la part d'un tiers ne peut pas fuiter.
+        val otherPayer = UserId(UUID.randomUUID())
+        insertUser(otherPayer)
+        adapter.save(share(name = "Bob", token = "bob").withAuthorizationIntent("pi_bob", otherPayer))
+        val mine = share(name = "Alice", token = "alice").withAuthorizationIntent("pi_alice", userId)
+        adapter.save(mine)
+
+        val found = adapter.findByPoolIdAndPayerUserId(poolId, userId)!!
+
+        assertEquals(mine.id, found.id)
+        assertEquals(userId, found.payerUserId)
+    }
+
+    @Test
+    fun `findByPoolIdAndPayerUserId ignores shares whose payer is still null`() {
+        // Part jamais présentée au paiement : payer_user_id IS NULL, elle n'appartient à personne.
+        adapter.save(share(name = "Anonyme", token = "no-payer", payer = null))
+
+        assertNull(adapter.findByPoolIdAndPayerUserId(poolId, userId))
+    }
+
+    @Test
+    fun `findByPoolIdAndPayerUserId does not leak a share from another pool of the same payer`() {
+        val otherRoomId = UUID.randomUUID()
+        insertRoom(otherRoomId)
+        val otherBookingId = UUID.randomUUID()
+        insertBooking(otherBookingId, otherRoomId, userId.value)
+        val otherPoolId = PoolId(UUID.randomUUID())
+        insertPool(otherPoolId.value, otherBookingId)
+
+        val shareInOtherPool =
+            share(name = "Alice", token = "other-pool")
+                .copy(poolId = otherPoolId)
+                .withAuthorizationIntent("pi_other_pool", userId)
+        adapter.save(shareInOtherPool)
+
+        assertNull(adapter.findByPoolIdAndPayerUserId(poolId, userId))
+        assertEquals(shareInOtherPool.id, adapter.findByPoolIdAndPayerUserId(otherPoolId, userId)!!.id)
+    }
+
+    @Test
+    fun `existsForBookingAndPayer is true when the user paid a share of a pool of that booking`() {
+        adapter.save(share(name = "Alice", token = "paid").withAuthorizationIntent("pi_paid", userId))
+
+        assertTrue(adapter.existsForBookingAndPayer(bookingId, userId))
+    }
+
+    @Test
+    fun `existsForBookingAndPayer is false for a user holding no share of that booking`() {
+        val stranger = UserId(UUID.randomUUID())
+        insertUser(stranger)
+        adapter.save(share(name = "Alice", token = "mine-only").withAuthorizationIntent("pi_mine", userId))
+
+        assertFalse(adapter.existsForBookingAndPayer(bookingId, stranger))
+    }
+
+    @Test
+    fun `existsForBookingAndPayer is false when the share was never paid`() {
+        adapter.save(share(name = "Anonyme", token = "unpaid", payer = null))
+
+        assertFalse(adapter.existsForBookingAndPayer(bookingId, userId))
+    }
+
+    @Test
+    fun `existsForBookingAndPayer does not leak involvement from a pool of another booking`() {
+        val otherRoomId = UUID.randomUUID()
+        insertRoom(otherRoomId)
+        val otherBookingId = BookingId(UUID.randomUUID())
+        insertBooking(otherBookingId.value, otherRoomId, userId.value)
+        val otherPoolId = PoolId(UUID.randomUUID())
+        insertPool(otherPoolId.value, otherBookingId.value)
+        adapter.save(
+            share(name = "Alice", token = "other-booking")
+                .copy(poolId = otherPoolId)
+                .withAuthorizationIntent("pi_other_booking", userId),
+        )
+
+        assertFalse(adapter.existsForBookingAndPayer(bookingId, userId))
+        assertTrue(adapter.existsForBookingAndPayer(otherBookingId, userId))
     }
 
     @Test

@@ -159,13 +159,28 @@ interface PoolApi {
     @Operation(
         summary = "Récapitulatif public via le lien global",
         description =
-            "Lecture publique (sans authentification) : résumé de la réservation, progression de la " +
-                "cagnotte et message de débit différé. Le paiement, lui, requiert une authentification.",
+            "Lecture publique : résumé de la réservation, progression de la cagnotte et message de débit " +
+                "différé.\n\n" +
+                "**Authentification facultative.** Un en-tête `Authorization: Bearer <JWT>` absent, expiré ou " +
+                "invalide n'est **pas** une erreur : la réponse est simplement celle d'un invité (champ `share` " +
+                "absent), jamais un 401.\n\n" +
+                "Avec un JWT valide, `share` contient **la part dont l'appelant est le payeur**, et elle seule : " +
+                "le filtrage est fait sur le payeur côté serveur, la part d'un autre participant n'est jamais " +
+                "exposée. Si l'appelant ne détient aucune part, `share` est absent.\n\n" +
+                "Cas d'usage : **reprise d'un paiement interrompu**. Quand le PaymentSheet échoue après " +
+                "`POST /api/v1/pools/join/{globalToken}/shares`, la part existe déjà et une seconde " +
+                "auto-inscription est refusée (POOL_ALREADY_JOINED). Cet endpoint restitue le `shareId` " +
+                "nécessaire pour relancer le paiement via " +
+                "`POST /api/v1/pools/{poolId}/shares/{shareId}/payment`, puis `.../sync`.\n\n" +
+                "Le paiement d'une part, lui, requiert toujours une authentification.",
     )
     @ApiResponses(
         value = [
             ApiResponse(
                 responseCode = "200",
+                description =
+                    "Récapitulatif de la cagnotte. `share` est renseigné uniquement si la requête porte un " +
+                        "JWT valide dont le porteur détient une part de cette cagnotte.",
                 content = [Content(schema = Schema(implementation = PoolRecapResponse::class))],
             ),
             ApiResponse(responseCode = "404", description = "POOL_NOT_FOUND"),
@@ -174,6 +189,9 @@ interface PoolApi {
     @GetMapping("/join/{globalToken}")
     fun joinRecap(
         @PathVariable globalToken: String,
+        // Nullable OBLIGATOIREMENT : sans authentification, Spring passe null ici. Un type non-nullable ferait
+        // échouer l'invocation Kotlin de la méthode du contrôleur (500 systématique pour les invités).
+        authentication: Authentication?,
     ): ResponseEntity<Any>
 
     @Operation(
@@ -199,7 +217,16 @@ interface PoolApi {
         description =
             "Crée un PaymentIntent Stripe en capture manuelle pour bloquer le montant de la part " +
                 "(aucun prélèvement immédiat) et retourne les secrets du PaymentSheet. La capture n'a lieu qu'une " +
-                "fois toute la cagnotte complète.",
+                "fois toute la cagnotte complète.\n\n" +
+                "Ouvert à **tout utilisateur authentifié** : il n'est pas nécessaire d'être le créateur de la " +
+                "cagnotte (un participant invité par lien ne l'est pas). Le créateur règle sa **part de reliquat** " +
+                "(la part `isCreatorShare` de `GET /api/v1/pools/{id}`) par ce même endpoint, sans traitement " +
+                "particulier : il suffit de lui passer le `shareId` de cette part.\n\n" +
+                "Préconditions : cagnotte OPEN et non expirée, part PENDING. Le montant autorisé est le montant " +
+                "**courant** de la part ; si ce montant change ensuite (un participant rejoint et découpe le " +
+                "reliquat), l'autorisation en cours est libérée et détachée, et la part doit être réglée à nouveau " +
+                "au nouveau montant. Après le PaymentSheet, appeler " +
+                "`POST /api/v1/pools/{poolId}/shares/{shareId}/sync` pour ne pas dépendre du seul webhook.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(
@@ -208,6 +235,7 @@ interface PoolApi {
                 responseCode = "200",
                 content = [Content(schema = Schema(implementation = AuthorizePoolShareResponse::class))],
             ),
+            ApiResponse(responseCode = "401", description = "Requête non authentifiée"),
             ApiResponse(responseCode = "404", description = "POOL_NOT_FOUND / POOL_SHARE_NOT_FOUND / POOL_PAYER_NOT_FOUND"),
             ApiResponse(
                 responseCode = "409",
@@ -225,12 +253,55 @@ interface PoolApi {
     ): ResponseEntity<Any>
 
     @Operation(
+        summary = "Réconcilier le paiement d'une part",
+        description =
+            "Interroge Stripe pour connaître le statut réel du PaymentIntent de la part. Si les fonds sont " +
+                "bloqués (`requires_capture`), la part passe AUTHORIZED et, si la cagnotte devient complète, toutes " +
+                "les autorisations sont capturées et la réservation passe CONFIRMED — mêmes effets que le webhook, " +
+                "de façon idempotente. Si l'intent est annulé, la part passe CANCELLED ; sinon rien n'est modifié. " +
+                "À appeler par le front après le PaymentSheet pour ne pas dépendre de la seule arrivée du webhook. " +
+                "Retourne l'état à jour de la part ET de la cagnotte (progression), de quoi rafraîchir l'écran sans " +
+                "second appel. Réservé au payeur de la part ou au créateur de la cagnotte.",
+        security = [SecurityRequirement(name = "bearerAuth")],
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "État à jour de la part et de la cagnotte",
+                content = [Content(schema = Schema(implementation = PoolRecapResponse::class))],
+            ),
+            ApiResponse(responseCode = "401", description = "Requête non authentifiée"),
+            ApiResponse(
+                responseCode = "403",
+                description = "Ni payeur de la part ni créateur de la cagnotte (POOL_SHARE_NOT_ALLOWED)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Cagnotte introuvable (POOL_NOT_FOUND) ou part introuvable (POOL_SHARE_NOT_FOUND)",
+                content = [Content(schema = Schema(implementation = ProblemDetail::class))],
+            ),
+        ],
+    )
+    @PostMapping("/{poolId}/shares/{shareId}/sync")
+    fun syncShare(
+        @PathVariable poolId: UUID,
+        @PathVariable shareId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any>
+
+    @Operation(
         summary = "Rejoindre une cagnotte (auto-inscription via le lien global)",
         description =
             "Un utilisateur authentifié crée sa propre part via le lien global : le montant (plafonné " +
                 "par le reliquat du créateur) est prélevé sur ce reliquat, puis un PaymentIntent Stripe en capture " +
                 "manuelle est créé. Nom et email de la part sont dérivés du compte. Retourne les secrets du " +
-                "PaymentSheet. Une seule part par personne.",
+                "PaymentSheet. Une seule part par personne.\n\n" +
+                "La découpe libère l'éventuelle autorisation Stripe encore en cours sur le reliquat (le créateur " +
+                "avait ouvert son PaymentSheet sans que le blocage soit enregistré) : elle ne couvrirait plus le " +
+                "nouveau montant dû. Le créateur doit alors régler son reliquat à nouveau. Si son reliquat est " +
+                "déjà AUTHORIZED/CAPTURED, la découpe est refusée (POOL_REMAINDER_LOCKED).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

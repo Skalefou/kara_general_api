@@ -65,6 +65,12 @@ class PoolSettlementServiceTest {
         false,
     )
 
+    private fun creatorShare(
+        intent: String,
+        status: PoolShareStatus,
+        amount: String = "50.00",
+    ) = share(intent, status, amount).copy(participantName = "Créateur", isCreatorShare = true)
+
     @Test
     fun `ignores an unknown payment intent`() {
         every { poolShareRepository.findByStripePaymentIntentId("pi_x") } returns null
@@ -74,19 +80,63 @@ class PoolSettlementServiceTest {
 
     @Test
     fun `is idempotent when the share is already authorized`() {
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returns
             share("pi_b", PoolShareStatus.AUTHORIZED)
 
         assertEquals(StripeWebhookResult.Handled, sut.onShareAuthorized("pi_b"))
         verify(exactly = 0) { poolShareRepository.save(any()) }
-        verify(exactly = 0) { paymentGateway.capturePaymentIntent(any()) }
+        verify(exactly = 0) { paymentGateway.capturePaymentIntent(any(), any()) }
+    }
+
+    @Test
+    fun `locks the pool before deciding on a share transition`() {
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returns
+            share("pi_b", PoolShareStatus.PENDING)
+        every { poolShareRepository.findByPoolId(poolId) } returns
+            listOf(share("pi_a", PoolShareStatus.PENDING), share("pi_b", PoolShareStatus.AUTHORIZED))
+
+        sut.onShareAuthorized("pi_b")
+
+        // Le verrou pessimiste est la garantie d'idempotence face à un webhook et un sync concurrents :
+        // sans lui, les deux liraient la part PENDING et l'autoriseraient (voire captureraient) deux fois.
+        verify(exactly = 1) { poolRepository.findByIdForUpdate(poolId) }
+        verify(exactly = 0) { poolRepository.findById(any()) }
+    }
+
+    @Test
+    fun `re-reads the share after locking so a concurrent transition wins only once`() {
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        // Première lecture (avant verrou) : PENDING. Relecture (après verrou) : une transaction concurrente
+        // a commité l'autorisation entre-temps.
+        every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returnsMany
+            listOf(
+                share("pi_b", PoolShareStatus.PENDING),
+                share("pi_b", PoolShareStatus.AUTHORIZED),
+            )
+
+        assertEquals(StripeWebhookResult.Handled, sut.onShareAuthorized("pi_b"))
+        verify(exactly = 0) { poolShareRepository.save(any()) }
+        verify(exactly = 0) { paymentGateway.capturePaymentIntent(any(), any()) }
+    }
+
+    @Test
+    fun `does not capture twice when the share is already captured`() {
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returns
+            share("pi_b", PoolShareStatus.CAPTURED)
+
+        assertEquals(StripeWebhookResult.Handled, sut.onShareAuthorized("pi_b"))
+        verify(exactly = 0) { poolShareRepository.save(any()) }
+        verify(exactly = 0) { paymentGateway.capturePaymentIntent(any(), any()) }
     }
 
     @Test
     fun `marks the share authorized without capturing while the pool is incomplete`() {
         every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returns
             share("pi_b", PoolShareStatus.PENDING)
-        every { poolRepository.findById(poolId) } returns pool()
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         every { poolShareRepository.findByPoolId(poolId) } returns
             listOf(
                 share("pi_a", PoolShareStatus.PENDING),
@@ -97,7 +147,7 @@ class PoolSettlementServiceTest {
 
         assertEquals(StripeWebhookResult.Handled, result)
         verify { poolShareRepository.save(match { it.status == PoolShareStatus.AUTHORIZED }) }
-        verify(exactly = 0) { paymentGateway.capturePaymentIntent(any()) }
+        verify(exactly = 0) { paymentGateway.capturePaymentIntent(any(), any()) }
         verify(exactly = 0) { bookingRepository.updateStatus(any(), BookingStatus.CONFIRMED) }
     }
 
@@ -105,7 +155,7 @@ class PoolSettlementServiceTest {
     fun `captures all shares, settles the pool and confirms the booking when complete`() {
         every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returns
             share("pi_b", PoolShareStatus.PENDING)
-        every { poolRepository.findById(poolId) } returns pool()
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         every { poolShareRepository.findByPoolId(poolId) } returns
             listOf(
                 share("pi_a", PoolShareStatus.AUTHORIZED),
@@ -116,15 +166,59 @@ class PoolSettlementServiceTest {
         val result = sut.onShareAuthorized("pi_b")
 
         assertEquals(StripeWebhookResult.Handled, result)
-        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_a") }
-        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_b") }
+        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_a", BigDecimal("50.00")) }
+        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_b", BigDecimal("50.00")) }
         verify { poolRepository.updateStatus(poolId, PoolStatus.SETTLED) }
         verify { bookingRepository.updateStatus(bookingId, BookingStatus.CONFIRMED) }
         verify { poolNotifier.notifyPoolConfirmed(any()) }
     }
 
     @Test
+    fun `settles a pool whose last authorized share is the creator remainder, capturing its intent too`() {
+        val creatorRemainder = creatorShare("pi_creator", PoolShareStatus.PENDING, amount = "60.00")
+        every { poolShareRepository.findByStripePaymentIntentId("pi_creator") } returns creatorRemainder
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        every { poolShareRepository.findByPoolId(poolId) } returns
+            listOf(
+                share("pi_guest", PoolShareStatus.AUTHORIZED, amount = "40.00"),
+                creatorShare("pi_creator", PoolShareStatus.AUTHORIZED, amount = "60.00"),
+            )
+        every { bookingRepository.findById(bookingId) } returns mockk<Booking>()
+
+        val result = sut.onShareAuthorized("pi_creator")
+
+        // Le reliquat du créateur est une part comme les autres : elle compte dans la complétude et son
+        // autorisation est capturée au même titre que celle des participants.
+        assertEquals(StripeWebhookResult.Handled, result)
+        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_guest", BigDecimal("40.00")) }
+        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_creator", BigDecimal("60.00")) }
+        verify { poolRepository.updateStatus(poolId, PoolStatus.SETTLED) }
+        verify { bookingRepository.updateStatus(bookingId, BookingStatus.CONFIRMED) }
+    }
+
+    @Test
+    fun `captures the amount due by the share, never the whole authorized amount`() {
+        // Le reliquat a été découpé (100 -> 60) : quoi qu'il arrive, on ne prélève que les 60 dus. Capturer
+        // sans montant prélèverait l'intégralité de l'autorisation, donc plus que le dû.
+        every { poolShareRepository.findByStripePaymentIntentId("pi_creator") } returns
+            creatorShare("pi_creator", PoolShareStatus.PENDING, amount = "60.00")
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        every { poolShareRepository.findByPoolId(poolId) } returns
+            listOf(
+                share("pi_guest", PoolShareStatus.AUTHORIZED, amount = "40.00"),
+                creatorShare("pi_creator", PoolShareStatus.AUTHORIZED, amount = "60.00"),
+            )
+        every { bookingRepository.findById(bookingId) } returns mockk<Booking>()
+
+        sut.onShareAuthorized("pi_creator")
+
+        verify(exactly = 0) { paymentGateway.capturePaymentIntent("pi_creator", BigDecimal("100.00")) }
+        verify(exactly = 1) { paymentGateway.capturePaymentIntent("pi_creator", BigDecimal("60.00")) }
+    }
+
+    @Test
     fun `onShareCanceled marks the share cancelled`() {
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         every { poolShareRepository.findByStripePaymentIntentId("pi_b") } returns
             share("pi_b", PoolShareStatus.AUTHORIZED)
 

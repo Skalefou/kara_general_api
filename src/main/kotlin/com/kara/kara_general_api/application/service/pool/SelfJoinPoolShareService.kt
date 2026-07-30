@@ -20,8 +20,19 @@ import java.time.Instant
  * Stripe (capture manuelle) — combinant la logique de [AddPoolShareService] (sans la garde « créateur
  * uniquement ») et de [AuthorizePoolShareService].
  *
- * Concurrence : le reliquat du créateur est **verrouillé** (`FOR UPDATE`) avant lecture de son montant, si
- * bien que deux auto-inscriptions simultanées se sérialisent et ne peuvent pas sur-découper le reliquat.
+ * Concurrence : la cagnotte puis le reliquat du créateur sont **verrouillés** (`FOR UPDATE`) avant lecture du
+ * montant du reliquat, si bien que deux auto-inscriptions simultanées se sérialisent et ne peuvent pas
+ * sur-découper le reliquat. Le verrou de cagnotte est le même que celui du règlement
+ * ([PoolSettlementService]) et de l'autorisation d'une part ([AuthorizePoolShareService]) : découpe et
+ * règlement ne peuvent donc pas s'entrelacer et s'écraser mutuellement (l'upsert d'une part réécrit toute la
+ * ligne, montant compris). Il est pris en premier partout, ce qui exclut tout interblocage.
+ *
+ * `rollbackFor = Exception::class` est **impératif** : `com.stripe.exception.StripeException` étend
+ * `java.lang.Exception` (exception **vérifiée**), or Spring ne déclenche par défaut le rollback que sur
+ * `RuntimeException`/`Error`. Sans cette mention, un échec de la passerelle (`ensureCustomer`,
+ * `createEphemeralKey`, `createManualCapturePaymentIntent`) **commiterait** la découpe du reliquat du créateur
+ * sans créer la part financée : l'invariant somme(parts) == targetAmount serait cassé définitivement et la
+ * cagnotte ne pourrait plus jamais être complétée ([PoolSettlementService] ne la verrait jamais complète).
  */
 @Service
 class SelfJoinPoolShareService(
@@ -29,12 +40,15 @@ class SelfJoinPoolShareService(
     private val poolShareRepository: PoolShareRepository,
     private val userRepository: UserRepository,
     private val paymentGateway: PaymentGateway,
+    private val poolShareHoldReleaser: PoolShareHoldReleaser,
 ) : SelfJoinPoolShareUseCase {
-    @Transactional
+    @Transactional(rollbackFor = [Exception::class])
     override fun selfJoin(command: SelfJoinPoolShareCommand): SelfJoinPoolShareResult {
-        val pool =
+        val located =
             poolRepository.findByGlobalLinkToken(command.globalToken)
                 ?: return SelfJoinPoolShareResult.PoolNotFound
+        // Relecture verrouillée : l'état décidé ci-dessous doit être celui commité, pas un instantané périmé.
+        val pool = poolRepository.findByIdForUpdate(located.id) ?: return SelfJoinPoolShareResult.PoolNotFound
         if (!pool.isOpen()) return SelfJoinPoolShareResult.PoolClosed
         if (pool.isExpired(Instant.now())) return SelfJoinPoolShareResult.PoolExpired
 
@@ -54,8 +68,11 @@ class SelfJoinPoolShareService(
         val remaining = creatorShare.amount - command.amount
         if (remaining <= BigDecimal.ZERO) return SelfJoinPoolShareResult.InsufficientRemainder
 
-        // Carve : le reliquat du créateur finance la nouvelle part (invariant somme == cible préservé).
-        poolShareRepository.save(creatorShare.updateAmount(remaining))
+        // Carve : le reliquat du créateur finance la nouvelle part (invariant somme == cible préservé). Son
+        // montant change, donc l'autorisation Stripe qu'il porte éventuellement (le créateur a ouvert le
+        // PaymentSheet de son reliquat sans que l'autorisation soit encore enregistrée AUTHORIZED) ne couvre
+        // plus le dû : elle est libérée et détachée, jamais capturée.
+        poolShareRepository.save(poolShareHoldReleaser.release(creatorShare).updateAmount(remaining))
         val selfShare =
             PoolShare.create(
                 poolId = pool.id,

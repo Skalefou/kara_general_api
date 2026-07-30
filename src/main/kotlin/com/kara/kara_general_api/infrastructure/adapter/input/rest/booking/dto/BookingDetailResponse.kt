@@ -9,7 +9,10 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
-/** Détail d'une réservation + billet. `ticketCode` est non-null uniquement lorsque le statut est CONFIRMED. */
+/**
+ * Détail d'une réservation + billet, pour son organisateur ou pour un participant détenant une part de sa
+ * cagnotte (`isCreator`). `ticketCode` est non-null uniquement lorsque le statut est CONFIRMED.
+ */
 data class BookingDetailResponse(
     val bookingId: UUID,
     val roomName: String,
@@ -37,6 +40,13 @@ data class BookingDetailResponse(
         example = "KARA-TKT-3F7Q2K9A",
     )
     val ticketCode: String?,
+    @field:Schema(
+        description =
+            "Vrai si l'utilisateur est l'organisateur (propriétaire de la réservation). Faux s'il n'y " +
+                "participe qu'en détenant une part de la cagnotte : il est alors en lecture seule sur la " +
+                "réservation (aucune annulation, extension, commande ni gestion de cagnotte).",
+    )
+    val isCreator: Boolean,
 ) {
     companion object {
         fun from(view: BookingDetailView): BookingDetailResponse =
@@ -54,6 +64,7 @@ data class BookingDetailResponse(
                 status = view.status,
                 paymentMode = view.paymentMode,
                 ticketCode = view.ticketCode,
+                isCreator = view.isCreator,
             )
     }
 }

@@ -105,6 +105,11 @@ class SecurityConfig {
                 authorize("/api/v1/server-shifts/**", hasRole(UserRole.ADMIN.name))
                 // Récapitulatifs publics de cagnotte (lecture sans authentification). Le paiement d'une part
                 // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
+                // Le lien global accepte un JWT **facultatif** : `permitAll` n'exige rien, mais le
+                // JwtAuthenticationFilter peuple malgré tout le SecurityContext quand un jeton valide est
+                // présent, ce qui permet au contrôleur de joindre au récapitulatif la part de l'appelant
+                // (reprise d'un paiement interrompu). Un jeton absent, expiré ou invalide reste un accès invité,
+                // jamais un 401.
                 authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)
                 authorize(HttpMethod.GET, "/api/v1/pools/share/**", permitAll)
                 // Observabilité (double barrière — cf. Caddyfile qui renvoie 404 sur /actuator* côté public,

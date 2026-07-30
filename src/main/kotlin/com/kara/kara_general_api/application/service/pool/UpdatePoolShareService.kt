@@ -17,6 +17,9 @@ import java.math.BigDecimal
  * Le créateur modifie le montant d'une part non encore payée. L'écart est répercuté sur le reliquat du
  * créateur pour préserver l'invariant somme(parts) == cible. Rejeté si la part visée (ou le reliquat) est
  * déjà autorisée/capturée.
+ *
+ * Concurrence : la cagnotte est **verrouillée** ([PoolRepository.findByIdForUpdate]) avant lecture des parts,
+ * comme dans [PoolSettlementService] — rééquilibrage et règlement ne peuvent pas s'entrelacer.
  */
 @Service
 class UpdatePoolShareService(
@@ -24,10 +27,12 @@ class UpdatePoolShareService(
     private val poolShareRepository: PoolShareRepository,
     private val bookingRepository: BookingRepository,
     private val poolLinkBuilder: PoolLinkBuilder,
+    private val poolShareHoldReleaser: PoolShareHoldReleaser,
 ) : UpdatePoolShareUseCase {
     @Transactional
     override fun updateShare(command: UpdatePoolShareCommand): UpdatePoolShareResult {
-        val pool = poolRepository.findById(command.poolId) ?: return UpdatePoolShareResult.PoolNotFound
+        // Verrou pessimiste AVANT lecture des parts : sérialise le rééquilibrage avec le règlement.
+        val pool = poolRepository.findByIdForUpdate(command.poolId) ?: return UpdatePoolShareResult.PoolNotFound
         val booking = bookingRepository.findById(pool.bookingId) ?: return UpdatePoolShareResult.PoolNotFound
         if (booking.userId != command.requesterId) return UpdatePoolShareResult.NotOwner
         if (!pool.isOpen()) return UpdatePoolShareResult.PoolClosed
@@ -47,8 +52,11 @@ class UpdatePoolShareService(
         val newCreatorAmount = creatorShare.amount - delta
         if (newCreatorAmount <= BigDecimal.ZERO) return UpdatePoolShareResult.InsufficientRemainder
 
-        poolShareRepository.save(creatorShare.updateAmount(newCreatorAmount))
-        poolShareRepository.save(target.updateAmount(command.newAmount))
+        // Les deux montants changent : les autorisations Stripe en cours qu'elles portent éventuellement ne les
+        // couvrent plus (ni à la baisse — capture supérieure au dû — ni à la hausse — capture impossible), donc
+        // elles sont libérées et détachées. Les payeurs concernés règlent à nouveau, au bon montant.
+        poolShareRepository.save(poolShareHoldReleaser.release(creatorShare).updateAmount(newCreatorAmount))
+        poolShareRepository.save(poolShareHoldReleaser.release(target).updateAmount(command.newAmount))
 
         return UpdatePoolShareResult.Updated(PoolView.of(pool, poolShareRepository.findByPoolId(pool.id), poolLinkBuilder))
     }

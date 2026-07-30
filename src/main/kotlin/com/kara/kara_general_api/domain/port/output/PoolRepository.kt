@@ -14,6 +14,15 @@ interface PoolRepository {
 
     fun findById(id: PoolId): Pool?
 
+    /**
+     * Verrou pessimiste (`SELECT ... FOR UPDATE`) sur la ligne de la cagnotte. Sérialise **tout** le
+     * règlement d'une même cagnotte : le webhook Stripe et la réconciliation demandée par le front prennent
+     * ce verrou avant de décider d'une transition, si bien qu'ils ne peuvent ni autoriser deux fois la même
+     * part, ni capturer deux fois, ni conclure tous les deux à la complétude. À appeler **dans une
+     * transaction**, et toujours **avant** de relire les parts. Retourne null si la cagnotte n'existe pas.
+     */
+    fun findByIdForUpdate(id: PoolId): Pool?
+
     fun findByBookingId(bookingId: BookingId): Pool?
 
     fun findByExtensionId(extensionId: BookingExtensionId): Pool?

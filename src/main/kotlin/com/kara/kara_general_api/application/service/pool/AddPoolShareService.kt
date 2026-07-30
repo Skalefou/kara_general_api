@@ -21,6 +21,9 @@ import java.math.BigDecimal
 /**
  * Le créateur ajoute un participant par email. Pour préserver l'invariant somme(parts) == cible, le
  * montant de la nouvelle part est prélevé sur le reliquat du créateur (part PENDING `isCreatorShare`).
+ *
+ * Concurrence : la cagnotte est **verrouillée** ([PoolRepository.findByIdForUpdate]) avant lecture des parts,
+ * comme dans [PoolSettlementService] — découpe et règlement ne peuvent pas s'entrelacer.
  */
 @Service
 class AddPoolShareService(
@@ -31,10 +34,12 @@ class AddPoolShareService(
     private val linkTokenGenerator: LinkTokenGenerator,
     private val emailService: EmailService,
     private val poolLinkBuilder: PoolLinkBuilder,
+    private val poolShareHoldReleaser: PoolShareHoldReleaser,
 ) : AddPoolShareUseCase {
     @Transactional
     override fun addShare(command: AddPoolShareCommand): AddPoolShareResult {
-        val pool = poolRepository.findById(command.poolId) ?: return AddPoolShareResult.PoolNotFound
+        // Verrou pessimiste AVANT lecture des parts : sérialise la découpe avec le règlement.
+        val pool = poolRepository.findByIdForUpdate(command.poolId) ?: return AddPoolShareResult.PoolNotFound
         val booking = bookingRepository.findById(pool.bookingId) ?: return AddPoolShareResult.PoolNotFound
         if (booking.userId != command.requesterId) return AddPoolShareResult.NotOwner
         if (!pool.isOpen()) return AddPoolShareResult.PoolClosed
@@ -48,7 +53,9 @@ class AddPoolShareService(
 
         val email = Email(command.email)
         val token = linkTokenGenerator.generate()
-        poolShareRepository.save(creatorShare.updateAmount(remaining))
+        // Le montant du reliquat change : son éventuelle autorisation Stripe en cours ne le couvre plus, elle
+        // est libérée et détachée pour ne jamais être capturée à un montant supérieur au dû.
+        poolShareRepository.save(poolShareHoldReleaser.release(creatorShare).updateAmount(remaining))
         poolShareRepository.save(
             PoolShare.create(
                 poolId = pool.id,

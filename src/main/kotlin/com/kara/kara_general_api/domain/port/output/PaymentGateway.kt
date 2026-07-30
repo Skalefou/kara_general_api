@@ -94,8 +94,19 @@ interface PaymentGateway {
         customerId: String,
     ): PaymentIntentResult
 
-    /** Capture une autorisation existante (prélèvement effectif). Idempotent côté Stripe si déjà capturée. */
-    fun capturePaymentIntent(paymentIntentId: String)
+    /**
+     * Capture une autorisation existante (prélèvement effectif), **à hauteur exacte de [amount]**.
+     *
+     * Le montant est explicite et jamais implicite : une autorisation à capture manuelle est figée sur le
+     * montant demandé à sa création, alors que le montant dû par une part de cagnotte peut avoir été revu à la
+     * baisse entre-temps (découpe du reliquat du créateur). Capturer sans montant prélèverait l'intégralité de
+     * l'autorisation, donc plus que le dû. Avec [amount], le surplus autorisé est libéré au lieu d'être
+     * prélevé. Idempotent côté Stripe si déjà capturée.
+     */
+    fun capturePaymentIntent(
+        paymentIntentId: String,
+        amount: BigDecimal,
+    )
 
     /** Annule une autorisation existante (libère le blocage, zéro prélèvement). */
     fun cancelPaymentIntent(paymentIntentId: String)

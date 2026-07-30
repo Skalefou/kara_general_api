@@ -24,7 +24,14 @@ data class PoolRecapResponse(
     val currency: Currency,
     val percentage: Int,
     val deadline: Instant,
-    @field:Schema(description = "Part concernée (présente uniquement pour un lien de part)")
+    @field:Schema(
+        description =
+            "Part concernée. Présente dans deux cas seulement : accès par un lien de part, ou accès par le " +
+                "lien global avec un JWT valide dont le porteur détient une part de cette cagnotte — sa part, " +
+                "jamais celle d'un autre participant. Absente pour un invité, et pour un utilisateur " +
+                "authentifié sans part. Son `shareId` permet de reprendre un paiement interrompu via " +
+                "POST /api/v1/pools/{poolId}/shares/{shareId}/payment.",
+    )
     val share: ShareSummary?,
     @field:Schema(description = "Message expliquant que la carte n'est débitée qu'une fois tout le monde payé")
     val message: String,

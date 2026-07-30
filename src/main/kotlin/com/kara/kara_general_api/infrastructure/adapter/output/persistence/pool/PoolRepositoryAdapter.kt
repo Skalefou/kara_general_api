@@ -58,6 +58,14 @@ class PoolRepositoryAdapter(
         return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
     }
 
+    override fun findByIdForUpdate(id: PoolId): Pool? {
+        // Verrou pessimiste sur la cagnotte : sérialise le règlement (webhook Stripe vs réconciliation front)
+        // pour une même cagnotte. Toute autre transaction prenant ce verrou attend le commit de la première,
+        // puis relit des parts à jour — d'où l'idempotence des deux entrées.
+        val sql = "SELECT $POOL_COLUMNS FROM pools WHERE id = :id FOR UPDATE"
+        return jdbc.query(sql, mapOf("id" to id.value), rowMapper).firstOrNull()
+    }
+
     override fun findByBookingId(bookingId: BookingId): Pool? {
         val sql = "SELECT $POOL_COLUMNS FROM pools WHERE booking_id = :bookingId AND extension_id IS NULL"
         return jdbc.query(sql, mapOf("bookingId" to bookingId.value), rowMapper).firstOrNull()

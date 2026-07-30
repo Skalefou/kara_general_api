@@ -1,8 +1,10 @@
 package com.kara.kara_general_api.infrastructure.adapter.output.persistence.pool
 
+import com.kara.kara_general_api.domain.model.booking.BookingId
 import com.kara.kara_general_api.domain.model.payment.PoolId
 import com.kara.kara_general_api.domain.model.payment.PoolShare
 import com.kara.kara_general_api.domain.model.payment.PoolShareId
+import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -72,6 +74,46 @@ class PoolShareRepositoryAdapter(
     override fun findByUniqueLinkToken(token: String): PoolShare? {
         val sql = "SELECT $POOL_SHARE_COLUMNS FROM pool_shares WHERE unique_link_token = :token"
         return jdbc.query(sql, mapOf("token" to token), rowMapper).firstOrNull()
+    }
+
+    override fun findByPoolIdAndPayerUserId(
+        poolId: PoolId,
+        payerUserId: UserId,
+    ): PoolShare? {
+        // Filtrage sur le payeur en SQL : jamais de part appartenant à un autre utilisateur. LIMIT 1 car
+        // l'unicité (pool_id, payer_user_id) n'est pas contrainte en base — un utilisateur peut régler
+        // plusieurs parts d'une même cagnotte ; la plus ancienne est retournée.
+        val sql =
+            """
+            SELECT $POOL_SHARE_COLUMNS
+            FROM pool_shares
+            WHERE pool_id = :poolId AND payer_user_id = :payerUserId
+            ORDER BY created_at ASC
+            LIMIT 1
+            """.trimIndent()
+        val params = mapOf("poolId" to poolId.value, "payerUserId" to payerUserId.value)
+        return jdbc.query(sql, params, rowMapper).firstOrNull()
+    }
+
+    override fun existsForBookingAndPayer(
+        bookingId: BookingId,
+        payerUserId: UserId,
+    ): Boolean {
+        // Implication d'un participant dans une réservation : il détient au moins une part d'une cagnotte de
+        // cette réservation (cagnotte initiale ou cagnotte d'extension — toutes portent booking_id). Même
+        // sémantique que le prédicat EXISTS de BookingRepositoryAdapter.findByUserInvolvement.
+        val sql =
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM pool_shares s
+                JOIN pools p ON p.id = s.pool_id
+                WHERE p.booking_id = :bookingId
+                  AND s.payer_user_id = :payerUserId
+            )
+            """.trimIndent()
+        val params = mapOf("bookingId" to bookingId.value, "payerUserId" to payerUserId.value)
+        return jdbc.queryForObject(sql, params, Boolean::class.java) ?: false
     }
 
     override fun findByStripePaymentIntentId(stripePaymentIntentId: String): PoolShare? {

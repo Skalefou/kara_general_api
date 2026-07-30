@@ -25,14 +25,18 @@ interface BookingRepository {
     fun findAllBookings(): List<Booking>
 
     /**
-     * Réservations appartenant à [userId] (**tous** les statuts), enrichies du nom et de l'adresse de la
-     * salle ainsi que des services retenus (libellé + prix). Ordonnées par date de début décroissante.
+     * Réservations auxquelles [userId] participe (**tous** les statuts) : celles dont il est l'organisateur
+     * (`bookings.user_id`) **ou** dont il détient une part de cagnotte (`pool_shares.payer_user_id`) —
+     * même sémantique d'implication que [PoolRepository.findByUserInvolvement]. Chaque réservation apparaît
+     * une seule fois, quel que soit le nombre de parts détenues, et porte son rôle
+     * ([UserBooking.isCreator]). Enrichies du nom et de l'adresse de la salle ainsi que des services retenus
+     * (libellé + prix). Ordonnées par date de début décroissante.
      *
      * Coût fixe, indépendant du nombre de réservations : une requête pour les réservations, une seconde
      * pour les options de l'ensemble des réservations. Aucune requête supplémentaire si l'utilisateur n'a
      * aucune réservation.
      */
-    fun findByUserId(userId: UserId): List<UserBooking>
+    fun findByUserInvolvement(userId: UserId): List<UserBooking>
 
     /**
      * Vrai s'il existe déjà une réservation active (PENDING ou CONFIRMED) sur la salle dont le

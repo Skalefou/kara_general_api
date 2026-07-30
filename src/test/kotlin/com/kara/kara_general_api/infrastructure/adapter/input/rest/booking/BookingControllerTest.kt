@@ -272,6 +272,7 @@ class BookingControllerTest {
     private fun detailView(
         status: BookingStatus,
         ticketCode: String?,
+        isCreator: Boolean = true,
     ) = BookingDetailView(
         bookingId = UUID.fromString(BOOKING_ID),
         roomName = "Salle Étoile",
@@ -286,6 +287,7 @@ class BookingControllerTest {
         status = status,
         paymentMode = PaymentMode.PAY_ALL,
         ticketCode = ticketCode,
+        isCreator = isCreator,
     )
 
     @Test
@@ -326,13 +328,26 @@ class BookingControllerTest {
 
     @Test
     @WithMockUser(username = USER_ID)
-    fun `should return 403 when fetching a booking the user does not own`() {
+    fun `should return 403 when fetching a booking the user is not involved in`() {
         every { getBookingDetailUseCase.getDetail(any(), any()) } returns GetBookingDetailResult.NotOwner
 
         mockMvc
             .perform(get("/api/v1/bookings/$BOOKING_ID"))
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("BOOKING_NOT_OWNER"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should flag the detail as read by a participant when the requester is not the organiser`() {
+        // Nom sérialisé `isCreator`, identique à PoolSummaryResponse.isCreator : une seule convention côté front.
+        every { getBookingDetailUseCase.getDetail(any(), any()) } returns
+            GetBookingDetailResult.Found(detailView(BookingStatus.CONFIRMED, "KARA-TKT-3F7Q2K9A", isCreator = false))
+
+        mockMvc
+            .perform(get("/api/v1/bookings/$BOOKING_ID"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.isCreator").value(false))
     }
 
     @Test
@@ -409,6 +424,7 @@ class BookingControllerTest {
     private fun myBookingView(
         paymentMode: PaymentMode,
         pool: UserBookingPoolView?,
+        isCreator: Boolean = true,
     ) = UserBookingView(
         bookingId = UUID.fromString(BOOKING_ID),
         roomId = UUID.fromString(ROOM_ID),
@@ -432,6 +448,7 @@ class BookingControllerTest {
                 ),
             ),
         pool = pool,
+        isCreator = isCreator,
     )
 
     private fun myBookingPoolView() =
@@ -495,6 +512,22 @@ class BookingControllerTest {
             .andExpect(jsonPath("$[0].options[0].label").value("Ménage fin de soirée"))
             .andExpect(jsonPath("$[0].options[0].price").value(60.00))
             .andExpect(jsonPath("$[0].pool").doesNotExist())
+            .andExpect(jsonPath("$[0].isCreator").value(true))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID, roles = ["CLIENT"])
+    fun `should flag a booking joined through its pool as not created by the client`() {
+        every { listUserBookingsUseCase.listForUser(any()) } returns
+            ListUserBookingsResult.Success(
+                listOf(myBookingView(PaymentMode.SHARED_POT, pool = myBookingPoolView(), isCreator = false)),
+            )
+
+        mockMvc
+            .perform(get("/api/v1/bookings/me"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].bookingId").value(BOOKING_ID))
+            .andExpect(jsonPath("$[0].isCreator").value(false))
     }
 
     @Test

@@ -13,22 +13,27 @@ import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.booking.GetBookingDetailResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
+import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class GetBookingDetailServiceTest {
     private val bookingRepository = mockk<BookingRepository>(relaxed = true)
     private val roomRepository = mockk<RoomRepository>(relaxed = true)
-    private val sut = GetBookingDetailService(bookingRepository, roomRepository)
+    private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
+    private val sut = GetBookingDetailService(bookingRepository, roomRepository, poolShareRepository)
 
     private val ownerId = UserId(UUID.randomUUID())
     private val bookingId = BookingId(UUID.randomUUID())
@@ -77,10 +82,36 @@ class GetBookingDetailServiceTest {
     }
 
     @Test
-    fun `returns NotOwner when the requester is not the owner`() {
+    fun `returns NotOwner when the requester neither owns the booking nor holds a pool share`() {
+        val thirdPartyId = UserId(UUID.randomUUID())
         every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED)
+        every { poolShareRepository.existsForBookingAndPayer(bookingId, thirdPartyId) } returns false
 
-        assertEquals(GetBookingDetailResult.NotOwner, sut.getDetail(bookingId, UserId(UUID.randomUUID())))
+        assertEquals(GetBookingDetailResult.NotOwner, sut.getDetail(bookingId, thirdPartyId))
+    }
+
+    @Test
+    fun `returns the detail flagged as not creator when the requester holds a pool share`() {
+        val participantId = UserId(UUID.randomUUID())
+        every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED)
+        every { roomRepository.findById(roomId) } returns room()
+        every { poolShareRepository.existsForBookingAndPayer(bookingId, participantId) } returns true
+
+        val result = assertInstanceOf<GetBookingDetailResult.Found>(sut.getDetail(bookingId, participantId))
+
+        assertFalse(result.view.isCreator)
+        assertEquals("Salle Étoile", result.view.roomName)
+    }
+
+    @Test
+    fun `flags the owner as creator without querying the pool shares`() {
+        every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CONFIRMED)
+        every { roomRepository.findById(roomId) } returns room()
+
+        val result = assertInstanceOf<GetBookingDetailResult.Found>(sut.getDetail(bookingId, ownerId))
+
+        assertTrue(result.view.isCreator)
+        verify(exactly = 0) { poolShareRepository.existsForBookingAndPayer(any(), any()) }
     }
 
     @Test

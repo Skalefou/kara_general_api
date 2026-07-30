@@ -98,7 +98,10 @@ data class PoolRecapView(
     val currency: Currency,
     val percentage: Int,
     val deadline: Instant,
-    // Renseignés uniquement pour un récapitulatif accédé via un lien de part (share token) :
+    // Détail d'une part, renseigné dans deux cas seulement : récapitulatif accédé via un lien de part (share
+    // token), ou récapitulatif du lien global demandé par un appelant authentifié qui détient une part de cette
+    // cagnotte (sa part, jamais celle d'un tiers) — de quoi reprendre un paiement interrompu. Null pour un
+    // invité, et pour un authentifié sans part.
     val shareId: UUID?,
     val shareParticipantName: String?,
     val shareAmount: BigDecimal?,

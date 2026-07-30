@@ -2,30 +2,36 @@ package com.kara.kara_general_api.application.service.pool
 
 import com.kara.kara_general_api.domain.model.payment.Pool
 import com.kara.kara_general_api.domain.model.payment.PoolShare
+import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.pool.GetPoolRecapResult
 import com.kara.kara_general_api.domain.port.input.pool.GetPoolRecapUseCase
-import com.kara.kara_general_api.domain.port.input.pool.PoolRecapView
-import com.kara.kara_general_api.domain.port.input.pool.collectedAmount
-import com.kara.kara_general_api.domain.port.input.pool.percentage
-import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
-import com.kara.kara_general_api.domain.port.output.RoomRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/** Récapitulatif public d'une cagnotte (lecture sans authentification). */
+/**
+ * Récapitulatif public d'une cagnotte (lecture sans authentification).
+ *
+ * Sur le lien global, l'authentification est **facultative** : quand elle est présente, la part dont l'appelant
+ * est le payeur est jointe au récapitulatif, de quoi reprendre un paiement interrompu sans avoir à recréer une
+ * part (ce que la règle « une part par personne » interdit).
+ */
 @Service
 class GetPoolRecapService(
     private val poolRepository: PoolRepository,
     private val poolShareRepository: PoolShareRepository,
-    private val bookingRepository: BookingRepository,
-    private val roomRepository: RoomRepository,
+    private val poolRecapAssembler: PoolRecapAssembler,
 ) : GetPoolRecapUseCase {
     @Transactional(readOnly = true)
-    override fun getByGlobalToken(globalToken: String): GetPoolRecapResult {
+    override fun getByGlobalToken(
+        globalToken: String,
+        callerId: UserId?,
+    ): GetPoolRecapResult {
         val pool = poolRepository.findByGlobalLinkToken(globalToken) ?: return GetPoolRecapResult.NotFound
-        return recap(pool, share = null)
+        // Invité : aucune interrogation des parts. Authentifié : uniquement la part dont il est le payeur.
+        val callerShare = callerId?.let { poolShareRepository.findByPoolIdAndPayerUserId(pool.id, it) }
+        return recap(pool, share = callerShare)
     }
 
     @Transactional(readOnly = true)
@@ -38,29 +44,7 @@ class GetPoolRecapService(
     private fun recap(
         pool: Pool,
         share: PoolShare?,
-    ): GetPoolRecapResult {
-        val booking = bookingRepository.findById(pool.bookingId) ?: return GetPoolRecapResult.NotFound
-        val room = roomRepository.findById(booking.roomId)
-        val shares = poolShareRepository.findByPoolId(pool.id)
-        val collected = collectedAmount(shares)
-        return GetPoolRecapResult.Found(
-            PoolRecapView(
-                poolId = pool.id.value,
-                status = pool.status,
-                roomName = room?.name ?: "Salle",
-                startAt = booking.startAt,
-                endAt = booking.endAt,
-                numberOfPeople = booking.numberOfPeople,
-                targetAmount = pool.targetAmount,
-                collectedAmount = collected,
-                currency = pool.currency,
-                percentage = percentage(collected, pool.targetAmount),
-                deadline = pool.deadline,
-                shareId = share?.id?.value,
-                shareParticipantName = share?.participantName,
-                shareAmount = share?.amount,
-                shareStatus = share?.status,
-            ),
-        )
-    }
+    ): GetPoolRecapResult =
+        poolRecapAssembler.assemble(pool, share)?.let { GetPoolRecapResult.Found(it) }
+            ?: GetPoolRecapResult.NotFound
 }

@@ -17,13 +17,19 @@ data class UserBookingOption(
 )
 
 /**
- * Vue d'une réservation destinée à son **propriétaire** (« Mes événements ») : la réservation, la salle
- * (nom + adresse) et les services retenus. L'éventuelle cagnotte n'est pas portée ici : elle est
- * assemblée par le service applicatif, qui la charge en une seule requête pour toutes les réservations.
+ * Vue d'une réservation destinée à un utilisateur **impliqué** dans celle-ci (« Mes événements ») : la
+ * réservation, la salle (nom + adresse) et les services retenus. Deux rôles y donnent accès : l'organisateur
+ * (propriétaire de la réservation) et le participant qui détient une part de sa cagnotte ; [isCreator]
+ * distingue les deux du point de vue de l'utilisateur qui a demandé la liste.
+ *
+ * L'éventuelle cagnotte n'est pas portée ici : elle est assemblée par le service applicatif, qui la charge
+ * en une seule requête pour toutes les réservations.
  */
 data class UserBooking(
     val booking: Booking,
     val roomName: String,
     val roomAddress: Address?,
     val options: List<UserBookingOption>,
+    /** Vrai si l'utilisateur pour lequel cette vue a été construite est l'organisateur (`bookings.user_id`). */
+    val isCreator: Boolean,
 )

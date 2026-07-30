@@ -30,6 +30,14 @@ data class PoolShare(
         payerUserId: UserId,
     ): PoolShare = copy(stripePaymentIntentId = intentId, payerUserId = payerUserId)
 
+    /**
+     * Détache l'autorisation Stripe de la part, sans toucher à son payeur. À utiliser lorsque le montant dû
+     * par la part change : une autorisation à capture manuelle est figée sur le montant demandé à sa création,
+     * elle ne couvre donc plus le nouveau dû et ne doit surtout pas être capturée. La part redevient une part
+     * PENDING sans autorisation, que le payeur règle à nouveau au bon montant.
+     */
+    fun withoutAuthorizationIntent(): PoolShare = copy(stripePaymentIntentId = null)
+
     fun markAuthorized(): PoolShare = copy(status = PoolShareStatus.AUTHORIZED)
 
     fun markCaptured(): PoolShare = copy(status = PoolShareStatus.CAPTURED)

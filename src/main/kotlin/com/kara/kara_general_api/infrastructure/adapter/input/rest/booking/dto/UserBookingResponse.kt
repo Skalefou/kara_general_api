@@ -15,8 +15,9 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Réservation de l'utilisateur authentifié (« Mes événements »). Tous les statuts sont renvoyés : le
- * front étiquette et regroupe. `pool` est non-null uniquement en mode SHARED_POT.
+ * Réservation à laquelle l'utilisateur authentifié participe (« Mes événements »), comme organisateur ou
+ * comme détenteur d'une part de sa cagnotte (`isCreator`). Tous les statuts sont renvoyés : le front
+ * étiquette et regroupe. `pool` est non-null uniquement en mode SHARED_POT.
  */
 data class UserBookingResponse(
     val bookingId: UUID,
@@ -43,6 +44,13 @@ data class UserBookingResponse(
                 "Null en mode PAY_ALL : aucune cagnotte n'existe et aucun nom de participant n'est connu.",
     )
     val pool: UserBookingPoolResponse?,
+    @field:Schema(
+        description =
+            "Vrai si l'utilisateur est l'organisateur (propriétaire de la réservation). Faux s'il n'y " +
+                "participe qu'en détenant une part de la cagnotte : il est alors en lecture seule sur la " +
+                "réservation (aucune annulation, extension, commande ni gestion de cagnotte).",
+    )
+    val isCreator: Boolean,
 ) {
     companion object {
         fun from(view: UserBookingView): UserBookingResponse =
@@ -61,6 +69,7 @@ data class UserBookingResponse(
                 expiresAt = view.expiresAt,
                 options = view.options.map { UserBookingOptionResponse.from(it) },
                 pool = view.pool?.let { UserBookingPoolResponse.from(it) },
+                isCreator = view.isCreator,
             )
     }
 }
@@ -95,7 +104,12 @@ data class UserBookingPoolResponse(
     @field:Schema(description = "Pourcentage collecté (0-100, arrondi vers le bas)")
     val percentage: Int,
     val deadline: Instant,
-    @field:Schema(description = "Liste nominative des participants et de leurs parts")
+    @field:Schema(
+        description =
+            "Parts de la cagnotte. Liste nominative complète pour l'organisateur ; pour un participant, " +
+                "uniquement ses propres parts et sans email — soit exactement ce que le récapitulatif de " +
+                "cagnotte lui expose déjà.",
+    )
     val shares: List<UserBookingPoolShareResponse>,
 ) {
     companion object {

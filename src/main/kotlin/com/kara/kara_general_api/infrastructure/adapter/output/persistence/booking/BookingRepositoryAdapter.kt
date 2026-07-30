@@ -174,9 +174,14 @@ class BookingRepositoryAdapter(
         return jdbc.query(sql, emptyMap<String, Any>(), rowMapper)
     }
 
-    override fun findByUserId(userId: UserId): List<UserBooking> {
-        // « Mes réservations » : tous les statuts, du plus récent créneau au plus ancien. La salle est
-        // jointe en LEFT JOIN pour survivre à une salle supprimée (nom retombant sur un libellé neutre).
+    override fun findByUserInvolvement(userId: UserId): List<UserBooking> {
+        // « Mes événements » : tous les statuts, du plus récent créneau au plus ancien. Deux rôles donnent
+        // accès à une réservation — organisateur (b.user_id) ou détenteur d'une part de sa cagnotte
+        // (pool_shares.payer_user_id) : même sémantique d'implication que PoolRepositoryAdapter
+        // .findByUserInvolvement. Le test d'implication est écrit en EXISTS (et non en LEFT JOIN) : la
+        // réservation reste sur une seule ligne même lorsque l'utilisateur détient plusieurs parts, sans
+        // DISTINCT à concilier avec l'ORDER BY. La salle est jointe en LEFT JOIN pour survivre à une salle
+        // supprimée (nom retombant sur un libellé neutre).
         val sql =
             """
             SELECT b.id, b.room_id, b.user_id, b.start_at, b.end_at, b.number_of_people,
@@ -186,6 +191,13 @@ class BookingRepositoryAdapter(
             FROM bookings b
             LEFT JOIN rooms r ON r.id = b.room_id
             WHERE b.user_id = :userId
+               OR EXISTS (
+                    SELECT 1
+                    FROM pool_shares s
+                    JOIN pools p ON p.id = s.pool_id
+                    WHERE p.booking_id = b.id
+                      AND s.payer_user_id = :userId
+               )
             ORDER BY b.start_at DESC
             """.trimIndent()
         val rows =
@@ -203,6 +215,7 @@ class BookingRepositoryAdapter(
                             )
                         },
                     options = emptyList(),
+                    isCreator = rs.getObject("user_id", UUID::class.java) == userId.value,
                 )
             }
         // Aucune réservation ⇒ aucune requête supplémentaire.

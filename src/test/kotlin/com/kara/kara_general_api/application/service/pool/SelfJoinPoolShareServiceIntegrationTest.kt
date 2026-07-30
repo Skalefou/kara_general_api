@@ -11,8 +11,10 @@ import com.kara.kara_general_api.domain.port.output.NotificationService
 import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PaymentIntentResult
 import com.ninjasquad.springmockk.MockkBean
+import com.stripe.exception.ApiConnectionException
 import io.mockk.every
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -112,6 +114,26 @@ class SelfJoinPoolShareServiceIntegrationTest {
     }
 
     @Test
+    fun `rolls back the carve when the gateway raises a checked StripeException`() {
+        // StripeException étend java.lang.Exception (exception VÉRIFIÉE) : sans
+        // @Transactional(rollbackFor = Exception::class), Spring ne rollbackerait pas et la découpe du reliquat
+        // serait commitée sans la part financée — invariant somme(parts) == cible cassé définitivement.
+        val joiner = UUID.randomUUID()
+        insertUser(joiner, "Jane", "Doe")
+        every { paymentGateway.createManualCapturePaymentIntent(any(), any(), any()) } throws
+            ApiConnectionException("gateway unreachable")
+
+        assertThrows(ApiConnectionException::class.java) {
+            service.selfJoin(SelfJoinPoolShareCommand(globalToken, UserId(joiner), BigDecimal("30.00")))
+        }
+
+        // Le reliquat créateur est intact et aucune part n'a été créée.
+        assertEquals(BigDecimal("100.00"), creatorRemainderAmount())
+        assertEquals(1, shareCount())
+        assertEquals(BigDecimal("100.00"), totalShareAmount())
+    }
+
+    @Test
     fun `concurrent self-joins exceeding the remainder let exactly one succeed`() {
         val userA = UUID.randomUUID()
         val userB = UUID.randomUUID()
@@ -146,6 +168,13 @@ class SelfJoinPoolShareServiceIntegrationTest {
             "SELECT amount FROM pool_shares WHERE pool_id = :poolId AND is_creator_share = TRUE",
             mapOf("poolId" to poolId),
             BigDecimal::class.java,
+        )!!
+
+    private fun shareCount(): Int =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM pool_shares WHERE pool_id = :poolId",
+            mapOf("poolId" to poolId),
+            Int::class.java,
         )!!
 
     private fun totalShareAmount(): BigDecimal =

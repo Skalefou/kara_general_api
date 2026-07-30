@@ -18,6 +18,7 @@ import com.kara.kara_general_api.domain.port.input.pool.AddPoolShareResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.EmailService
 import com.kara.kara_general_api.domain.port.output.LinkTokenGenerator
+import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import com.kara.kara_general_api.domain.port.output.RoomRepository
@@ -39,6 +40,10 @@ class AddPoolShareServiceTest {
     private val linkTokenGenerator = mockk<LinkTokenGenerator>()
     private val emailService = mockk<EmailService>(relaxed = true)
     private val poolLinkBuilder = FakePoolLinkBuilder()
+    private val paymentGateway = mockk<PaymentGateway>(relaxed = true)
+
+    // Releaser réel (et non mock) : la libération de l'autorisation obsolète fait partie du comportement testé.
+    private val poolShareHoldReleaser = PoolShareHoldReleaser(paymentGateway)
     private val sut =
         AddPoolShareService(
             poolRepository,
@@ -48,6 +53,7 @@ class AddPoolShareServiceTest {
             linkTokenGenerator,
             emailService,
             poolLinkBuilder,
+            poolShareHoldReleaser,
         )
 
     private val poolId = PoolId(UUID.randomUUID())
@@ -73,7 +79,7 @@ class AddPoolShareServiceTest {
 
     @Test
     fun `returns NotOwner when the caller does not own the booking`() {
-        every { poolRepository.findById(poolId) } returns pool()
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         stubBookingOwnedBy(UserId(UUID.randomUUID()))
 
         assertEquals(AddPoolShareResult.NotOwner, sut.addShare(command()))
@@ -81,7 +87,7 @@ class AddPoolShareServiceTest {
 
     @Test
     fun `returns InsufficientRemainder when the creator remainder cannot fund the new share`() {
-        every { poolRepository.findById(poolId) } returns pool()
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         stubBookingOwnedBy(creatorId)
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creatorShare(amount = "30.00"))
 
@@ -90,7 +96,7 @@ class AddPoolShareServiceTest {
 
     @Test
     fun `carves the new share from the creator remainder and sends an invitation`() {
-        every { poolRepository.findById(poolId) } returns pool()
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         stubBookingOwnedBy(creatorId)
         every { poolShareRepository.findByPoolId(poolId) } returnsMany
             listOf(
@@ -109,5 +115,39 @@ class AddPoolShareServiceTest {
         verify { poolShareRepository.save(match { it.isCreatorShare && it.amount == BigDecimal("60.00") }) }
         verify { poolShareRepository.save(match { !it.isCreatorShare && it.amount == BigDecimal("40.00") }) }
         verify(exactly = 1) { emailService.sendPoolInvitation(Email("bob@example.com"), "Bob", "Salle", "tok", any()) }
+    }
+
+    @Test
+    fun `carving a remainder that holds a pending Stripe hold releases and detaches that hold`() {
+        // Le créateur a ouvert le PaymentSheet de son reliquat (autorisation de 100) avant d'ajouter Bob : sans
+        // libération, cette autorisation resterait capturable à 100 alors que le dû tombe à 60.
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        stubBookingOwnedBy(creatorId)
+        every { poolShareRepository.findByPoolId(poolId) } returns
+            listOf(creatorShare(amount = "100.00").withAuthorizationIntent("pi_creator", creatorId))
+        every { linkTokenGenerator.generate() } returns "tok"
+        val room = mockk<Room>()
+        every { room.name } returns "Salle"
+        every { roomRepository.findById(any()) } returns room
+
+        assertIs<AddPoolShareResult.Added>(sut.addShare(command(amount = "40.00")))
+
+        verify(exactly = 1) { paymentGateway.cancelPaymentIntent("pi_creator") }
+        verify {
+            poolShareRepository.save(
+                match { it.isCreatorShare && it.amount == BigDecimal("60.00") && it.stripePaymentIntentId == null },
+            )
+        }
+    }
+
+    @Test
+    fun `locks the pool before reading the shares`() {
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
+        stubBookingOwnedBy(UserId(UUID.randomUUID()))
+
+        sut.addShare(command())
+
+        verify(exactly = 1) { poolRepository.findByIdForUpdate(poolId) }
+        verify(exactly = 0) { poolRepository.findById(any()) }
     }
 }

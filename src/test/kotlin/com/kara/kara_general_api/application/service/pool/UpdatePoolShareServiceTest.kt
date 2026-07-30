@@ -13,6 +13,7 @@ import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareCommand
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
+import com.kara.kara_general_api.domain.port.output.PaymentGateway
 import com.kara.kara_general_api.domain.port.output.PoolRepository
 import com.kara.kara_general_api.domain.port.output.PoolShareRepository
 import io.mockk.every
@@ -30,8 +31,12 @@ class UpdatePoolShareServiceTest {
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val bookingRepository = mockk<BookingRepository>()
     private val poolLinkBuilder = FakePoolLinkBuilder()
+    private val paymentGateway = mockk<PaymentGateway>(relaxed = true)
+
+    // Releaser réel (et non mock) : la libération de l'autorisation obsolète fait partie du comportement testé.
+    private val poolShareHoldReleaser = PoolShareHoldReleaser(paymentGateway)
     private val sut =
-        UpdatePoolShareService(poolRepository, poolShareRepository, bookingRepository, poolLinkBuilder)
+        UpdatePoolShareService(poolRepository, poolShareRepository, bookingRepository, poolLinkBuilder, poolShareHoldReleaser)
 
     private val poolId = PoolId(UUID.randomUUID())
     private val bookingId = BookingId(UUID.randomUUID())
@@ -61,7 +66,7 @@ class UpdatePoolShareServiceTest {
     ) = PoolShare(targetId, poolId, "Bob", null, BigDecimal(amount), status, null, "tok", null, false)
 
     private fun stubOwnership() {
-        every { poolRepository.findById(poolId) } returns pool()
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool()
         val booking = mockk<Booking>()
         every { booking.userId } returns creatorId
         every { bookingRepository.findById(bookingId) } returns booking
@@ -98,6 +103,35 @@ class UpdatePoolShareServiceTest {
         assertIs<UpdatePoolShareResult.Updated>(result)
         verify { poolShareRepository.save(match { it.isCreatorShare && it.amount == BigDecimal("50.00") }) }
         verify { poolShareRepository.save(match { it.id == targetId && it.amount == BigDecimal("50.00") }) }
+    }
+
+    @Test
+    fun `rebalancing releases and detaches the Stripe holds of both re-priced shares`() {
+        // Les deux montants changent : conserver leurs autorisations en cours ferait capturer un montant qui
+        // n'est plus le dû (trop pour le reliquat qui baisse, trop peu pour la part qui monte).
+        stubOwnership()
+        val target = targetShare(amount = "40.00").withAuthorizationIntent("pi_target", creatorId)
+        every { poolShareRepository.findById(targetId) } returns target
+        every { poolShareRepository.findByPoolId(poolId) } returns
+            listOf(creatorShare(amount = "60.00").withAuthorizationIntent("pi_creator", creatorId), target)
+
+        assertIs<UpdatePoolShareResult.Updated>(sut.updateShare(command("50.00")))
+
+        verify(exactly = 1) { paymentGateway.cancelPaymentIntent("pi_creator") }
+        verify(exactly = 1) { paymentGateway.cancelPaymentIntent("pi_target") }
+        verify { poolShareRepository.save(match { it.isCreatorShare && it.stripePaymentIntentId == null }) }
+        verify { poolShareRepository.save(match { it.id == targetId && it.stripePaymentIntentId == null }) }
+    }
+
+    @Test
+    fun `locks the pool before reading the shares`() {
+        stubOwnership()
+        every { poolShareRepository.findById(targetId) } returns targetShare(status = PoolShareStatus.AUTHORIZED)
+
+        sut.updateShare(command("50.00"))
+
+        verify(exactly = 1) { poolRepository.findByIdForUpdate(poolId) }
+        verify(exactly = 0) { poolRepository.findById(any()) }
     }
 
     @Test

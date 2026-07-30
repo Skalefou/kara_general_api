@@ -33,7 +33,11 @@ class SelfJoinPoolShareServiceTest {
     private val poolShareRepository = mockk<PoolShareRepository>(relaxed = true)
     private val userRepository = mockk<UserRepository>(relaxed = true)
     private val paymentGateway = mockk<PaymentGateway>(relaxed = true)
-    private val sut = SelfJoinPoolShareService(poolRepository, poolShareRepository, userRepository, paymentGateway)
+
+    // Releaser réel (et non mock) : la libération de l'autorisation obsolète fait partie du comportement testé.
+    private val poolShareHoldReleaser = PoolShareHoldReleaser(paymentGateway)
+    private val sut =
+        SelfJoinPoolShareService(poolRepository, poolShareRepository, userRepository, paymentGateway, poolShareHoldReleaser)
 
     private val token = "global-token"
     private val callerId = UserId(UUID.randomUUID())
@@ -49,6 +53,15 @@ class SelfJoinPoolShareServiceTest {
         amount: String = "100.00",
         status: PoolShareStatus = PoolShareStatus.PENDING,
     ) = PoolShare(PoolShareId(UUID.randomUUID()), poolId, "Créateur", null, BigDecimal(amount), status, null, null, null, true)
+
+    /**
+     * Le service retrouve la cagnotte par son token PUIS la relit sous verrou pessimiste : les deux lectures
+     * doivent renvoyer la même cagnotte.
+     */
+    private fun givenPool(pool: Pool = pool()) {
+        every { poolRepository.findByGlobalLinkToken(token) } returns pool
+        every { poolRepository.findByIdForUpdate(poolId) } returns pool
+    }
 
     private fun user(): User {
         val u = mockk<User>(relaxed = true)
@@ -73,7 +86,7 @@ class SelfJoinPoolShareServiceTest {
     @Test
     fun `happy path carves the remainder and authorizes the self-share`() {
         val creator = creatorShare("100.00")
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
         every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
@@ -102,7 +115,7 @@ class SelfJoinPoolShareServiceTest {
     @Test
     fun `locks the creator remainder before reading its amount`() {
         val creator = creatorShare("100.00")
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
         every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
@@ -122,21 +135,21 @@ class SelfJoinPoolShareServiceTest {
 
     @Test
     fun `returns PoolClosed when the pool is not open`() {
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool(status = PoolStatus.SETTLED)
+        givenPool(pool(status = PoolStatus.SETTLED))
 
         assertEquals(SelfJoinPoolShareResult.PoolClosed, sut.selfJoin(command("30.00")))
     }
 
     @Test
     fun `returns PoolExpired when the deadline has passed`() {
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool(deadline = Instant.now().minusSeconds(1))
+        givenPool(pool(deadline = Instant.now().minusSeconds(1)))
 
         assertEquals(SelfJoinPoolShareResult.PoolExpired, sut.selfJoin(command("30.00")))
     }
 
     @Test
     fun `returns PayerNotFound when the caller is unknown`() {
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns null
 
         assertEquals(SelfJoinPoolShareResult.PayerNotFound, sut.selfJoin(command("30.00")))
@@ -158,7 +171,7 @@ class SelfJoinPoolShareServiceTest {
                 callerId,
                 false,
             )
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator, existing)
 
@@ -169,7 +182,7 @@ class SelfJoinPoolShareServiceTest {
     @Test
     fun `returns RemainderLocked when the creator share is no longer pending`() {
         val creator = creatorShare("100.00", status = PoolShareStatus.AUTHORIZED)
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
         every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
@@ -178,8 +191,77 @@ class SelfJoinPoolShareServiceTest {
     }
 
     @Test
+    fun `refuses to carve a creator remainder already captured`() {
+        val creator = creatorShare("100.00", status = PoolShareStatus.CAPTURED)
+        givenPool()
+        every { userRepository.findById(callerId) } returns user()
+        every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
+        every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
+
+        assertEquals(SelfJoinPoolShareResult.RemainderLocked, sut.selfJoin(command("30.00")))
+        verify(exactly = 0) { poolShareRepository.save(any()) }
+    }
+
+    @Test
+    fun `carving a remainder that holds a pending Stripe hold releases and detaches that hold`() {
+        // Le créateur a ouvert le PaymentSheet de son reliquat (autorisation de 100) sans que le webhook
+        // `amount_capturable_updated` soit encore arrivé : la part est donc encore PENDING avec un intent.
+        // Découper à 70 sans toucher à cette autorisation la laisserait capturable à 100, soit 30 de trop.
+        val creator = creatorShare("100.00").withAuthorizationIntent("pi_creator", callerId)
+        givenPool()
+        every { userRepository.findById(callerId) } returns user()
+        every { poolShareRepository.findByPoolId(poolId) } returns emptyList()
+        every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
+        stubStripe()
+
+        assertInstanceOf<SelfJoinPoolShareResult.Ready>(sut.selfJoin(command("30.00")))
+
+        verify(exactly = 1) { paymentGateway.cancelPaymentIntent("pi_creator") }
+        verify {
+            poolShareRepository.save(
+                match {
+                    it.isCreatorShare &&
+                        it.amount.compareTo(BigDecimal("70.00")) == 0 &&
+                        it.stripePaymentIntentId == null
+                },
+            )
+        }
+    }
+
+    @Test
+    fun `carving a remainder without any Stripe hold touches nothing at the gateway`() {
+        val creator = creatorShare("100.00")
+        givenPool()
+        every { userRepository.findById(callerId) } returns user()
+        every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
+        every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
+        stubStripe()
+
+        sut.selfJoin(command("30.00"))
+
+        verify(exactly = 0) { paymentGateway.cancelPaymentIntent(any()) }
+    }
+
+    @Test
+    fun `locks the pool before reading the creator remainder`() {
+        val creator = creatorShare("100.00")
+        givenPool()
+        every { userRepository.findById(callerId) } returns user()
+        every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
+        every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
+        stubStripe()
+
+        sut.selfJoin(command("30.00"))
+
+        // Même verrou que PoolSettlementService : sans lui, une découpe et un règlement concurrents
+        // s'écrasent mutuellement (l'upsert d'une part réécrit toute la ligne, montant compris).
+        verify(exactly = 1) { poolRepository.findByIdForUpdate(poolId) }
+        verify(exactly = 0) { poolRepository.findById(any()) }
+    }
+
+    @Test
     fun `returns NoCreatorRemainder when there is no creator share`() {
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns emptyList()
         every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns null
@@ -190,7 +272,7 @@ class SelfJoinPoolShareServiceTest {
     @Test
     fun `returns InvalidAmount when the amount is not positive`() {
         val creator = creatorShare("100.00")
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
         every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator
@@ -201,7 +283,7 @@ class SelfJoinPoolShareServiceTest {
     @Test
     fun `returns InsufficientRemainder when the amount would exhaust the remainder`() {
         val creator = creatorShare("30.00")
-        every { poolRepository.findByGlobalLinkToken(token) } returns pool()
+        givenPool()
         every { userRepository.findById(callerId) } returns user()
         every { poolShareRepository.findByPoolId(poolId) } returns listOf(creator)
         every { poolShareRepository.findCreatorShareForUpdate(poolId) } returns creator

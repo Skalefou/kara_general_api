@@ -62,6 +62,10 @@ class StripeWebhookService(
             return StripeWebhookResult.Ignored
         }
 
+        // Trace du chemin nominal : sans elle, un webhook non routé (tunnel absent en local, endpoint mal
+        // configuré en prod) est indiscernable d'un webhook reçu et traité — les deux sont silencieux.
+        logger.info("Stripe webhook received: type={} intent={}", event.type, intentId)
+
         return when (event.type) {
             PAYMENT_INTENT_SUCCEEDED -> handlePayAllSucceeded(intentId)
             PAYMENT_INTENT_PAYMENT_FAILED -> handlePayAllFailed(intentId)

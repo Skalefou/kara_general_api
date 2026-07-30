@@ -49,10 +49,11 @@ class ListUserBookingsServiceTest {
         startAt: Instant = Instant.parse("2026-08-01T18:00:00Z"),
         status: BookingStatus = BookingStatus.CONFIRMED,
         paymentMode: PaymentMode = PaymentMode.PAY_ALL,
+        ownerId: UserId = userId,
     ) = Booking(
         id = id,
         roomId = roomId,
-        userId = userId,
+        userId = ownerId,
         startAt = startAt,
         endAt = startAt.plusSeconds(3 * 3600),
         numberOfPeople = 8,
@@ -68,11 +69,13 @@ class ListUserBookingsServiceTest {
     private fun record(
         booking: Booking,
         options: List<UserBookingOption> = emptyList(),
+        isCreator: Boolean = true,
     ) = UserBooking(
         booking = booking,
         roomName = "Salle Étoile",
         roomAddress = Address(street = "12 rue de Paris", city = "Lyon", postalCode = "69002", country = "France"),
         options = options,
+        isCreator = isCreator,
     )
 
     private fun pool(
@@ -95,6 +98,7 @@ class ListUserBookingsServiceTest {
         amount: String,
         status: PoolShareStatus,
         email: String?,
+        payerUserId: UserId? = null,
     ) = PoolShare(
         id = PoolShareId(UUID.randomUUID()),
         poolId = poolId,
@@ -104,7 +108,7 @@ class ListUserBookingsServiceTest {
         status = status,
         stripePaymentIntentId = null,
         uniqueLinkToken = null,
-        payerUserId = null,
+        payerUserId = payerUserId,
         isCreatorShare = false,
     )
 
@@ -113,7 +117,7 @@ class ListUserBookingsServiceTest {
         val booking = booking(paymentMode = PaymentMode.SHARED_POT, status = BookingStatus.PENDING)
         val optionId = RoomOptionId(UUID.randomUUID())
         val poolId = PoolId(UUID.randomUUID())
-        every { bookingRepository.findByUserId(userId) } returns
+        every { bookingRepository.findByUserInvolvement(userId) } returns
             listOf(
                 record(
                     booking,
@@ -153,12 +157,103 @@ class ListUserBookingsServiceTest {
         assertEquals(50, pool.percentage)
         assertEquals(listOf("Jeanne Martin", "Karim Belkacem"), pool.shares.map { it.participantName })
         assertEquals(listOf("jeanne@example.com", null), pool.shares.map { it.email })
+        assertTrue(view.isCreator)
+    }
+
+    @Test
+    fun `should return the event of a booking created by someone else when the user paid a pool share`() {
+        val organiserId = UserId(UUID.randomUUID())
+        val booking =
+            booking(paymentMode = PaymentMode.SHARED_POT, status = BookingStatus.CONFIRMED, ownerId = organiserId)
+        val poolId = PoolId(UUID.randomUUID())
+        every { bookingRepository.findByUserInvolvement(userId) } returns
+            listOf(record(booking, isCreator = false))
+        every { poolRepository.findByBookingIds(listOf(booking.id)) } returns listOf(pool(poolId, booking.id))
+        every { poolShareRepository.findByPoolIds(listOf(poolId)) } returns
+            listOf(
+                share(poolId, "Jeanne Martin", "217.50", PoolShareStatus.AUTHORIZED, "jeanne@example.com"),
+                share(poolId, "Moi", "217.50", PoolShareStatus.CAPTURED, "moi@example.com", payerUserId = userId),
+            )
+
+        val result = sut.listForUser(command) as ListUserBookingsResult.Success
+
+        val view = result.bookings.single()
+        assertEquals(booking.id.value, view.bookingId)
+        assertTrue(!view.isCreator)
+        val pool = requireNotNull(view.pool)
+        // La progression reste calculée sur toutes les parts : 217.50 + 217.50 = 435.00, soit 100 %.
+        assertEquals(BigDecimal("435.00"), pool.collectedAmount)
+        assertEquals(100, pool.percentage)
+    }
+
+    @Test
+    fun `should hide the other participants and every email from a participant who is not the organiser`() {
+        val organiserId = UserId(UUID.randomUUID())
+        val booking = booking(paymentMode = PaymentMode.SHARED_POT, ownerId = organiserId)
+        val poolId = PoolId(UUID.randomUUID())
+        every { bookingRepository.findByUserInvolvement(userId) } returns
+            listOf(record(booking, isCreator = false))
+        every { poolRepository.findByBookingIds(listOf(booking.id)) } returns listOf(pool(poolId, booking.id))
+        every { poolShareRepository.findByPoolIds(listOf(poolId)) } returns
+            listOf(
+                share(poolId, "Jeanne Martin", "217.50", PoolShareStatus.AUTHORIZED, "jeanne@example.com"),
+                share(poolId, "Moi", "217.50", PoolShareStatus.CAPTURED, "moi@example.com", payerUserId = userId),
+            )
+
+        val result = sut.listForUser(command) as ListUserBookingsResult.Success
+
+        val shares = requireNotNull(result.bookings.single().pool).shares
+        assertEquals(listOf("Moi"), shares.map { it.participantName })
+        assertEquals(listOf(null), shares.map { it.email })
+    }
+
+    @Test
+    fun `should keep the full named share list and the emails for the organiser`() {
+        val booking = booking(paymentMode = PaymentMode.SHARED_POT)
+        val poolId = PoolId(UUID.randomUUID())
+        every { bookingRepository.findByUserInvolvement(userId) } returns listOf(record(booking, isCreator = true))
+        every { poolRepository.findByBookingIds(listOf(booking.id)) } returns listOf(pool(poolId, booking.id))
+        every { poolShareRepository.findByPoolIds(listOf(poolId)) } returns
+            listOf(
+                share(poolId, "Jeanne Martin", "217.50", PoolShareStatus.AUTHORIZED, "jeanne@example.com"),
+                share(poolId, "Karim Belkacem", "217.50", PoolShareStatus.PENDING, "karim@example.com"),
+            )
+
+        val result = sut.listForUser(command) as ListUserBookingsResult.Success
+
+        val shares = requireNotNull(result.bookings.single().pool).shares
+        assertEquals(listOf("Jeanne Martin", "Karim Belkacem"), shares.map { it.participantName })
+        assertEquals(listOf("jeanne@example.com", "karim@example.com"), shares.map { it.email })
+    }
+
+    @Test
+    fun `should expose every share of a participant holding several shares without duplicating the booking`() {
+        val organiserId = UserId(UUID.randomUUID())
+        val booking = booking(paymentMode = PaymentMode.SHARED_POT, ownerId = organiserId)
+        val poolId = PoolId(UUID.randomUUID())
+        every { bookingRepository.findByUserInvolvement(userId) } returns
+            listOf(record(booking, isCreator = false))
+        every { poolRepository.findByBookingIds(listOf(booking.id)) } returns listOf(pool(poolId, booking.id))
+        every { poolShareRepository.findByPoolIds(listOf(poolId)) } returns
+            listOf(
+                share(poolId, "Moi", "100.00", PoolShareStatus.CAPTURED, null, payerUserId = userId),
+                share(poolId, "Mon frère", "117.50", PoolShareStatus.CAPTURED, null, payerUserId = userId),
+                share(poolId, "Jeanne Martin", "217.50", PoolShareStatus.AUTHORIZED, "jeanne@example.com"),
+            )
+
+        val result = sut.listForUser(command) as ListUserBookingsResult.Success
+
+        assertEquals(1, result.bookings.size)
+        assertEquals(
+            listOf("Moi", "Mon frère"),
+            requireNotNull(result.bookings.single().pool).shares.map { it.participantName },
+        )
     }
 
     @Test
     fun `should expose a null pool when the booking is paid in full by its owner`() {
         val booking = booking(paymentMode = PaymentMode.PAY_ALL)
-        every { bookingRepository.findByUserId(userId) } returns listOf(record(booking))
+        every { bookingRepository.findByUserInvolvement(userId) } returns listOf(record(booking))
         every { poolRepository.findByBookingIds(listOf(booking.id)) } returns emptyList()
         every { poolShareRepository.findByPoolIds(emptyList()) } returns emptyList()
 
@@ -171,7 +266,7 @@ class ListUserBookingsServiceTest {
 
     @Test
     fun `should return an empty list and query no pool when the user has no booking`() {
-        every { bookingRepository.findByUserId(userId) } returns emptyList()
+        every { bookingRepository.findByUserInvolvement(userId) } returns emptyList()
 
         val result = sut.listForUser(command) as ListUserBookingsResult.Success
 
@@ -185,7 +280,7 @@ class ListUserBookingsServiceTest {
         val oldest = booking(startAt = Instant.parse("2026-06-01T18:00:00Z"))
         val newest = booking(startAt = Instant.parse("2026-09-01T18:00:00Z"))
         val middle = booking(startAt = Instant.parse("2026-07-01T18:00:00Z"))
-        every { bookingRepository.findByUserId(userId) } returns
+        every { bookingRepository.findByUserInvolvement(userId) } returns
             listOf(record(oldest), record(newest), record(middle))
         every { poolRepository.findByBookingIds(any()) } returns emptyList()
         every { poolShareRepository.findByPoolIds(emptyList()) } returns emptyList()
@@ -201,7 +296,7 @@ class ListUserBookingsServiceTest {
     @Test
     fun `should return every status without filtering`() {
         val statuses = BookingStatus.entries
-        every { bookingRepository.findByUserId(userId) } returns
+        every { bookingRepository.findByUserInvolvement(userId) } returns
             statuses.mapIndexed { index, status ->
                 record(booking(startAt = Instant.parse("2026-08-0${index + 1}T18:00:00Z"), status = status))
             }

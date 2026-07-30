@@ -29,6 +29,9 @@ import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareCommand
 import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareUseCase
+import com.kara.kara_general_api.domain.port.input.pool.SyncPoolShareCommand
+import com.kara.kara_general_api.domain.port.input.pool.SyncPoolShareResult
+import com.kara.kara_general_api.domain.port.input.pool.SyncPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareCommand
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareUseCase
@@ -62,6 +65,7 @@ class PoolController(
     private val remindPoolShareUseCase: RemindPoolShareUseCase,
     private val listUserPoolsUseCase: ListUserPoolsUseCase,
     private val selfJoinPoolShareUseCase: SelfJoinPoolShareUseCase,
+    private val syncPoolShareUseCase: SyncPoolShareUseCase,
 ) : PoolApi {
     override fun listPools(authentication: Authentication): ResponseEntity<Any> =
         ResponseEntity.ok(
@@ -138,7 +142,10 @@ class PoolController(
             GetPoolResult.NotOwner -> notOwner()
         }
 
-    override fun joinRecap(globalToken: String): ResponseEntity<Any> = toRecapResponse(getPoolRecapUseCase.getByGlobalToken(globalToken))
+    override fun joinRecap(
+        globalToken: String,
+        authentication: Authentication?,
+    ): ResponseEntity<Any> = toRecapResponse(getPoolRecapUseCase.getByGlobalToken(globalToken, optionalCallerId(authentication)))
 
     override fun shareRecap(uniqueToken: String): ResponseEntity<Any> = toRecapResponse(getPoolRecapUseCase.getByShareToken(uniqueToken))
 
@@ -170,6 +177,30 @@ class PoolController(
                 problem(HttpStatus.CONFLICT, "Le délai de la cagnotte est écoulé.", "POOL_EXPIRED")
             AuthorizePoolShareResult.ShareAlreadyProcessed ->
                 problem(HttpStatus.CONFLICT, "Cette part n'est plus à payer.", "POOL_SHARE_ALREADY_PROCESSED")
+        }
+    }
+
+    override fun syncShare(
+        poolId: UUID,
+        shareId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val command =
+            SyncPoolShareCommand(
+                poolId = PoolId(poolId),
+                shareId = PoolShareId(shareId),
+                requesterId = callerId(authentication),
+            )
+        return when (val result = syncPoolShareUseCase.sync(command)) {
+            is SyncPoolShareResult.Synced -> ResponseEntity.ok(PoolRecapResponse.from(result.view))
+            SyncPoolShareResult.PoolNotFound -> poolNotFound()
+            SyncPoolShareResult.ShareNotFound -> shareNotFound()
+            SyncPoolShareResult.NotAllowed ->
+                problem(
+                    HttpStatus.FORBIDDEN,
+                    "Cette part n'est pas la vôtre et vous n'êtes pas le créateur de la cagnotte.",
+                    "POOL_SHARE_NOT_ALLOWED",
+                )
         }
     }
 
@@ -324,6 +355,16 @@ class PoolController(
     }
 
     private fun callerId(authentication: Authentication): UserId = UserId(UUID.fromString(authentication.name))
+
+    /**
+     * Identifiant de l'appelant sur une route à authentification **facultative**, ou null s'il n'y en a pas.
+     *
+     * Le `runCatching` est indispensable : un principal qui n'est pas un UUID (utilisateur anonyme) ferait lever
+     * `IllegalArgumentException`, traduite en 400 INVALID_REQUEST par le `GlobalExceptionHandler`, au lieu de
+     * retomber sur le cas invité attendu.
+     */
+    private fun optionalCallerId(authentication: Authentication?): UserId? =
+        authentication?.name?.let { runCatching { UserId(UUID.fromString(it)) }.getOrNull() }
 
     private fun poolNotFound(): ResponseEntity<Any> = problem(HttpStatus.NOT_FOUND, "Aucune cagnotte ne correspond.", "POOL_NOT_FOUND")
 

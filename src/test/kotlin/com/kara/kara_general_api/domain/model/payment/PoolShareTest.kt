@@ -59,6 +59,18 @@ class PoolShareTest {
     }
 
     @Test
+    fun `withoutAuthorizationIntent drops the intent but keeps the payer`() {
+        val payer = UserId(UUID.randomUUID())
+
+        val s = share().withAuthorizationIntent("pi_1", payer).withoutAuthorizationIntent()
+
+        assertNull(s.stripePaymentIntentId)
+        // Le payeur est conservé : il porte la règle « une part par personne » et l'accès à la réconciliation.
+        assertEquals(payer, s.payerUserId)
+        assertEquals(PoolShareStatus.PENDING, s.status)
+    }
+
+    @Test
     fun `status transitions and settleability`() {
         val s = share()
 

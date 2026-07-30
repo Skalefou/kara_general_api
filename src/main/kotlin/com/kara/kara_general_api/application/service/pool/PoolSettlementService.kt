@@ -17,14 +17,22 @@ import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 
 /**
- * Cœur du règlement de cagnotte piloté par le webhook Stripe (autorisation à capture manuelle).
+ * Cœur du règlement de cagnotte. **Unique chemin d'écriture** des transitions de part, appelé par deux
+ * entrées : le webhook Stripe ([com.kara.kara_general_api.application.service.payment.StripeWebhookService])
+ * et la réconciliation demandée par le front ([SyncPoolShareService]).
  *
- * - `amount_capturable_updated` : la part passe AUTHORIZED. Si TOUTES les parts sont autorisées et que leur
- *   somme égale la cible, on **capture** toutes les autorisations, la cagnotte passe SETTLED et la
- *   réservation CONFIRMED, puis le créateur est notifié.
- * - `canceled` : la part passe CANCELLED (autorisation levée, zéro prélèvement).
+ * - autorisation confirmée (`amount_capturable_updated`, ou intent relu en `requires_capture`) : la part
+ *   passe AUTHORIZED. Si TOUTES les parts sont autorisées et que leur somme égale la cible, on **capture**
+ *   toutes les autorisations, la cagnotte passe SETTLED et la réservation CONFIRMED, puis le créateur est
+ *   notifié.
+ * - annulation (`canceled`, ou intent relu en `canceled`) : la part passe CANCELLED (autorisation levée,
+ *   zéro prélèvement).
  *
- * Idempotent : un événement déjà appliqué renvoie Handled sans effet de bord.
+ * **Idempotence et concurrence** : chaque transition prend d'abord un verrou pessimiste sur la ligne de la
+ * cagnotte ([PoolRepository.findByIdForUpdate]) **puis relit la part**. Deux appels concurrents (webhook et
+ * sync qui arrivent en même temps) se sérialisent donc sur ce verrou : le second relit une part déjà
+ * AUTHORIZED et ressort sans effet de bord. Aucune double autorisation, aucune double capture, aucune
+ * erreur — l'appelant reçoit Handled dans tous les cas.
  */
 @Service
 class PoolSettlementService(
@@ -39,17 +47,30 @@ class PoolSettlementService(
 
     @Transactional
     fun onShareAuthorized(intentId: String): StripeWebhookResult {
+        val located = poolShareRepository.findByStripePaymentIntentId(intentId)
+        if (located == null) {
+            logger.info("Pool share authorization ignored: no share holds this payment intent")
+            return StripeWebhookResult.Ignored
+        }
+
+        // Verrou pessimiste AVANT toute décision : sérialise le webhook et la réconciliation front.
+        val pool = poolRepository.findByIdForUpdate(located.poolId) ?: return StripeWebhookResult.Handled
+        // Relecture APRÈS le verrou : une transaction concurrente a pu commiter la transition entre-temps.
         val share = poolShareRepository.findByStripePaymentIntentId(intentId) ?: return StripeWebhookResult.Ignored
-        if (share.status != PoolShareStatus.PENDING) return StripeWebhookResult.Handled
+        if (share.status != PoolShareStatus.PENDING) {
+            logger.info("Pool share authorization already applied (status={}); nothing to do", share.status)
+            return StripeWebhookResult.Handled
+        }
 
         poolShareRepository.save(share.markAuthorized())
+        logger.info("Pool share authorized for pool {}", pool.id.value)
 
-        val pool = poolRepository.findById(share.poolId) ?: return StripeWebhookResult.Handled
         if (!pool.isOpen()) return StripeWebhookResult.Handled
 
         val shares = poolShareRepository.findByPoolId(pool.id)
         if (!isComplete(pool, shares)) return StripeWebhookResult.Handled
 
+        logger.info("Pool {} is fully authorized; capturing {} share(s)", pool.id.value, shares.size)
         settle(pool, shares)
         return StripeWebhookResult.Handled
     }
@@ -88,10 +109,19 @@ class PoolSettlementService(
 
     @Transactional
     fun onShareCanceled(intentId: String): StripeWebhookResult {
+        val located = poolShareRepository.findByStripePaymentIntentId(intentId)
+        if (located == null) {
+            logger.info("Pool share cancellation ignored: no share holds this payment intent")
+            return StripeWebhookResult.Ignored
+        }
+
+        // Même verrou que l'autorisation : une annulation ne doit pas croiser un règlement en cours.
+        poolRepository.findByIdForUpdate(located.poolId) ?: return StripeWebhookResult.Handled
         val share = poolShareRepository.findByStripePaymentIntentId(intentId) ?: return StripeWebhookResult.Ignored
         if (share.status == PoolShareStatus.CANCELLED) return StripeWebhookResult.Handled
         if (share.status == PoolShareStatus.CAPTURED) return StripeWebhookResult.Handled
         poolShareRepository.save(share.markCancelled())
+        logger.info("Pool share cancelled for pool {}", share.poolId.value)
         return StripeWebhookResult.Handled
     }
 
@@ -114,7 +144,9 @@ class PoolSettlementService(
         shares
             .filter { it.status == PoolShareStatus.AUTHORIZED }
             .forEach { share ->
-                share.stripePaymentIntentId?.let { paymentGateway.capturePaymentIntent(it) }
+                // Capture du montant DÛ par la part, jamais du montant autorisé : si l'autorisation porte plus
+                // que le dû, le surplus est libéré au lieu d'être prélevé (cf. PaymentGateway).
+                share.stripePaymentIntentId?.let { paymentGateway.capturePaymentIntent(it, share.amount) }
                 poolShareRepository.save(share.markCaptured())
             }
         poolRepository.updateStatus(pool.id, PoolStatus.SETTLED)

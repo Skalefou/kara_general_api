@@ -3,6 +3,7 @@ package com.kara.kara_general_api.infrastructure.adapter.input.rest.pool
 import com.kara.kara_general_api.domain.model.payment.PoolShareStatus
 import com.kara.kara_general_api.domain.model.payment.PoolStatus
 import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.port.input.pool.AddPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.AuthorizePoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.AuthorizePoolShareUseCase
@@ -22,6 +23,9 @@ import com.kara.kara_general_api.domain.port.input.pool.RegeneratePoolLinkUseCas
 import com.kara.kara_general_api.domain.port.input.pool.RemindPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareResult
 import com.kara.kara_general_api.domain.port.input.pool.SelfJoinPoolShareUseCase
+import com.kara.kara_general_api.domain.port.input.pool.SyncPoolShareCommand
+import com.kara.kara_general_api.domain.port.input.pool.SyncPoolShareResult
+import com.kara.kara_general_api.domain.port.input.pool.SyncPoolShareUseCase
 import com.kara.kara_general_api.domain.port.input.pool.UpdatePoolShareUseCase
 import com.kara.kara_general_api.infrastructure.config.SecurityConfig
 import com.ninjasquad.springmockk.MockkBean
@@ -87,6 +91,9 @@ class PoolControllerTest {
 
     @MockkBean
     private lateinit var selfJoinPoolShareUseCase: SelfJoinPoolShareUseCase
+
+    @MockkBean
+    private lateinit var syncPoolShareUseCase: SyncPoolShareUseCase
 
     private fun poolView() =
         PoolView(
@@ -282,34 +289,79 @@ class PoolControllerTest {
             .andExpect(jsonPath("$.shareId").value(SHARE_ID))
     }
 
+    private fun recapView(withShare: Boolean) =
+        PoolRecapView(
+            poolId = UUID.fromString(POOL_ID),
+            status = PoolStatus.OPEN,
+            roomName = "Salle Étoile",
+            startAt = Instant.parse("2026-08-01T18:00:00Z"),
+            endAt = Instant.parse("2026-08-01T21:00:00Z"),
+            numberOfPeople = 4,
+            targetAmount = BigDecimal("100.00"),
+            collectedAmount = BigDecimal("40.00"),
+            currency = Currency.EUR,
+            percentage = 40,
+            deadline = Instant.parse("2026-08-01T12:00:00Z"),
+            shareId = if (withShare) UUID.fromString(SHARE_ID) else null,
+            shareParticipantName = if (withShare) "Bob" else null,
+            shareAmount = if (withShare) BigDecimal("40.00") else null,
+            shareStatus = if (withShare) PoolShareStatus.PENDING else null,
+        )
+
     @Test
     fun `should expose the public join recap without authentication`() {
-        every { getPoolRecapUseCase.getByGlobalToken("global-token") } returns
-            GetPoolRecapResult.Found(
-                PoolRecapView(
-                    poolId = UUID.fromString(POOL_ID),
-                    status = PoolStatus.OPEN,
-                    roomName = "Salle Étoile",
-                    startAt = Instant.parse("2026-08-01T18:00:00Z"),
-                    endAt = Instant.parse("2026-08-01T21:00:00Z"),
-                    numberOfPeople = 4,
-                    targetAmount = BigDecimal("100.00"),
-                    collectedAmount = BigDecimal("40.00"),
-                    currency = Currency.EUR,
-                    percentage = 40,
-                    deadline = Instant.parse("2026-08-01T12:00:00Z"),
-                    shareId = null,
-                    shareParticipantName = null,
-                    shareAmount = null,
-                    shareStatus = null,
-                ),
-            )
+        every { getPoolRecapUseCase.getByGlobalToken("global-token", null) } returns
+            GetPoolRecapResult.Found(recapView(withShare = false))
 
         mockMvc
             .perform(get("/api/v1/pools/join/global-token"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.booking.roomName").value("Salle Étoile"))
             .andExpect(jsonPath("$.message").isNotEmpty)
+    }
+
+    @Test
+    fun `should read the join recap as a guest, with no share, when unauthenticated`() {
+        // L'authentification est facultative sur le lien global : sans JWT, aucun appelant n'est transmis au
+        // use case et la réponse ne contient pas de part.
+        every { getPoolRecapUseCase.getByGlobalToken("global-token", null) } returns
+            GetPoolRecapResult.Found(recapView(withShare = false))
+
+        mockMvc
+            .perform(get("/api/v1/pools/join/global-token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.share").doesNotExist())
+
+        verify { getPoolRecapUseCase.getByGlobalToken("global-token", null) }
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should join the caller's own share to the join recap when authenticated`() {
+        // Cas d'usage : reprise d'un paiement interrompu — le shareId est indispensable au front.
+        every { getPoolRecapUseCase.getByGlobalToken("global-token", UserId(UUID.fromString(USER_ID))) } returns
+            GetPoolRecapResult.Found(recapView(withShare = true))
+
+        mockMvc
+            .perform(get("/api/v1/pools/join/global-token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.share.shareId").value(SHARE_ID))
+            .andExpect(jsonPath("$.share.participantName").value("Bob"))
+    }
+
+    @Test
+    @WithMockUser(username = "not-a-uuid")
+    fun `should fall back to the guest recap when the principal is not a user id`() {
+        // Un principal non-UUID ne doit jamais provoquer un 400 INVALID_REQUEST : on retombe sur le cas invité.
+        every { getPoolRecapUseCase.getByGlobalToken("global-token", null) } returns
+            GetPoolRecapResult.Found(recapView(withShare = false))
+
+        mockMvc
+            .perform(get("/api/v1/pools/join/global-token"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.share").doesNotExist())
+
+        verify { getPoolRecapUseCase.getByGlobalToken("global-token", null) }
     }
 
     @Test
@@ -352,6 +404,68 @@ class PoolControllerTest {
             .perform(get("/api/v1/pools/share/nope"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("POOL_NOT_FOUND"))
+    }
+
+    private fun performSyncShare() = mockMvc.perform(post("/api/v1/pools/$POOL_ID/shares/$SHARE_ID/sync"))
+
+    @Test
+    fun `should return 401 when syncing a share without authentication`() {
+        performSyncShare().andExpect(status().isUnauthorized)
+
+        verify(exactly = 0) { syncPoolShareUseCase.sync(any()) }
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return the refreshed share and pool state when syncing a share`() {
+        every { syncPoolShareUseCase.sync(any<SyncPoolShareCommand>()) } returns
+            SyncPoolShareResult.Synced(
+                PoolRecapView(
+                    poolId = UUID.fromString(POOL_ID),
+                    status = PoolStatus.OPEN,
+                    roomName = "Salle Étoile",
+                    startAt = Instant.parse("2026-08-01T18:00:00Z"),
+                    endAt = Instant.parse("2026-08-01T21:00:00Z"),
+                    numberOfPeople = 4,
+                    targetAmount = BigDecimal("100.00"),
+                    collectedAmount = BigDecimal("40.00"),
+                    currency = Currency.EUR,
+                    percentage = 40,
+                    deadline = Instant.parse("2026-08-01T12:00:00Z"),
+                    shareId = UUID.fromString(SHARE_ID),
+                    shareParticipantName = "Thomas Poupard",
+                    shareAmount = BigDecimal("40.00"),
+                    shareStatus = PoolShareStatus.AUTHORIZED,
+                ),
+            )
+
+        performSyncShare()
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.poolId").value(POOL_ID))
+            .andExpect(jsonPath("$.percentage").value(40))
+            .andExpect(jsonPath("$.collectedAmount").value(40.00))
+            .andExpect(jsonPath("$.share.shareId").value(SHARE_ID))
+            .andExpect(jsonPath("$.share.status").value("AUTHORIZED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 403 POOL_SHARE_NOT_ALLOWED when syncing a share the caller may not touch`() {
+        every { syncPoolShareUseCase.sync(any<SyncPoolShareCommand>()) } returns SyncPoolShareResult.NotAllowed
+
+        performSyncShare()
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("POOL_SHARE_NOT_ALLOWED"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_ID)
+    fun `should return 404 POOL_SHARE_NOT_FOUND when syncing an unknown share`() {
+        every { syncPoolShareUseCase.sync(any<SyncPoolShareCommand>()) } returns SyncPoolShareResult.ShareNotFound
+
+        performSyncShare()
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("POOL_SHARE_NOT_FOUND"))
     }
 
     private val selfJoinBody = """{"amount":30.00}"""

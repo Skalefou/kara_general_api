@@ -123,6 +123,19 @@ class CancelBookingServiceTest {
     }
 
     @Test
+    fun `returns NotOwner when a pool share holder tries to cancel the booking`() {
+        // Non-régression : détenir une part de la cagnotte ouvre la lecture de la réservation
+        // (« Mes événements » + détail), jamais son annulation. La propriété est vérifiée explicitement.
+        val participantId = UserId(UUID.randomUUID())
+        every { bookingRepository.findById(bookingId) } returns
+            booking(BookingStatus.PENDING, paymentMode = PaymentMode.SHARED_POT)
+        every { poolRepository.findByBookingId(bookingId) } returns openPool()
+
+        assertEquals(CancelBookingResult.NotOwner, sut.cancel(command(participantId)))
+        verify(exactly = 0) { bookingRepository.updateStatus(any(), any()) }
+    }
+
+    @Test
     fun `returns AlreadyCancelled when the booking is already cancelled (idempotence)`() {
         every { bookingRepository.findById(bookingId) } returns booking(BookingStatus.CANCELLED)
 

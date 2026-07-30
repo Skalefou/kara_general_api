@@ -243,7 +243,7 @@ class BookingRepositoryAdapterTest {
     }
 
     @Test
-    fun `findByUserId returns only the bookings of the requested user`() {
+    fun `findByUserInvolvement ignores a booking the user neither owns nor holds a share in`() {
         val otherUserId = UserId(UUID.randomUUID())
         insertUser(otherUserId)
         val mine = booking()
@@ -255,14 +255,77 @@ class BookingRepositoryAdapterTest {
         adapter.save(mine)
         adapter.save(theirs)
 
-        val found = adapter.findByUserId(userId)
+        val found = adapter.findByUserInvolvement(userId)
 
         assertEquals(listOf(mine.id), found.map { it.booking.id })
-        assertEquals(listOf(theirs.id), adapter.findByUserId(otherUserId).map { it.booking.id })
+        assertTrue(found.single().isCreator)
+        assertEquals(listOf(theirs.id), adapter.findByUserInvolvement(otherUserId).map { it.booking.id })
     }
 
     @Test
-    fun `findByUserId assembles the room the two options and the pool shares of a booking`() {
+    fun `findByUserInvolvement returns a booking owned by someone else when the user paid a pool share`() {
+        val organiserId = UserId(UUID.randomUUID())
+        insertUser(organiserId)
+        val theirs = booking().copy(userId = organiserId)
+        adapter.save(theirs)
+        val poolId = insertPool(theirs.id)
+        insertPoolShare(poolId, "Jeanne Martin", "jeanne@example.com", "217.50", "AUTHORIZED")
+        insertPoolShare(poolId, "Moi", null, "217.50", "CAPTURED", payerUserId = userId)
+
+        val found = adapter.findByUserInvolvement(userId)
+
+        assertEquals(listOf(theirs.id), found.map { it.booking.id })
+        assertFalse(found.single().isCreator)
+    }
+
+    @Test
+    fun `findByUserInvolvement returns the booking once when the user holds several shares of its pool`() {
+        val organiserId = UserId(UUID.randomUUID())
+        insertUser(organiserId)
+        val theirs = booking().copy(userId = organiserId)
+        adapter.save(theirs)
+        val poolId = insertPool(theirs.id)
+        insertPoolShare(poolId, "Moi", null, "150.00", "CAPTURED", payerUserId = userId)
+        insertPoolShare(poolId, "Mon frère", null, "150.00", "CAPTURED", payerUserId = userId)
+        insertPoolShare(poolId, "Ma sœur", null, "135.00", "CAPTURED", payerUserId = userId)
+
+        assertEquals(listOf(theirs.id), adapter.findByUserInvolvement(userId).map { it.booking.id })
+    }
+
+    @Test
+    fun `findByUserInvolvement ignores a share not yet paid by the user`() {
+        val organiserId = UserId(UUID.randomUUID())
+        insertUser(organiserId)
+        val theirs = booking().copy(userId = organiserId)
+        adapter.save(theirs)
+        // Part nominative créée par l'organisateur mais jamais réglée : payer_user_id reste NULL.
+        insertPoolShare(insertPool(theirs.id), "Moi", null, "435.00", "PENDING")
+
+        assertTrue(adapter.findByUserInvolvement(userId).isEmpty())
+    }
+
+    @Test
+    fun `findByUserInvolvement returns both the owned and the joined bookings ordered by start date descending`() {
+        val organiserId = UserId(UUID.randomUUID())
+        insertUser(organiserId)
+        val owned = booking()
+        val joined =
+            booking(
+                startAt = Instant.parse("2026-09-01T18:00:00Z"),
+                endAt = Instant.parse("2026-09-01T21:00:00Z"),
+            ).copy(userId = organiserId)
+        adapter.save(owned)
+        adapter.save(joined)
+        insertPoolShare(insertPool(joined.id), "Moi", null, "435.00", "CAPTURED", payerUserId = userId)
+
+        val found = adapter.findByUserInvolvement(userId)
+
+        assertEquals(listOf(joined.id, owned.id), found.map { it.booking.id })
+        assertEquals(listOf(false, true), found.map { it.isCreator })
+    }
+
+    @Test
+    fun `findByUserInvolvement assembles the room the two options and the pool shares of a booking`() {
         val cleaning = insertService("Ménage")
         val security = insertService("Sécurité")
         val saved = booking(status = BookingStatus.CONFIRMED, optionIds = listOf(cleaning, security))
@@ -271,7 +334,7 @@ class BookingRepositoryAdapterTest {
         insertPoolShare(poolId, "Jeanne Martin", "jeanne@example.com", "217.50", "AUTHORIZED")
         insertPoolShare(poolId, "Karim Belkacem", null, "217.50", "PENDING")
 
-        val record = adapter.findByUserId(userId).single()
+        val record = adapter.findByUserInvolvement(userId).single()
         val shares = poolShareAdapter.findByPoolIds(listOf(poolId))
 
         assertEquals("Salle", record.roomName)
@@ -287,7 +350,7 @@ class BookingRepositoryAdapterTest {
     }
 
     @Test
-    fun `findByUserId returns every status ordered by start date descending`() {
+    fun `findByUserInvolvement returns every status ordered by start date descending`() {
         val past =
             booking(
                 startAt = Instant.parse("2026-06-01T18:00:00Z"),
@@ -304,15 +367,15 @@ class BookingRepositoryAdapterTest {
         adapter.save(booking())
         adapter.save(future)
 
-        val found = adapter.findByUserId(userId)
+        val found = adapter.findByUserInvolvement(userId)
 
         assertEquals(3, found.size)
         assertEquals(listOf(future.id, past.id), listOf(found.first().booking.id, found.last().booking.id))
     }
 
     @Test
-    fun `findByUserId returns empty when the user has no booking`() {
-        assertTrue(adapter.findByUserId(UserId(UUID.randomUUID())).isEmpty())
+    fun `findByUserInvolvement returns empty when the user has no booking`() {
+        assertTrue(adapter.findByUserInvolvement(UserId(UUID.randomUUID())).isEmpty())
     }
 
     @Test
@@ -397,12 +460,13 @@ class BookingRepositoryAdapterTest {
         email: String?,
         amount: String,
         status: String,
+        payerUserId: UserId? = null,
     ) {
         val sql =
             """
             INSERT INTO pool_shares (id, pool_id, participant_name, email, amount, status,
-                                     is_creator_share, created_at)
-            VALUES (:id, :poolId, :name, :email, :amount, :status, false, NOW())
+                                     payer_user_id, is_creator_share, created_at)
+            VALUES (:id, :poolId, :name, :email, :amount, :status, :payerUserId, false, NOW())
             """.trimIndent()
         jdbc.update(
             sql,
@@ -413,6 +477,7 @@ class BookingRepositoryAdapterTest {
                 "email" to email,
                 "amount" to BigDecimal(amount),
                 "status" to status,
+                "payerUserId" to payerUserId?.value,
             ),
         )
     }

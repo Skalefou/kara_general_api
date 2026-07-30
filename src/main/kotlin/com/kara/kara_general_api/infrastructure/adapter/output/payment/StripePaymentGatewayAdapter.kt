@@ -17,6 +17,7 @@ import com.stripe.net.RequestOptions
 import com.stripe.net.Webhook
 import com.stripe.param.CustomerCreateParams
 import com.stripe.param.EphemeralKeyCreateParams
+import com.stripe.param.PaymentIntentCaptureParams
 import com.stripe.param.PaymentIntentCreateParams
 import com.stripe.param.RefundCreateParams
 import org.slf4j.LoggerFactory
@@ -111,8 +112,19 @@ class StripePaymentGatewayAdapter(
         return PaymentIntentResult(clientSecret = intent.clientSecret, paymentIntentId = intent.id)
     }
 
-    override fun capturePaymentIntent(paymentIntentId: String) {
-        PaymentIntent.retrieve(paymentIntentId).capture()
+    override fun capturePaymentIntent(
+        paymentIntentId: String,
+        amount: BigDecimal,
+    ) {
+        // `amount_to_capture` : on ne prélève JAMAIS plus que le montant réellement dû. `capture()` sans
+        // paramètre prélèverait l'intégralité du montant autorisé, qui peut être supérieur au dû si le montant
+        // de la part a été revu à la baisse après l'autorisation. Stripe libère le surplus non capturé.
+        val params =
+            PaymentIntentCaptureParams
+                .builder()
+                .setAmountToCapture(toMinorUnits(amount))
+                .build()
+        PaymentIntent.retrieve(paymentIntentId).capture(params)
     }
 
     override fun cancelPaymentIntent(paymentIntentId: String) {
@@ -129,10 +141,9 @@ class StripePaymentGatewayAdapter(
         currency: Currency,
         customerId: String,
     ): PaymentIntentCreateParams.Builder {
-        val amountMinorUnits = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
         return PaymentIntentCreateParams
             .builder()
-            .setAmount(amountMinorUnits)
+            .setAmount(toMinorUnits(amount))
             .setCurrency(currency.name.lowercase())
             .setCustomer(customerId)
             .setAutomaticPaymentMethods(
@@ -142,6 +153,10 @@ class StripePaymentGatewayAdapter(
                     .build(),
             )
     }
+
+    /** Conversion unique montant décimal -> plus petite unité monétaire, partagée par la création et la
+     *  capture d'un PaymentIntent : les deux doivent arrondir à l'identique. */
+    private fun toMinorUnits(amount: BigDecimal): Long = amount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
 
     override fun verifyAndParseWebhook(
         payload: String,

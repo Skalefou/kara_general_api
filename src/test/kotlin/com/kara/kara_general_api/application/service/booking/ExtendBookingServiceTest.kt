@@ -165,6 +165,17 @@ class ExtendBookingServiceTest {
     }
 
     @Test
+    fun `should refuse an extension asked by a pool share holder`() {
+        // Non-régression : l'implication d'un participant via sa part de cagnotte n'ouvre que la lecture.
+        every { bookingRepository.findById(bookingId) } returns booking()
+
+        val result = sut.extend(command(userId = UserId(UUID.randomUUID()), additionalMinutes = 60))
+
+        assertEquals(ExtendBookingResult.NotOwner, result)
+        verify(exactly = 0) { bookingExtensionRepository.save(any()) }
+    }
+
+    @Test
     fun `should refuse when the booking is not confirmed`() {
         every { bookingRepository.findById(bookingId) } returns booking(status = BookingStatus.PENDING)
 
