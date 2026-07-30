@@ -433,6 +433,22 @@ Notifications push (FCM) **planifiées automatiquement** à confirmation réserv
 
 ---
 
+### 7 bis. Lieux favoris (`favorite/`)
+
+| Use Case                       | Acteur | Description                                                             |
+|--------------------------------|--------|-------------------------------------------------------------------------|
+| `AddFavoriteUseCase`           | CLIENT | Met une salle en favori. Idempotent : un doublon est ignoré             |
+| `RemoveFavoriteUseCase`        | CLIENT | Retire une salle des favoris                                            |
+| `ListFavoritesUseCase`         | CLIENT | Salles favorites paginées, du favori le plus récent au plus ancien      |
+| `ListFavoriteRoomIdsUseCase`   | CLIENT | Ensemble complet des identifiants favoris (état « cœur » côté client)   |
+
+**Règles métier :**
+- Table de liaison `room_favorites`, couple `(user_id, room_id)` unique
+- Suppression du compte ou de la salle : favoris purgés par `ON DELETE CASCADE`
+- Un favori pointant vers une salle supprimée n'apparaît jamais dans la liste
+
+---
+
 ### 8. Stock & Catalogue produit (`stock/`)
 
 | Use Case                   | Acteur        | Description                                                   |
@@ -486,6 +502,11 @@ GET    /api/v1/users/me/invoices
 GET    /api/v1/users/me/payment-methods
 POST   /api/v1/users/me/payment-methods
 DELETE /api/v1/users/me/payment-methods/{id}
+
+GET    /api/v1/users/me/favorites               (CLIENT)  lieux favoris, paginés ?page&size
+GET    /api/v1/users/me/favorites/ids           (CLIENT)  identifiants de tous les favoris, non paginé
+PUT    /api/v1/users/me/favorites/{roomId}      (CLIENT)  ajoute un lieu aux favoris (idempotent, 204)
+DELETE /api/v1/users/me/favorites/{roomId}      (CLIENT)  retire un lieu des favoris (204)
 
 GET    /api/v1/users                          (ADMIN)  liste paginée ?page&size
 POST   /api/v1/users                          (ADMIN)  crée un compte SERVER
