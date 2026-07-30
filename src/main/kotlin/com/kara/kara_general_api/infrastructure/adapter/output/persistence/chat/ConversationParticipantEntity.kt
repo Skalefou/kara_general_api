@@ -39,6 +39,8 @@ class ConversationParticipantEntity(
     var userId: UUID,
     @Column(name = "last_read_at", columnDefinition = "timestamptz")
     var lastReadAt: Instant? = null,
+    @Column(name = "is_admin", nullable = false, columnDefinition = "boolean not null default false")
+    var isAdmin: Boolean = false,
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamptz")
     var createdAt: Instant = Instant.now(),
 )

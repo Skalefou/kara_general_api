@@ -9,10 +9,7 @@ import com.kara.kara_general_api.domain.port.output.ChatRepository
 import com.kara.kara_general_api.domain.port.output.ServerShiftRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Duration
 import java.time.Instant
-
-private val BOOKING_CHAT_WINDOW_AFTER_END: Duration = Duration.ofMinutes(30)
 
 /**
  * Ouvre (ou crée) la conversation rattachée à une réservation. Autorisé au client de la réservation, aux
@@ -53,7 +50,7 @@ class BookingChatService(
                 conversation.id
             }
 
-        val closesAt = booking.endAt.plus(BOOKING_CHAT_WINDOW_AFTER_END)
+        val closesAt = booking.endAt.plus(Conversation.BOOKING_CHAT_WINDOW_AFTER_END)
         return OpenBookingConversationResult.Success(
             conversationId = conversationId,
             bookingId = command.bookingId,

@@ -26,6 +26,7 @@ class ChatRepositoryAdapter(
             id = ConversationId(rs.getObject("id", UUID::class.java)),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             bookingId = rs.getObject("booking_id", UUID::class.java)?.let { BookingId(it) },
+            title = rs.getString("title"),
         )
 
     private val messageRowMapper =
@@ -48,17 +49,18 @@ class ChatRepositoryAdapter(
         participantIds: Set<UserId>,
     ) {
         jdbc.update(
-            "INSERT INTO conversations (id, created_at, booking_id) VALUES (:id, :createdAt, :bookingId)",
+            "INSERT INTO conversations (id, created_at, booking_id, title) VALUES (:id, :createdAt, :bookingId, :title)",
             MapSqlParameterSource()
                 .addValue("id", conversation.id.value)
                 .addValue("createdAt", Timestamp.from(conversation.createdAt))
-                .addValue("bookingId", conversation.bookingId?.value),
+                .addValue("bookingId", conversation.bookingId?.value)
+                .addValue("title", conversation.title),
         )
         addParticipants(conversation.id, participantIds)
     }
 
     override fun findConversationByBookingId(bookingId: BookingId): Conversation? {
-        val sql = "SELECT id, created_at, booking_id FROM conversations WHERE booking_id = :bookingId"
+        val sql = "SELECT id, created_at, booking_id, title FROM conversations WHERE booking_id = :bookingId"
         return jdbc.query(sql, mapOf("bookingId" to bookingId.value)) { rs, _ -> mapConversation(rs) }.firstOrNull()
     }
 
@@ -77,8 +79,8 @@ class ChatRepositoryAdapter(
                 }.toTypedArray()
         jdbc.batchUpdate(
             """
-            INSERT INTO conversation_participants (id, conversation_id, user_id, last_read_at, created_at)
-            VALUES (:id, :conversationId, :userId, NULL, NOW())
+            INSERT INTO conversation_participants (id, conversation_id, user_id, last_read_at, is_admin, created_at)
+            VALUES (:id, :conversationId, :userId, NULL, FALSE, NOW())
             ON CONFLICT ON CONSTRAINT uq_conversation_participants_conversation_user DO NOTHING
             """.trimIndent(),
             batch,
@@ -86,15 +88,27 @@ class ChatRepositoryAdapter(
     }
 
     override fun findConversationById(id: ConversationId): Conversation? {
-        val sql = "SELECT id, created_at, booking_id FROM conversations WHERE id = :id"
+        val sql = "SELECT id, created_at, booking_id, title FROM conversations WHERE id = :id"
         return jdbc.query(sql, mapOf("id" to id.value)) { rs, _ -> mapConversation(rs) }.firstOrNull()
+    }
+
+    override fun updateConversationTitle(
+        id: ConversationId,
+        title: String?,
+    ) {
+        jdbc.update(
+            "UPDATE conversations SET title = :title WHERE id = :id",
+            MapSqlParameterSource()
+                .addValue("id", id.value)
+                .addValue("title", title),
+        )
     }
 
     // Tri par activité récente : dernier message posté, à défaut date de création de la conversation.
     override fun findConversationsForUser(userId: UserId): List<Conversation> {
         val sql =
             """
-            SELECT c.id, c.created_at, c.booking_id
+            SELECT c.id, c.created_at, c.booking_id, c.title
             FROM conversations c
             JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = :userId
             ORDER BY COALESCE(
@@ -108,7 +122,7 @@ class ChatRepositoryAdapter(
     override fun findAllConversations(): List<Conversation> {
         val sql =
             """
-            SELECT c.id, c.created_at, c.booking_id
+            SELECT c.id, c.created_at, c.booking_id, c.title
             FROM conversations c
             ORDER BY COALESCE(
                 (SELECT MAX(m.sent_at) FROM messages m WHERE m.conversation_id = c.id),
@@ -125,7 +139,7 @@ class ChatRepositoryAdapter(
         val ids = participantIds.map { it.value }
         val sql =
             """
-            SELECT c.id, c.created_at, c.booking_id
+            SELECT c.id, c.created_at, c.booking_id, c.title
             FROM conversations c
             WHERE c.id = (
                 SELECT p.conversation_id
@@ -149,6 +163,32 @@ class ChatRepositoryAdapter(
             .query(sql, mapOf("id" to conversationId.value)) { rs, _ ->
                 UserId(rs.getObject("user_id", UUID::class.java))
             }.toSet()
+    }
+
+    override fun findAdminIds(conversationId: ConversationId): Set<UserId> {
+        val sql = "SELECT user_id FROM conversation_participants WHERE conversation_id = :id AND is_admin = TRUE"
+        return jdbc
+            .query(sql, mapOf("id" to conversationId.value)) { rs, _ ->
+                UserId(rs.getObject("user_id", UUID::class.java))
+            }.toSet()
+    }
+
+    override fun setParticipantAdmin(
+        conversationId: ConversationId,
+        userId: UserId,
+        isAdmin: Boolean,
+    ) {
+        jdbc.update(
+            """
+            UPDATE conversation_participants
+            SET is_admin = :isAdmin
+            WHERE conversation_id = :conversationId AND user_id = :userId
+            """.trimIndent(),
+            MapSqlParameterSource()
+                .addValue("conversationId", conversationId.value)
+                .addValue("userId", userId.value)
+                .addValue("isAdmin", isAdmin),
+        )
     }
 
     override fun isParticipant(

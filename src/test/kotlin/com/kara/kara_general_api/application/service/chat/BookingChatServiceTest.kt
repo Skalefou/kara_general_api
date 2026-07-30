@@ -113,8 +113,8 @@ class BookingChatServiceTest {
     }
 
     @Test
-    fun `should flag the chat as closed past the 30 min window`() {
-        val past = Instant.now().minusSeconds(3 * 3600)
+    fun `should flag the chat as closed past the 24 hour window`() {
+        val past = Instant.now().minusSeconds(25 * 3600)
         val closedBooking = booking().copy(startAt = past.minusSeconds(3600), endAt = past)
         every { bookingRepository.findById(bookingId) } returns closedBooking
         every { serverShiftRepository.findServerIdsAssignedTo(roomId, closedBooking.startAt, past) } returns setOf(serverId)

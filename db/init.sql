@@ -219,8 +219,11 @@ CREATE INDEX IF NOT EXISTS idx_room_favorites_room_id ON room_favorites (room_id
 CREATE TABLE IF NOT EXISTS conversations (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- Conversation rattachée à une réservation (nullable) : sert au verrou « chat fermé 30 min après ».
-    booking_id UUID
+    -- Conversation rattachée à une réservation (nullable) : sert au verrou « chat fermé 24 h après la fin ».
+    booking_id UUID,
+    -- Titre choisi par un participant. NULL : titre déduit (salle + créneau pour une réservation,
+    -- noms des participants pour un groupe, nom de l'interlocuteur pour une conversation à deux).
+    title      VARCHAR(255)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_booking_id ON conversations (booking_id) WHERE booking_id IS NOT NULL;
@@ -231,6 +234,9 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     last_read_at    TIMESTAMPTZ,
+    -- Administrateur du groupe : renomme la conversation et promeut d'autres membres. Le client à
+    -- l'origine d'une réservation l'est d'office, sans dépendre de ce drapeau.
+    is_admin        BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_conversation_participants_conversation_user UNIQUE (conversation_id, user_id)
 );

@@ -24,7 +24,7 @@ sealed interface SendMessageResult {
 
     data object EmptyText : SendMessageResult
 
-    /** Conversation de réservation fermée : plus de 30 min se sont écoulées après la fin du créneau. */
+    /** Conversation de réservation fermée : plus de 24 h se sont écoulées après la fin du créneau. */
     data object ChatClosed : SendMessageResult
 }
 

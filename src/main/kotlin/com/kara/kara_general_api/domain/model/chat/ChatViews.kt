@@ -45,6 +45,10 @@ data class MessageView(
 data class ConversationView(
     val id: ConversationId,
     val bookingId: BookingId?,
+    /** Titre affiché : personnalisé, sinon déduit de la réservation ou des participants. */
+    val title: String,
+    /** Vrai si le demandeur a le droit de renommer la conversation. */
+    val canRename: Boolean,
     val counterpartName: String,
     val counterpartPhotoKey: String?,
     val lastMessagePreview: String,

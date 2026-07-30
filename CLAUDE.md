@@ -397,7 +397,10 @@ data class Room(
 | `RequestUberUseCase`            | CLIENT  | Suggestion Uber (deep link vers l'app Uber avec adresse de la salle)            |
 
 **Règles métier critiques :**
-- Chat **lisible** 30 min après fin réservation, mais **plus modifiable**
+- Titre d'une conversation : personnalisé s'il est défini, sinon déduit — salle + créneau pour une réservation (fuseau de la salle), noms des autres participants pour un groupe, nom de l'interlocuteur pour une conversation à deux
+- Administrateur de groupe : le client à l'origine de la réservation l'est d'office et ne peut être rétrogradé ; le créateur d'un groupe libre l'est à la création ; un administrateur promeut ou rétrograde les autres membres
+- Renommage réservé aux administrateurs du groupe ; impossible sur une conversation à deux, qui porte le nom de l'interlocuteur
+- Chat **lisible** 24 h après fin réservation : plus d'envoi ni de réaction, mais chacun peut encore supprimer ses propres messages
 - Chaque message affiche avertissement : « l'administration Kara a accès aux messages »
 - Alerte urgence déclenche vibration + son fort côté SERVER (WebSocket push)
 - Alerte commande déclenche vibration + son côté SERVER (WebSocket push)
@@ -542,6 +545,10 @@ PATCH  /api/v1/bookings/{id}/cart
 
 GET    /api/v1/bookings/{id}/chat
 POST   /api/v1/bookings/{id}/chat
+GET    /api/v1/chat/conversations/{id}              (CLIENT)  paramètres du groupe : titre, membres, droits
+PATCH  /api/v1/chat/conversations/{id}              (CLIENT)  renomme le groupe ; titre vide = titre déduit
+PUT    /api/v1/chat/conversations/{id}/members/{memberId}/admin     (CLIENT admin)  promeut un membre
+DELETE /api/v1/chat/conversations/{id}/members/{memberId}/admin     (CLIENT admin)  rétrograde un membre
 
 # Gestion des comptes serveur exposée sous /api/v1/users (ADMIN, cf. bloc users ci-dessus).
 # /api/v1/admin/accounts* : cible historique, remplacée par /api/v1/users.

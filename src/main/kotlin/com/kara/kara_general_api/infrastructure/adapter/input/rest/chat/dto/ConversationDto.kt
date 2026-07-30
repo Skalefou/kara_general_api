@@ -7,6 +7,7 @@ data class ConversationDto(
     val id: String,
     val bookingId: String?,
     val title: String,
+    val canRename: Boolean,
     val counterpartName: String,
     val counterpartPhotoUrl: String?,
     val lastMessagePreview: String,
@@ -22,7 +23,8 @@ data class ConversationDto(
             ConversationDto(
                 id = view.id.value.toString(),
                 bookingId = view.bookingId?.value?.toString(),
-                title = view.counterpartName,
+                title = view.title,
+                canRename = view.canRename,
                 counterpartName = view.counterpartName,
                 counterpartPhotoUrl = view.counterpartPhotoKey?.let(photoUrl),
                 lastMessagePreview = view.lastMessagePreview,

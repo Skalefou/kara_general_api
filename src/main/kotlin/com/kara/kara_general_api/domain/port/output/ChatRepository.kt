@@ -30,6 +30,12 @@ interface ChatRepository {
 
     fun findConversationById(id: ConversationId): Conversation?
 
+    /** Fixe le titre d'une conversation. [title] null restaure le titre déduit. */
+    fun updateConversationTitle(
+        id: ConversationId,
+        title: String?,
+    )
+
     /** Conversations où [userId] est participant, triées par activité récente décroissante. */
     fun findConversationsForUser(userId: UserId): List<Conversation>
 
@@ -40,6 +46,16 @@ interface ChatRepository {
     fun findConversationByExactParticipants(participantIds: Set<UserId>): Conversation?
 
     fun findParticipantIds(conversationId: ConversationId): Set<UserId>
+
+    /** Administrateurs déclarés d'une conversation (hors client propriétaire d'une réservation). */
+    fun findAdminIds(conversationId: ConversationId): Set<UserId>
+
+    /** Promeut ou rétrograde un participant. */
+    fun setParticipantAdmin(
+        conversationId: ConversationId,
+        userId: UserId,
+        isAdmin: Boolean,
+    )
 
     fun isParticipant(
         conversationId: ConversationId,

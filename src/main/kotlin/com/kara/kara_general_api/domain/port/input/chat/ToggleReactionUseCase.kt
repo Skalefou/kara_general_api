@@ -22,6 +22,9 @@ sealed interface ToggleReactionResult {
     data object NotParticipant : ToggleReactionResult
 
     data object MessageNotFound : ToggleReactionResult
+
+    /** Conversation de réservation close : les réactions sont figées comme les envois. */
+    data object ChatClosed : ToggleReactionResult
 }
 
 interface ToggleReactionUseCase {

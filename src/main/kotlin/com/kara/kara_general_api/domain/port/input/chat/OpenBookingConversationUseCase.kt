@@ -13,7 +13,7 @@ data class OpenBookingConversationCommand(
 
 sealed interface OpenBookingConversationResult {
     /**
-     * Conversation de la réservation prête. [closesAt] = fin de la réservation + 30 min ; passé ce délai,
+     * Conversation de la réservation prête. [closesAt] = fin de la réservation + 24 h ; passé ce délai,
      * [closed] vaut vrai et l'envoi de messages est refusé (lecture seule).
      */
     data class Success(

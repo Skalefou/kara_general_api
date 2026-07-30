@@ -321,7 +321,7 @@ interface BookingApi {
         description =
             "Crée ou retourne la conversation rattachée à la réservation. Accessible au client de " +
                 "la réservation, aux serveurs qui y sont rattachés (via leur agenda) et aux administrateurs. " +
-                "La réponse indique la date de fermeture du chat (fin de la réservation + 30 min).",
+                "La réponse indique la date de fermeture du chat (fin de la réservation + 24 h).",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     @ApiResponses(

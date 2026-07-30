@@ -10,7 +10,9 @@ import com.kara.kara_general_api.domain.model.chat.Message
 import com.kara.kara_general_api.domain.model.chat.MessageId
 import com.kara.kara_general_api.domain.model.chat.MessageReaction
 import com.kara.kara_general_api.domain.model.room.Currency
+import com.kara.kara_general_api.domain.model.room.Room
 import com.kara.kara_general_api.domain.model.room.RoomId
+import com.kara.kara_general_api.domain.model.room.vo.Address
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.UserRole
@@ -19,15 +21,22 @@ import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationCommand
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationResult
+import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailQuery
+import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailResult
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesQuery
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesResult
+import com.kara.kara_general_api.domain.port.input.chat.RenameConversationCommand
+import com.kara.kara_general_api.domain.port.input.chat.RenameConversationResult
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageCommand
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageResult
+import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminCommand
+import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminResult
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionCommand
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionResult
 import com.kara.kara_general_api.domain.port.output.BookingRepository
 import com.kara.kara_general_api.domain.port.output.ChatEventPublisher
 import com.kara.kara_general_api.domain.port.output.ChatRepository
+import com.kara.kara_general_api.domain.port.output.RoomRepository
 import com.kara.kara_general_api.domain.port.output.UserRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -45,8 +54,10 @@ class ChatServiceTest {
     private val chatRepository = mockk<ChatRepository>(relaxUnitFun = true)
     private val userRepository = mockk<UserRepository>()
     private val bookingRepository = mockk<BookingRepository>()
+    private val roomRepository = mockk<RoomRepository>()
     private val eventPublisher = mockk<ChatEventPublisher>(relaxUnitFun = true)
-    private val sut = ChatService(chatRepository, userRepository, bookingRepository, eventPublisher)
+    private val sut =
+        ChatService(chatRepository, userRepository, bookingRepository, roomRepository, eventPublisher)
 
     private val meId = UserId(UUID.randomUUID())
     private val otherId = UserId(UUID.randomUUID())
@@ -233,19 +244,269 @@ class ChatServiceTest {
     }
 
     @Test
-    fun `sendMessage on a booking conversation is rejected past the 30 min window`() {
+    fun `sendMessage on a booking conversation is rejected past the 24 hour window`() {
         val bookingId = BookingId(UUID.randomUUID())
         every { chatRepository.findConversationById(conversationId) } returns
             Conversation(conversationId, Instant.now(), bookingId)
         every { chatRepository.isParticipant(conversationId, meId) } returns true
         every { bookingRepository.findById(bookingId) } returns
-            bookingEndingAt(bookingId, Instant.now().minusSeconds(31 * 60))
+            bookingEndingAt(bookingId, Instant.now().minusSeconds(25 * 3600))
 
         val result = sut.sendMessage(SendMessageCommand(meId, conversationId, "coucou", null, false))
 
         assertEquals(SendMessageResult.ChatClosed, result)
         verify(exactly = 0) { chatRepository.saveMessage(any()) }
     }
+
+    @Test
+    fun `toggleReaction on a booking conversation is rejected past the 24 hour window`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.now().minusSeconds(25 * 3600))
+
+        val result =
+            sut.toggleReaction(
+                ToggleReactionCommand(meId, conversationId, MessageId(UUID.randomUUID()), "+1"),
+            )
+
+        assertEquals(ToggleReactionResult.ChatClosed, result)
+        verify(exactly = 0) { chatRepository.addReaction(any()) }
+        verify(exactly = 0) { chatRepository.removeReaction(any(), any(), any()) }
+    }
+
+    @Test
+    fun `listConversations names a booking conversation after the room and its slot`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        val roomId = RoomId(UUID.randomUUID())
+        val booking =
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(
+                roomId = roomId,
+                startAt = Instant.parse("2026-07-29T18:00:00Z"),
+                userId = meId,
+            )
+        every { chatRepository.findConversationsForUser(meId) } returns
+            listOf(Conversation(conversationId, Instant.now(), bookingId))
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { bookingRepository.findById(bookingId) } returns booking
+        every { roomRepository.findById(roomId) } returns room(roomId, "Salle Étoile")
+        every { chatRepository.findLastMessage(conversationId) } returns null
+        every { chatRepository.countUnread(conversationId, meId, null) } returns 0
+        stubViewLookups()
+
+        val views = sut.listConversations(meId)
+
+        assertEquals("Salle Étoile · 29/07 20:00-23:00", views.single().title)
+        assertTrue(views.single().canRename)
+    }
+
+    @Test
+    fun `listConversations keeps a custom title and denies renaming to a guest`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        val roomId = RoomId(UUID.randomUUID())
+        every { chatRepository.findConversationsForUser(meId) } returns
+            listOf(Conversation(conversationId, Instant.now(), bookingId, "Anniversaire de Bruno"))
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId, "Anniversaire de Bruno")
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(roomId = roomId)
+        every { chatRepository.findLastMessage(conversationId) } returns null
+        every { chatRepository.countUnread(conversationId, meId, null) } returns 0
+        every { chatRepository.findAdminIds(conversationId) } returns emptySet()
+        stubViewLookups()
+
+        val view = sut.listConversations(meId).single()
+
+        assertEquals("Anniversaire de Bruno", view.title)
+        assertEquals(false, view.canRename)
+    }
+
+    @Test
+    fun `renameConversation rejects a participant who did not create the booking`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z"))
+        every { chatRepository.findAdminIds(conversationId) } returns emptySet()
+
+        val result =
+            sut.renameConversation(RenameConversationCommand(meId, conversationId, "Chez Bruno"))
+
+        assertEquals(RenameConversationResult.NotRenamable, result)
+        verify(exactly = 0) { chatRepository.updateConversationTitle(any(), any()) }
+    }
+
+    @Test
+    fun `renameConversation stores the trimmed title for the booking owner`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        val roomId = RoomId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(
+                roomId = roomId,
+                userId = meId,
+            )
+        every { roomRepository.findById(roomId) } returns room(roomId, "Salle Étoile")
+        every { chatRepository.findLastMessage(conversationId) } returns null
+        every { chatRepository.countUnread(conversationId, meId, null) } returns 0
+        stubViewLookups()
+
+        val result =
+            sut.renameConversation(
+                RenameConversationCommand(meId, conversationId, "  Anniversaire de Bruno  "),
+            )
+
+        assertInstanceOf(RenameConversationResult.Success::class.java, result)
+        verify {
+            chatRepository.updateConversationTitle(conversationId, "Anniversaire de Bruno")
+        }
+    }
+
+    @Test
+    fun `renameConversation clears the title when it is blank`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        val roomId = RoomId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId, "Anniversaire de Bruno")
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(
+                roomId = roomId,
+                userId = meId,
+            )
+        every { roomRepository.findById(roomId) } returns room(roomId, "Salle Étoile")
+        every { chatRepository.findLastMessage(conversationId) } returns null
+        every { chatRepository.countUnread(conversationId, meId, null) } returns 0
+        stubViewLookups()
+
+        sut.renameConversation(RenameConversationCommand(meId, conversationId, "   "))
+
+        verify { chatRepository.updateConversationTitle(conversationId, null) }
+    }
+
+    @Test
+    fun `getConversationDetail flags the booking owner as admin and lists admins first`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        val roomId = RoomId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, otherId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { chatRepository.findAdminIds(conversationId) } returns emptySet()
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(
+                roomId = roomId,
+                userId = meId,
+            )
+        every { roomRepository.findById(roomId) } returns room(roomId, "Salle Étoile")
+        every { userRepository.findById(meId) } returns user(meId, "Jane")
+        every { userRepository.findById(otherId) } returns user(otherId, "John")
+
+        val result =
+            sut.getConversationDetail(GetConversationDetailQuery(otherId, conversationId))
+
+        val detail = assertInstanceOf(GetConversationDetailResult.Success::class.java, result).conversation
+        assertEquals(listOf("Jane Doe", "John Doe"), detail.members.map { it.displayName })
+        assertEquals(listOf(true, false), detail.members.map { it.isAdmin })
+        assertEquals(false, detail.isAdmin)
+        assertEquals(false, detail.canRename)
+        assertTrue(detail.isGroup)
+    }
+
+    @Test
+    fun `setConversationAdmin promotes a member when the requester owns the booking`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        val roomId = RoomId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { chatRepository.findAdminIds(conversationId) } returns emptySet()
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(
+                roomId = roomId,
+                userId = meId,
+            )
+        every { roomRepository.findById(roomId) } returns room(roomId, "Salle Étoile")
+        every { userRepository.findById(meId) } returns user(meId, "Jane")
+        every { userRepository.findById(otherId) } returns user(otherId, "John")
+
+        val result =
+            sut.setConversationAdmin(
+                SetConversationAdminCommand(meId, conversationId, otherId, isAdmin = true),
+            )
+
+        assertInstanceOf(SetConversationAdminResult.Success::class.java, result)
+        verify { chatRepository.setParticipantAdmin(conversationId, otherId, true) }
+    }
+
+    @Test
+    fun `setConversationAdmin refuses a member who is not admin`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, otherId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { chatRepository.findAdminIds(conversationId) } returns emptySet()
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(userId = meId)
+
+        val result =
+            sut.setConversationAdmin(
+                SetConversationAdminCommand(otherId, conversationId, meId, isAdmin = false),
+            )
+
+        assertEquals(SetConversationAdminResult.NotAdmin, result)
+        verify(exactly = 0) { chatRepository.setParticipantAdmin(any(), any(), any()) }
+    }
+
+    @Test
+    fun `setConversationAdmin never demotes the booking owner`() {
+        val bookingId = BookingId(UUID.randomUUID())
+        every { chatRepository.findConversationById(conversationId) } returns
+            Conversation(conversationId, Instant.now(), bookingId)
+        every { chatRepository.isParticipant(conversationId, meId) } returns true
+        every { chatRepository.findParticipantIds(conversationId) } returns setOf(meId, otherId)
+        every { chatRepository.findAdminIds(conversationId) } returns emptySet()
+        every { bookingRepository.findById(bookingId) } returns
+            bookingEndingAt(bookingId, Instant.parse("2026-07-29T21:00:00Z")).copy(userId = meId)
+
+        val result =
+            sut.setConversationAdmin(
+                SetConversationAdminCommand(meId, conversationId, meId, isAdmin = false),
+            )
+
+        assertEquals(SetConversationAdminResult.CannotDemoteBookingOwner, result)
+        verify(exactly = 0) { chatRepository.setParticipantAdmin(any(), any(), any()) }
+    }
+
+    private fun room(
+        id: RoomId,
+        name: String,
+    ): Room =
+        Room(
+            id = id,
+            name = name,
+            description = "",
+            address = Address(street = "12 rue de la Paix", city = "Paris", postalCode = "75002", country = "France"),
+            pricePerPersonPerHour = java.math.BigDecimal("12.50"),
+            currency = Currency.EUR,
+            maxCapacity = 50,
+            isThereWifi = true,
+            isThereSonoPro = false,
+            isThereAirConditioning = true,
+            createdAt = Instant.now(),
+        )
 
     private fun bookingEndingAt(
         bookingId: BookingId,

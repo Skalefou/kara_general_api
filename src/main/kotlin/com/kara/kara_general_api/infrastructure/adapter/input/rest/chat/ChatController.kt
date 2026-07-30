@@ -9,6 +9,9 @@ import com.kara.kara_general_api.domain.port.input.chat.CreateConversationUseCas
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageCommand
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageResult
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageUseCase
+import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailQuery
+import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailResult
+import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailUseCase
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesQuery
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesResult
 import com.kara.kara_general_api.domain.port.input.chat.GetMessagesUseCase
@@ -17,17 +20,25 @@ import com.kara.kara_general_api.domain.port.input.chat.ListConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadCommand
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadResult
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadUseCase
+import com.kara.kara_general_api.domain.port.input.chat.RenameConversationCommand
+import com.kara.kara_general_api.domain.port.input.chat.RenameConversationResult
+import com.kara.kara_general_api.domain.port.input.chat.RenameConversationUseCase
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageCommand
+import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminCommand
+import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminResult
+import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminUseCase
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageResult
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionCommand
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionResult
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionUseCase
 import com.kara.kara_general_api.domain.port.output.ImageStoragePort
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.ConversationDetailDto
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.ConversationDto
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.CreateConversationRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.MessageDto
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.ReactionRequest
+import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.RenameConversationRequest
 import com.kara.kara_general_api.infrastructure.adapter.input.rest.chat.dto.SendMessageRequest
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -37,8 +48,10 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -61,6 +74,9 @@ class ChatController(
     private val toggleReactionUseCase: ToggleReactionUseCase,
     private val markMessageReadUseCase: MarkMessageReadUseCase,
     private val deleteMessageUseCase: DeleteMessageUseCase,
+    private val renameConversationUseCase: RenameConversationUseCase,
+    private val getConversationDetailUseCase: GetConversationDetailUseCase,
+    private val setConversationAdminUseCase: SetConversationAdminUseCase,
     private val imageStorage: ImageStoragePort,
 ) {
     private fun signedPhotoUrl(key: String): String = imageStorage.signedUrl(key, PHOTO_URL_TTL)
@@ -85,6 +101,88 @@ class ChatController(
                 .listAllConversations(currentUserId(authentication))
                 .map { ConversationDto.from(it, ::signedPhotoUrl) }
         return ResponseEntity.ok(conversations)
+    }
+
+    @GetMapping("/conversations/{id}")
+    fun getConversationDetail(
+        @PathVariable id: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val query =
+            GetConversationDetailQuery(
+                currentUserId = currentUserId(authentication),
+                conversationId = ConversationId(id),
+                isAdminRole = isAdmin(authentication),
+            )
+        return when (val result = getConversationDetailUseCase.getConversationDetail(query)) {
+            is GetConversationDetailResult.Success ->
+                ResponseEntity.ok(ConversationDetailDto.from(result.conversation, ::signedPhotoUrl))
+
+            GetConversationDetailResult.ConversationNotFound -> conversationNotFound()
+            GetConversationDetailResult.NotParticipant -> notParticipant()
+        }
+    }
+
+    @PutMapping("/conversations/{id}/members/{memberId}/admin")
+    fun promoteMember(
+        @PathVariable id: UUID,
+        @PathVariable memberId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> = setAdmin(id, memberId, true, authentication)
+
+    @DeleteMapping("/conversations/{id}/members/{memberId}/admin")
+    fun demoteMember(
+        @PathVariable id: UUID,
+        @PathVariable memberId: UUID,
+        authentication: Authentication,
+    ): ResponseEntity<Any> = setAdmin(id, memberId, false, authentication)
+
+    private fun setAdmin(
+        conversationId: UUID,
+        memberId: UUID,
+        isAdmin: Boolean,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val command =
+            SetConversationAdminCommand(
+                currentUserId = currentUserId(authentication),
+                conversationId = ConversationId(conversationId),
+                memberId = UserId(memberId),
+                isAdmin = isAdmin,
+            )
+        return when (val result = setConversationAdminUseCase.setConversationAdmin(command)) {
+            is SetConversationAdminResult.Success ->
+                ResponseEntity.ok(ConversationDetailDto.from(result.conversation, ::signedPhotoUrl))
+
+            SetConversationAdminResult.ConversationNotFound -> conversationNotFound()
+            SetConversationAdminResult.NotParticipant -> notParticipant()
+            SetConversationAdminResult.NotAdmin -> notGroupAdmin()
+            SetConversationAdminResult.MemberNotParticipant -> memberNotParticipant()
+            SetConversationAdminResult.CannotDemoteBookingOwner -> cannotDemoteBookingOwner()
+        }
+    }
+
+    @PatchMapping("/conversations/{id}")
+    fun renameConversation(
+        @PathVariable id: UUID,
+        @RequestBody request: RenameConversationRequest,
+        authentication: Authentication,
+    ): ResponseEntity<Any> {
+        val command =
+            RenameConversationCommand(
+                currentUserId = currentUserId(authentication),
+                conversationId = ConversationId(id),
+                title = request.title,
+            )
+        return when (val result = renameConversationUseCase.renameConversation(command)) {
+            is RenameConversationResult.Success ->
+                ResponseEntity.ok(ConversationDto.from(result.conversation, ::signedPhotoUrl))
+
+            RenameConversationResult.ConversationNotFound -> conversationNotFound()
+            RenameConversationResult.NotParticipant -> notParticipant()
+            RenameConversationResult.NotRenamable -> notRenamable()
+            RenameConversationResult.TitleTooLong -> titleTooLong()
+        }
     }
 
     @PostMapping("/conversations")
@@ -173,6 +271,7 @@ class ChatController(
             ToggleReactionResult.ConversationNotFound -> conversationNotFound()
             ToggleReactionResult.NotParticipant -> notParticipant()
             ToggleReactionResult.MessageNotFound -> messageNotFound()
+            ToggleReactionResult.ChatClosed -> chatClosed()
         }
     }
 
@@ -278,12 +377,72 @@ class ChatController(
                 },
         )
 
+    private fun notGroupAdmin(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Seul un administrateur du groupe gère les droits de ses membres.",
+                ).apply {
+                    title = "Droits insuffisants"
+                    setProperty("code", "CONVERSATION_NOT_GROUP_ADMIN")
+                },
+        )
+
+    private fun memberNotParticipant(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.NOT_FOUND,
+                    "Ce membre ne fait pas partie de la conversation.",
+                ).apply {
+                    title = "Membre introuvable"
+                    setProperty("code", "CONVERSATION_MEMBER_NOT_FOUND")
+                },
+        )
+
+    private fun cannotDemoteBookingOwner(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.CONFLICT,
+                    "Le client à l'origine de la réservation reste administrateur du groupe.",
+                ).apply {
+                    title = "Rétrogradation impossible"
+                    setProperty("code", "CONVERSATION_OWNER_ALWAYS_ADMIN")
+                },
+        )
+
+    private fun notRenamable(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.FORBIDDEN,
+                    "Cette conversation ne peut pas être renommée : seul le client à l'origine de la réservation en change le nom.",
+                ).apply {
+                    title = "Renommage interdit"
+                    setProperty("code", "CONVERSATION_NOT_RENAMABLE")
+                },
+        )
+
+    private fun titleTooLong(): ResponseEntity<Any> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ProblemDetail
+                .forStatusAndDetail(
+                    HttpStatus.BAD_REQUEST,
+                    "Le titre du groupe ne peut pas dépasser 255 caractères.",
+                ).apply {
+                    title = "Titre trop long"
+                    setProperty("code", "CONVERSATION_TITLE_TOO_LONG")
+                },
+        )
+
     private fun chatClosed(): ResponseEntity<Any> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
             ProblemDetail
                 .forStatusAndDetail(
                     HttpStatus.CONFLICT,
-                    "Le chat de cette réservation est fermé (30 minutes après la fin de la réservation).",
+                    "Le chat de cette réservation est fermé (24 heures après la fin de la réservation).",
                 ).apply {
                     title = "Chat fermé"
                     setProperty("code", "CHAT_CLOSED")

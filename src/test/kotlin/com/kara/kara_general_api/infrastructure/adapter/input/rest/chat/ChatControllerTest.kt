@@ -19,6 +19,9 @@ import com.kara.kara_general_api.domain.port.input.chat.ListAllConversationsUseC
 import com.kara.kara_general_api.domain.port.input.chat.ListConversationsUseCase
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadResult
 import com.kara.kara_general_api.domain.port.input.chat.MarkMessageReadUseCase
+import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailUseCase
+import com.kara.kara_general_api.domain.port.input.chat.RenameConversationUseCase
+import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminUseCase
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageResult
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionResult
@@ -75,6 +78,15 @@ class ChatControllerTest {
 
     @MockkBean
     private lateinit var deleteMessageUseCase: DeleteMessageUseCase
+
+    @MockkBean
+    private lateinit var renameConversationUseCase: RenameConversationUseCase
+
+    @MockkBean
+    private lateinit var getConversationDetailUseCase: GetConversationDetailUseCase
+
+    @MockkBean
+    private lateinit var setConversationAdminUseCase: SetConversationAdminUseCase
 
     @MockkBean
     private lateinit var imageStorage: ImageStoragePort
@@ -185,6 +197,8 @@ class ChatControllerTest {
                 ConversationView(
                     id = ConversationId(UUID.fromString(CONVERSATION_ID)),
                     bookingId = null,
+                    title = "John Doe",
+                    canRename = false,
                     counterpartName = "John Doe",
                     counterpartPhotoKey = null,
                     lastMessagePreview = "hey",
@@ -211,6 +225,8 @@ class ChatControllerTest {
                 ConversationView(
                     id = ConversationId(UUID.fromString(CONVERSATION_ID)),
                     bookingId = null,
+                    title = "John Doe",
+                    canRename = false,
                     counterpartName = "John Doe",
                     counterpartPhotoKey = null,
                     lastMessagePreview = "",
