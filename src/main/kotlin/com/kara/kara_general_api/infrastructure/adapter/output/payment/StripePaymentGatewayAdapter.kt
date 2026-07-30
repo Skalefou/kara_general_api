@@ -140,8 +140,8 @@ class StripePaymentGatewayAdapter(
         amount: BigDecimal,
         currency: Currency,
         customerId: String,
-    ): PaymentIntentCreateParams.Builder {
-        return PaymentIntentCreateParams
+    ): PaymentIntentCreateParams.Builder =
+        PaymentIntentCreateParams
             .builder()
             .setAmount(toMinorUnits(amount))
             .setCurrency(currency.name.lowercase())
@@ -152,7 +152,6 @@ class StripePaymentGatewayAdapter(
                     .setEnabled(true)
                     .build(),
             )
-    }
 
     /** Conversion unique montant décimal -> plus petite unité monétaire, partagée par la création et la
      *  capture d'un PaymentIntent : les deux doivent arrondir à l'identique. */

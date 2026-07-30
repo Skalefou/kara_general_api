@@ -17,14 +17,14 @@ import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.UserRole
 import com.kara.kara_general_api.domain.model.user.displayName
+import com.kara.kara_general_api.domain.port.input.chat.ConversationDetailView
+import com.kara.kara_general_api.domain.port.input.chat.ConversationMemberView
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationCommand
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationResult
 import com.kara.kara_general_api.domain.port.input.chat.CreateConversationUseCase
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageCommand
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageResult
 import com.kara.kara_general_api.domain.port.input.chat.DeleteMessageUseCase
-import com.kara.kara_general_api.domain.port.input.chat.ConversationDetailView
-import com.kara.kara_general_api.domain.port.input.chat.ConversationMemberView
 import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailQuery
 import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailResult
 import com.kara.kara_general_api.domain.port.input.chat.GetConversationDetailUseCase
@@ -43,11 +43,11 @@ import com.kara.kara_general_api.domain.port.input.chat.RenameConversationComman
 import com.kara.kara_general_api.domain.port.input.chat.RenameConversationResult
 import com.kara.kara_general_api.domain.port.input.chat.RenameConversationUseCase
 import com.kara.kara_general_api.domain.port.input.chat.SendMessageCommand
+import com.kara.kara_general_api.domain.port.input.chat.SendMessageResult
+import com.kara.kara_general_api.domain.port.input.chat.SendMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminCommand
 import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminResult
 import com.kara.kara_general_api.domain.port.input.chat.SetConversationAdminUseCase
-import com.kara.kara_general_api.domain.port.input.chat.SendMessageResult
-import com.kara.kara_general_api.domain.port.input.chat.SendMessageUseCase
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionCommand
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionResult
 import com.kara.kara_general_api.domain.port.input.chat.ToggleReactionUseCase
@@ -380,8 +380,7 @@ class ChatService(
         return currentUserId in chatRepository.findAdminIds(conversation.id)
     }
 
-    private fun bookingOwnerId(conversation: Conversation): UserId? =
-        conversation.bookingId?.let { bookingRepository.findById(it)?.userId }
+    private fun bookingOwnerId(conversation: Conversation): UserId? = conversation.bookingId?.let { bookingRepository.findById(it)?.userId }
 
     private fun buildConversationDetail(
         conversation: Conversation,

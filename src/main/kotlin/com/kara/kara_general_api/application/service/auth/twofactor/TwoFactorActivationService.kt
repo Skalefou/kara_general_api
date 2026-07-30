@@ -61,6 +61,5 @@ class TwoFactorActivationService(
         return ActivateTwoFactorResult.Success(plainCodes)
     }
 
-    private fun hashOf(plainCode: String): String =
-        passwordHasher.hash(RecoveryCodeNormalizer.normalize(plainCode)).value
+    private fun hashOf(plainCode: String): String = passwordHasher.hash(RecoveryCodeNormalizer.normalize(plainCode)).value
 }

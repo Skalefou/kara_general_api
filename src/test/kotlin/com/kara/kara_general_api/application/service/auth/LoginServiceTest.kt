@@ -3,14 +3,14 @@ package com.kara.kara_general_api.application.service.auth
 import com.kara.kara_general_api.domain.model.user.User
 import com.kara.kara_general_api.domain.model.user.UserId
 import com.kara.kara_general_api.domain.model.user.UserRole
+import com.kara.kara_general_api.domain.model.user.twofactor.TwoFactorSecret
+import com.kara.kara_general_api.domain.model.user.twofactor.TwoFactorStatus
 import com.kara.kara_general_api.domain.model.user.vo.Email
 import com.kara.kara_general_api.domain.model.user.vo.HashedPassword
 import com.kara.kara_general_api.domain.model.user.vo.PhoneNumber
 import com.kara.kara_general_api.domain.port.input.auth.LoginCommand
 import com.kara.kara_general_api.domain.port.input.auth.LoginIdentifier
 import com.kara.kara_general_api.domain.port.input.auth.LoginResult
-import com.kara.kara_general_api.domain.model.user.twofactor.TwoFactorSecret
-import com.kara.kara_general_api.domain.model.user.twofactor.TwoFactorStatus
 import com.kara.kara_general_api.domain.port.output.AccessToken
 import com.kara.kara_general_api.domain.port.output.MfaChallengeRepository
 import com.kara.kara_general_api.domain.port.output.PasswordHasher
