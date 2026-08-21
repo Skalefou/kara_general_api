@@ -29,14 +29,11 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/auth/change-password", authenticated)
                 authorize("/api/v1/auth/**", permitAll)
                 authorize("/api/v1/test/**", permitAll)
-                // Handshake WebSocket : non authentifié ; l'authentification se fait sur la frame STOMP CONNECT.
                 authorize("/ws/**", permitAll)
                 authorize("/error", permitAll)
                 authorize("/swagger-ui/**", permitAll)
                 authorize("/swagger-ui.html", permitAll)
                 authorize("/v3/api-docs/**", permitAll)
-                // Stock par salle : géré par le serveur de service (autorisation fine dans le use case) ou
-                // l'admin. Doit précéder les règles /rooms/** génériques (GET public, DELETE ADMIN) ci-dessous.
                 authorize(HttpMethod.GET, "/api/v1/rooms/*/stock", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
                 authorize(HttpMethod.PUT, "/api/v1/rooms/*/stock/**", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/rooms/*/stock/**", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
@@ -45,50 +42,30 @@ class SecurityConfig {
                 authorize(HttpMethod.POST, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/rooms/**", hasRole(UserRole.ADMIN.name))
-                // Estimation tarifaire : lecture seule, aucune persistance ; accessible aux invités et clients
-                // (même logique que la consultation publique des salles).
                 authorize(HttpMethod.POST, "/api/v1/bookings/estimate", permitAll)
-                // Webhook Stripe : signé et vérifié applicativement (STRIPE_WEBHOOK_SECRET), donc ouvert.
                 authorize(HttpMethod.POST, "/api/v1/stripe/webhook", permitAll)
-                // Réservations rattachées au serveur (via son agenda) : réservées au rôle SERVER.
                 authorize(HttpMethod.GET, "/api/v1/bookings/me/assigned", hasRole(UserRole.SERVER.name))
-                // Mes réservations (propriétaire) : tout utilisateur authentifié, quel que soit son rôle.
-                // Doit précéder la règle ADMIN sur /api/v1/bookings ci-dessous ; la propriété est garantie
-                // par le use case, qui ne lit que les réservations dont user_id est l'appelant.
                 authorize(HttpMethod.GET, "/api/v1/bookings/me", authenticated)
                 authorize(
                     HttpMethod.POST,
                     "/api/v1/bookings/*/validate-access",
                     hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name),
                 )
-                // Supervision admin : toutes les réservations et tous les chats.
                 authorize(HttpMethod.GET, "/api/v1/bookings", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/chat/admin/**", hasRole(UserRole.ADMIN.name))
-                // Création de réservation et initiation de paiement : réservées au client authentifié.
                 authorize(HttpMethod.POST, "/api/v1/bookings", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/payments", authenticated)
-                // Réconciliation d'un paiement avec Stripe : authentifiée ; la propriété du paiement est
-                // vérifiée dans le use case.
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/payments/*/sync", authenticated)
-                // Commande d'un produit pendant une réservation active : réservée au client authentifié.
-                // L'autorisation propriétaire (réservation appartenant au client) est vérifiée dans le use case.
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/orders", authenticated)
-                // Produits commandables d'une réservation : lecture réservée au client (propriété vérifiée
-                // dans le use case).
                 authorize(HttpMethod.GET, "/api/v1/bookings/*/available-products", authenticated)
                 authorize(HttpMethod.GET, "/api/v1/bookings/*/extension-options", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/bookings/*/extensions", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/extensions/*/payment", authenticated)
                 authorize(HttpMethod.POST, "/api/v1/extensions/*/pool", authenticated)
-                // Catalogue global des services : gestion réservée au back-office (ADMIN) pour toutes les
-                // opérations (création, listing de gestion, suppression).
                 authorize(HttpMethod.POST, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/services", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.DELETE, "/api/v1/services/**", hasRole(UserRole.ADMIN.name))
-                // Catalogue générique des produits consommables : création/modification/suppression réservées
-                // au back-office (ADMIN). Lecture ouverte aussi au SERVER : il pioche dans le catalogue pour
-                // garnir le stock de sa salle.
                 authorize(HttpMethod.POST, "/api/v1/products", hasRole(UserRole.ADMIN.name))
                 authorize(HttpMethod.GET, "/api/v1/products", hasAnyRole(UserRole.SERVER.name, UserRole.ADMIN.name))
                 authorize(HttpMethod.PATCH, "/api/v1/products/**", hasRole(UserRole.ADMIN.name))
@@ -97,29 +74,11 @@ class SecurityConfig {
                 authorize("/api/v1/users/me/**", authenticated)
                 authorize("/api/v1/users", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/users/**", hasRole(UserRole.ADMIN.name))
-                // Agenda personnel du serveur : un SERVER consulte ses propres créneaux (doit précéder
-                // les règles ADMIN génériques ci-dessous, sinon /me tomberait sous /server-shifts/**).
                 authorize(HttpMethod.GET, "/api/v1/server-shifts/me", hasRole(UserRole.SERVER.name))
-                // Agenda des serveurs : édition réservée au back-office (ADMIN) sur toutes les opérations.
                 authorize("/api/v1/server-shifts", hasRole(UserRole.ADMIN.name))
                 authorize("/api/v1/server-shifts/**", hasRole(UserRole.ADMIN.name))
-                // Récapitulatifs publics de cagnotte (lecture sans authentification). Le paiement d'une part
-                // reste soumis à l'authentification (routes /shares/*/payment couvertes par anyRequest).
-                // Le lien global accepte un JWT **facultatif** : `permitAll` n'exige rien, mais le
-                // JwtAuthenticationFilter peuple malgré tout le SecurityContext quand un jeton valide est
-                // présent, ce qui permet au contrôleur de joindre au récapitulatif la part de l'appelant
-                // (reprise d'un paiement interrompu). Un jeton absent, expiré ou invalide reste un accès invité,
-                // jamais un 401.
                 authorize(HttpMethod.GET, "/api/v1/pools/join/**", permitAll)
                 authorize(HttpMethod.GET, "/api/v1/pools/share/**", permitAll)
-                // Observabilité (double barrière — cf. Caddyfile qui renvoie 404 sur /actuator* côté public,
-                // et le pare-feu hôte qui n'expose jamais le port 8080 sur Internet).
-                // Seuls ces trois endpoints actuator sont ouverts, et uniquement joignables via le réseau
-                // Docker interne (sonde de santé du conteneur + scrape Prometheus) :
-                //   - /actuator/health : liveness/readiness du conteneur ;
-                //   - /actuator/prometheus : métriques Micrometer, scrapées par Prometheus (api:8080) ;
-                //   - /actuator/info : métadonnées applicatives, sans secret.
-                // Aucun autre endpoint actuator n'est exposé (management.endpoints.web.exposure.include).
                 authorize(HttpMethod.GET, "/actuator/health", permitAll)
                 authorize(HttpMethod.GET, "/actuator/health/**", permitAll)
                 authorize(HttpMethod.GET, "/actuator/prometheus", permitAll)
